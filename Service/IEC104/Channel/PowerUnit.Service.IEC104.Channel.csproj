@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\Common\Subsciption\PowerUnit.Common.Subsciption.csproj" />
+		<ProjectReference Include="..\..\..\Common\TimeoutService\PowerUnit.Common.TimeoutService.csproj" />
+		<ProjectReference Include="..\Application\PowerUnit.Service.IEC104.Application.csproj" />
+		<ProjectReference Include="..\Common\PowerUnit.Service.IEC104.Abstract.csproj" />
+		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Models.csproj" />
+		<ProjectReference Include="..\Types\PowerUnit.Service.IEC104.Types.csproj" />
+	</ItemGroup>
+
+</Project>

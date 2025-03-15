@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="NLog.Web.AspNetCore" Version="$(NLogWebAspNetCoreVersion)" />
+		<PackageReference Include="NetCoreServer" Version="$(NetCoreServerVersion)" />
+		<PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="$(OpenTelemetryExporterPrometheusAspNetCoreVersion)" />
+		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryExtensionsHostingVersion)" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.EventCounters" Version="$(OpenTelemetryInstrumentationEventCountersVersion)" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="$(OpenTelemetryInstrumentationProcessVersion)" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryInstrumentationRuntimeVersion)" />
+		<PackageReference Include="Polly" Version="$(PollyVersion)" />
+		<PackageReference Include="System.Linq.Async" Version="$(SystemLinqAsyncVersion)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\Common\EnviromentManager\PowerUnit.Common.EnviromentManager.csproj" />
+		<ProjectReference Include="..\..\..\Common\StringHelpers\PowerUnit.Common.StringHelpers.csproj" />
+		<ProjectReference Include="..\..\..\Common\Subsciption\PowerUnit.Common.Subsciption.csproj" />
+		<ProjectReference Include="..\..\..\Common\TimeoutService\PowerUnit.Common.TimeoutService.csproj" />
+		<ProjectReference Include="..\..\..\Infrastructure\DbContexts\Iec104ServerContext.PostgreSql\PowerUnit.Infrastructure.IEC104ServerDb.PostgreSql.csproj" />
+		<ProjectReference Include="..\..\..\Infrastructure\DbContexts\Iec104ServerContext.Sqlite\PowerUnit.Infrastructure.IEC104ServerDb.Sqlite.csproj" />
+		<ProjectReference Include="..\..\..\Infrastructure\DbContexts\Iec104ServerContext\PowerUnit.Infrastructure.IEC104ServerDb.csproj" />
+		<ProjectReference Include="..\Application\PowerUnit.Service.IEC104.Application.csproj" />
+		<ProjectReference Include="..\Channel\PowerUnit.Service.IEC104.Channel.csproj" />
+		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Models.csproj" />
+		<ProjectReference Include="..\Types\PowerUnit.Service.IEC104.Types.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="appsettings.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+</Project>

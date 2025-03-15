@@ -1,0 +1,318 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="_003_M_DP_NA_1_Desc" xml:space="preserve">
+    <value>Двухэлементная информация без метки времени</value>
+  </data>
+  <data name="_001_M_SP_NA_1_Desc" xml:space="preserve">
+    <value>Одноэлементная информация без метки времени</value>
+  </data>
+  <data name="_002_M_SP_TA_1_Desc" xml:space="preserve">
+    <value>Одноэлементная информация с меткой времени</value>
+  </data>
+  <data name="_004_M_DP_TA_1_Desc" xml:space="preserve">
+    <value>Двухэлементная информация с меткой времени</value>
+  </data>
+  <data name="_005_M_ST_NA_1_Desc" xml:space="preserve">
+    <value>Информация о положении отпаек</value>
+  </data>
+  <data name="_006_M_ST_TA_1_Desc" xml:space="preserve">
+    <value>Информация о положении отпаек с меткой времени</value>
+  </data>
+  <data name="_007_M_BO_NA_1_Desc" xml:space="preserve">
+    <value>Строка из 32 бит</value>
+  </data>
+  <data name="_008_М_ВО_ТА_1_Desc" xml:space="preserve">
+    <value>Строка из 32 бит с меткой времени</value>
+  </data>
+  <data name="_009_M_ME_NA_1_Desc" xml:space="preserve">
+    <value>Значение измеряемой величины, нормализованное значение</value>
+  </data>
+  <data name="_010_М_МЕ_ТА_1_Desc" xml:space="preserve">
+    <value>Значение измеряемой величины, нормализованное значение с меткой времени</value>
+  </data>
+  <data name="_011_M_ME_NB_1_Desc" xml:space="preserve">
+    <value>Значение измеряемой величины, масштабированное значение</value>
+  </data>
+  <data name="_012_М_МЕ_ТВ_1_Desc" xml:space="preserve">
+    <value>Значение измеряемой величины, масштабированное значение с меткой времени</value>
+  </data>
+  <data name="_013_M_ME_NC_1_Desc" xml:space="preserve">
+    <value>Значение измеряемой величины, короткий формате плавающей запятой</value>
+  </data>
+  <data name="_014_М_МЕ_ТС_1_Desc" xml:space="preserve">
+    <value>Значение измеряемой величины, короткий формат с плавающей запятой с меткой времени</value>
+  </data>
+  <data name="_015_M_IT_NA_1_Desc" xml:space="preserve">
+    <value>Интегральные суммы</value>
+  </data>
+  <data name="_016_М_IТ_ТА_1_Desc" xml:space="preserve">
+    <value>Интегральные суммы с меткой времени</value>
+  </data>
+  <data name="_017_М_ЕР_ТА_1_Desc" xml:space="preserve">
+    <value>Работа устройств защиты с меткой времени</value>
+  </data>
+  <data name="_018_М_ЕР_ТВ_1_Desc" xml:space="preserve">
+    <value>Упакованная информация о срабатывании пусковых органов устройств защиты с меткой времени</value>
+  </data>
+  <data name="_019_М_ЕР_ТС_1_Desc" xml:space="preserve">
+    <value>Упакованная информация о срабатывании выходных цепей устройства защиты с меткой времени</value>
+  </data>
+  <data name="_020_M_PS_NA_1_Desc" xml:space="preserve">
+    <value>Упакованная одноэлементная информация с указателем изменения состояния</value>
+  </data>
+  <data name="_021_M_ME_ND_1_Desc" xml:space="preserve">
+    <value>Значение измеряемой величины, нормализованное значение без описателя качества</value>
+  </data>
+  <data name="_030_M_SP_TB_1_Desc" xml:space="preserve">
+    <value>Одноэлементная информация с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_031_M_DP_TB_1_Desc" xml:space="preserve">
+    <value>Двухэлементная информация с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_032_M_ST_TB_1_Desc" xml:space="preserve">
+    <value>Информация о положении отпаек с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_033_М_ВО_ТВ_1_Desc" xml:space="preserve">
+    <value>Строка из 32 б и тс меткой времени СР56Время2а</value>
+  </data>
+  <data name="_034_M_ME_TD_1_Desc" xml:space="preserve">
+    <value>Значение измеряемой величины, нормализованное значение с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_035_М_МЕ_ТЕ_1_Desc" xml:space="preserve">
+    <value>Значение измеряемой величины, масштабированное значение с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_036_M_ME_TF_1_Desc" xml:space="preserve">
+    <value>Значение измеряемой величины, короткий формат с плавающей запятой с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_037_М_IТ_ТВ_1_Desc" xml:space="preserve">
+    <value>Интегральные суммы с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_038_M_EP_TD_1_Desc" xml:space="preserve">
+    <value>Работа устройств защиты с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_039_М_ЕР_ТЕ_1_Desc" xml:space="preserve">
+    <value>Упакованное сообщение о срабатывании пусковых органов устройств защиты с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_040_M_EP_TF_1_Desc" xml:space="preserve">
+    <value>Упакованная информация о срабатывании в выходных цепях устройства защиты с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_045_C_SC_NA_1_Desc" xml:space="preserve">
+    <value>Однопозиционная команда</value>
+  </data>
+  <data name="_046_C_DC_NA_1_Desc" xml:space="preserve">
+    <value>Двухпозиционная команда</value>
+  </data>
+  <data name="_047_C_RC_NA_1_Desc" xml:space="preserve">
+    <value>Команда пошагового регулирования</value>
+  </data>
+  <data name="_048_C_SE_NA_1_Desc" xml:space="preserve">
+    <value>Команда уставки, нормализованное значение</value>
+  </data>
+  <data name="_049_C_SE_NB_1_Desc" xml:space="preserve">
+    <value>Команда уставки, масштабированное значение</value>
+  </data>
+  <data name="_050_C_SE_NC_1_Desc" xml:space="preserve">
+    <value>Команда уставки, короткий формат с плавающей запятой</value>
+  </data>
+  <data name="_051_C_BO_NA_1_Desc" xml:space="preserve">
+    <value>Строка из 32 бит</value>
+  </data>
+  <data name="_070_M_EI_NA_1_Desc" xml:space="preserve">
+    <value>Окончание инициализации</value>
+  </data>
+  <data name="_100_C_IC_NA_1_Desc" xml:space="preserve">
+    <value>Команда опроса</value>
+  </data>
+  <data name="_101_C_CI_NA_1_Desc" xml:space="preserve">
+    <value>Команда опроса счетчиков</value>
+  </data>
+  <data name="_102_C_RD_NA_1_Desc" xml:space="preserve">
+    <value>Команда чтения</value>
+  </data>
+  <data name="_103_C_CS_NA_1_Desc" xml:space="preserve">
+    <value>Команда синхронизации часов</value>
+  </data>
+  <data name="_104_C_TS_NA_1_Desc" xml:space="preserve">
+    <value>Тестовая команда</value>
+  </data>
+  <data name="_105_C_RP_NA_1_Desc" xml:space="preserve">
+    <value>Команда установки процесса в исходное состояние</value>
+  </data>
+  <data name="_106_C_CD_NA_1_Desc" xml:space="preserve">
+    <value>Команда определения запаздывания</value>
+  </data>
+  <data name="_110_P_ME_NA_1_Desc" xml:space="preserve">
+    <value>Параметры измеряемых величин, нормализованное значение</value>
+  </data>
+  <data name="_111_P_ME_NB_1_Desc" xml:space="preserve">
+    <value>Параметры измеряемых величин, масштабированное значение</value>
+  </data>
+  <data name="_112_P_ME_NC_1_Desc" xml:space="preserve">
+    <value>Параметры измеряемых величин, короткий формате плавающей запятой</value>
+  </data>
+  <data name="_113_P_AC_NA_1_Desc" xml:space="preserve">
+    <value>Активация параметра</value>
+  </data>
+  <data name="_120_F_FR_NA_1_Desc" xml:space="preserve">
+    <value>Готовность файла</value>
+  </data>
+  <data name="_121_F_SR_NA_1_Desc" xml:space="preserve">
+    <value>Готовность секции</value>
+  </data>
+  <data name="_122_F_SC_NA_1_Desc" xml:space="preserve">
+    <value>Вызов директории, выбор файла, вызов секции</value>
+  </data>
+  <data name="_123_F_LS_NA_1_Desc" xml:space="preserve">
+    <value>Последняя секция, последний сегмент</value>
+  </data>
+  <data name="_124_F_AF_NA_1_Desc" xml:space="preserve">
+    <value>Подтверждение приема файла, подтверждение приема секции</value>
+  </data>
+  <data name="_125_F_SG_NA_1_Desc" xml:space="preserve">
+    <value>Сегмент</value>
+  </data>
+  <data name="_126_F_DR_TA_1_Desc" xml:space="preserve">
+    <value>Директория</value>
+  </data>
+  <data name="_058_C_SC_TA_1_Desc" xml:space="preserve">
+    <value>Однопозиционная команда с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_059_C_DC_TA_1_Desc" xml:space="preserve">
+    <value>Двухпозиционная команда с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_060_C_RC_TA_1_Desc" xml:space="preserve">
+    <value>Команда пошагового ругулирования с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_061_C_SE_TA_1_Desc" xml:space="preserve">
+    <value>Команда уставки с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_062_C_SE_TB_1_Desc" xml:space="preserve">
+    <value>Команда уставки с меткой времени СР56Время2а, масштабированное значение</value>
+  </data>
+  <data name="_063_C_SE_TC_1_Desc" xml:space="preserve">
+    <value>Команда уставки с меткой времени СР56Время2а, короткий формат с плавающей запятой</value>
+  </data>
+  <data name="_064_C_BO_TA_1_Desc" xml:space="preserve">
+    <value>Строка из 32 битов с меткой времени СР56Время2а</value>
+  </data>
+  <data name="_107_C_TS_TA_1_Desc" xml:space="preserve">
+    <value>Тестовая команда с меткой времени СР56Время2а</value>
+  </data>
+</root>

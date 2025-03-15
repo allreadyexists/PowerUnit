@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\Common\Exceptions\PowerUnit.Common.Exceptions.csproj" />
+		<ProjectReference Include="..\..\..\Common\Options\PowerUnit.Common.Options.csproj" />
+		<ProjectReference Include="..\..\..\Common\StringHelpers\PowerUnit.Common.StringHelpers.csproj" />
+		<ProjectReference Include="..\..\..\Common\Subsciption\PowerUnit.Common.Subsciption.csproj" />
+		<ProjectReference Include="..\Common\PowerUnit.Service.IEC104.Abstract.csproj" />
+		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Models.csproj" />
+		<ProjectReference Include="..\Types\PowerUnit.Service.IEC104.Types.csproj" />
+	</ItemGroup>
+
+</Project>

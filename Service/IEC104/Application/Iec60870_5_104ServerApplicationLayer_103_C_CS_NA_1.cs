@@ -1,0 +1,23 @@
+using PowerUnit.Service.IEC104.Types;
+using PowerUnit.Service.IEC104.Types.Asdu;
+
+namespace PowerUnit.Service.IEC104.Application;
+
+public partial class IEC60870_5_104ServerApplicationLayer
+{
+    internal void Process_C_CS_NA_1(ASDUPacketHeader_2_2 header, ushort address, DateTime dateTime, TimeStatus timeStatus, CancellationToken ct)
+    {
+        _ = SendInRentBuffer(buffer =>
+            {
+                var headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
+                    COT.ACTIVATE_CONFIRMATION,
+                    initAddr: header.InitAddr,
+                    commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+                var C_CS_NA_1 = new C_CS_NA_1(_timeProvider.GetUtcNow().DateTime, TimeStatus.OK);
+                var length = C_CS_NA_1.Serialize(buffer, in headerReq, in C_CS_NA_1);
+                _packetSender!.Send(buffer[..length]);
+                return Task.CompletedTask;
+            });
+    }
+}
+
