@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<ItemGroup>
+		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.7.0-beta.3">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="ErrorProne.NET.Structs" Version="0.7.0-beta.3">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsLoggingAbstractionsVersion)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\Common\Exceptions\PowerUnit.Common.Exceptions.csproj" />
+		<ProjectReference Include="..\..\..\Common\PowerUnit.Common.Other\PowerUnit.Common.Other.csproj" />
+		<ProjectReference Include="..\..\..\Common\StringHelpers\PowerUnit.Common.StringHelpers.csproj" />
+		<ProjectReference Include="..\Common\PowerUnit.Service.IEC104.Abstract.csproj" />
+		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Options.csproj" />
+		<ProjectReference Include="..\Types\PowerUnit.Service.IEC104.Types.csproj" />
+	</ItemGroup>
+
+</Project>

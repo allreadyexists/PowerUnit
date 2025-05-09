@@ -1,0 +1,15 @@
+using PowerUnit.Asdu;
+
+namespace PowerUnit;
+
+public record AnalogValue(AsduType AsduType, ushort Address, float Value, DateTime? ValueDt, DateTime RegistrationDt, byte/*TODO type*/ Status);
+public record DiscretValue(AsduType AsduType, ushort Address, bool Value, DateTime? ValueDt, DateTime RegistrationDt, byte/*TODO type*/ Status);
+
+public interface IDataProvider
+{
+    IAsyncEnumerable<AnalogValue> GetAnalogGroup(int serverId, QOI qoi, CancellationToken ct);
+    IAsyncEnumerable<DiscretValue> GetDiscretGroup(int serverId, QOI qoi, CancellationToken ct);
+
+    Task<AnalogValue?> GetAnalogValue(int serverId, ushort address, CancellationToken ct);
+    Task<DiscretValue?> GetDiscretValue(int serverId, ushort address, CancellationToken ct);
+}

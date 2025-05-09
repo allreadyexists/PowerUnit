@@ -1,0 +1,30 @@
+<Project>
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<RootNamespace>PowerUnit</RootNamespace>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>
+		<InvariantGlobalization>true</InvariantGlobalization>
+	</PropertyGroup>
+	<PropertyGroup>
+		<EditorConfigVersion>0.15.0</EditorConfigVersion>
+		<FastEnumVersion>2.0.5</FastEnumVersion>
+		<MicrosoftExtensionsHostingVersion>9.0.4</MicrosoftExtensionsHostingVersion>
+		<MicrosoftExtensionsDependencyInjectionVersion>9.0.4</MicrosoftExtensionsDependencyInjectionVersion>
+		<MicrosoftExtensionsLoggingAbstractionsVersion>9.0.4</MicrosoftExtensionsLoggingAbstractionsVersion>
+		<MicrosoftExtensionsOptionsVersion>9.0.4</MicrosoftExtensionsOptionsVersion>
+		<SystemManagementVersion>9.0.4</SystemManagementVersion>
+		<LinkDotNetStringBuilderVersion>2.4.1</LinkDotNetStringBuilderVersion>
+		<MicrosoftEntityFrameworkCoreVersion>9.0.4</MicrosoftEntityFrameworkCoreVersion>
+		<NpgsqlEntityFrameworkCorePostgreSQLVersion>9.0.4</NpgsqlEntityFrameworkCorePostgreSQLVersion>
+		<EFCoreNamingConventionsVersion>9.0.0</EFCoreNamingConventionsVersion>
+		<linq2dbEntityFrameworkCoreVersion>9.0.0</linq2dbEntityFrameworkCoreVersion>
+		<NLogVersion>5.4.0</NLogVersion>
+		<NetCoreServerVersion>8.0.7</NetCoreServerVersion>
+		<PollyVersion>8.5.2</PollyVersion>
+	</PropertyGroup>
+</Project>

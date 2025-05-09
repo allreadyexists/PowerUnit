@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<RootNamespace>PowerUnit</RootNamespace>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.7.0-beta.3">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="ErrorProne.NET.Structs" Version="0.7.0-beta.3">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="linq2db.EntityFrameworkCore" Version="$(linq2dbEntityFrameworkCoreVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="$(MicrosoftExtensionsHostingVersion)" />
+		<PackageReference Include="NLog.Extensions.Logging" Version="$(NLogVersion)" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="$(NLogVersion)" />
+		<PackageReference Include="NetCoreServer" Version="$(NetCoreServerVersion)" />
+		<PackageReference Include="Polly" Version="$(PollyVersion)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\Common\EnviromentManager\PowerUnit.Common.EnviromentManager.csproj" />
+		<ProjectReference Include="..\..\..\Common\StringHelpers\PowerUnit.Common.StringHelpers.csproj" />
+		<ProjectReference Include="..\..\..\Common\TimeoutService\PowerUnit.Common.TimeoutService.csproj" />
+		<ProjectReference Include="..\..\..\Infrastructure\Db\PowerUnit.Infrastructure.Db.csproj" />
+		<ProjectReference Include="..\Application\PowerUnit.Service.IEC104.Application.csproj" />
+		<ProjectReference Include="..\Channel\PowerUnit.Service.IEC104.Channel.csproj" />
+		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Options.csproj" />
+		<ProjectReference Include="..\Types\PowerUnit.Service.IEC104.Types.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="appsettings.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+</Project>
