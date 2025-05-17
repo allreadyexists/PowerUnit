@@ -187,6 +187,37 @@ namespace PowerUnit.Migrations
                     b.ToTable("iec104mappings", "power_unit");
                 });
 
+            modelBuilder.Entity("PowerUnit.IEC104ServerApplicationLayerOptionItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("CheckCommonASDUAddress")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("check_common_asdu_address");
+
+                    b.Property<byte>("FileSegmentSize")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("smallint")
+                        .HasDefaultValue((byte)200)
+                        .HasColumnName("file_segment_size");
+
+                    b.Property<bool>("SporadicSendEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("sporadic_send_enabled");
+
+                    b.HasKey("Id")
+                        .HasName("pk_iec104server_application_layer_options");
+
+                    b.ToTable("iec104server_application_layer_options", "power_unit");
+                });
+
             modelBuilder.Entity("PowerUnit.IEC104ServerChannelLayerOptionItem", b =>
                 {
                     b.Property<int>("Id")
@@ -236,9 +267,9 @@ namespace PowerUnit.Migrations
                         .HasColumnName("window_w_size");
 
                     b.HasKey("Id")
-                        .HasName("pk_iec104server_channel_layer_option");
+                        .HasName("pk_iec104server_channel_layer_options");
 
-                    b.ToTable("iec104server_channel_layer_option", "power_unit");
+                    b.ToTable("iec104server_channel_layer_options", "power_unit");
                 });
 
             modelBuilder.Entity("PowerUnit.IEC104ServerItem", b =>
@@ -249,12 +280,6 @@ namespace PowerUnit.Migrations
                         .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("CheckCommonASDUAddress")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("check_common_asdu_address");
 
                     b.Property<int>("CommonASDUAddress")
                         .ValueGeneratedOnAdd()
@@ -267,20 +292,6 @@ namespace PowerUnit.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true)
                         .HasColumnName("enable");
-
-                    b.Property<int>("FileSectionSize")
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(4096)
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1024)
-                        .HasColumnName("file_section_size");
-
-                    b.Property<byte>("FileSegmentSize")
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(200)
-                        .HasColumnType("smallint")
-                        .HasDefaultValue((byte)200)
-                        .HasColumnName("file_segment_size");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -295,12 +306,6 @@ namespace PowerUnit.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(2404)
                         .HasColumnName("port");
-
-                    b.Property<bool>("SporadicSendEnabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("sporadic_send_enabled");
 
                     b.HasKey("Id")
                         .HasName("pk_iec104servers");
@@ -490,6 +495,16 @@ namespace PowerUnit.Migrations
                     b.Navigation("Server");
                 });
 
+            modelBuilder.Entity("PowerUnit.IEC104ServerApplicationLayerOptionItem", b =>
+                {
+                    b.HasOne("PowerUnit.IEC104ServerItem", null)
+                        .WithOne("ApplicationLayerOption")
+                        .HasForeignKey("PowerUnit.IEC104ServerApplicationLayerOptionItem", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_iec104server_application_layer_options_iec104servers_id");
+                });
+
             modelBuilder.Entity("PowerUnit.IEC104ServerChannelLayerOptionItem", b =>
                 {
                     b.HasOne("PowerUnit.IEC104ServerItem", null)
@@ -497,7 +512,7 @@ namespace PowerUnit.Migrations
                         .HasForeignKey("PowerUnit.IEC104ServerChannelLayerOptionItem", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_iec104server_channel_layer_option_iec104servers_id");
+                        .HasConstraintName("fk_iec104server_channel_layer_options_iec104servers_id");
                 });
 
             modelBuilder.Entity("PowerUnit.MeasurementItem", b =>
@@ -544,8 +559,9 @@ namespace PowerUnit.Migrations
 
             modelBuilder.Entity("PowerUnit.IEC104ServerItem", b =>
                 {
-                    b.Navigation("ChannelLayerOption")
-                        .IsRequired();
+                    b.Navigation("ApplicationLayerOption");
+
+                    b.Navigation("ChannelLayerOption");
                 });
 #pragma warning restore 612, 618
         }

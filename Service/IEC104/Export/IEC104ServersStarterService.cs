@@ -1,42 +1,42 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-
 namespace PowerUnit;
 
 public sealed class IEC104ServersStarterService : BackgroundService
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IConfigProvider _configProvider;
+    private readonly IEC104ServerFactory _iec104ServerFactory;
     private readonly ILogger<IEC104ServersStarterService> _logger;
     private readonly List<IEC104Server> _servers = [];
-    public IEC104ServersStarterService(IServiceProvider serviceProvider, ILogger<IEC104ServersStarterService> logger)
+    public IEC104ServersStarterService(IConfigProvider configProvider, IEC104ServerFactory iec104ServerFactory, ILogger<IEC104ServersStarterService> logger)
     {
-        _serviceProvider = serviceProvider;
+        _configProvider = configProvider;
+        _iec104ServerFactory = iec104ServerFactory;
         _logger = logger;
     }
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        return Task.Run(() =>
+        return Task.Run(async () =>
         {
-            var iec60870_5_104ServerFactory = _serviceProvider.GetRequiredService<IEC104ServerFactory>();
-
-            try
+            foreach (var serverModel in await _configProvider.GetServersAsync(stoppingToken))
             {
-                var server = iec60870_5_104ServerFactory.CreateServer(new IEC104ServerModel() { });
-                _servers.Add(server);
-                server.Start();
-            }
-            catch (ObjectDisposedException disposeException)
-            {
-                _logger.LogError(disposeException, "Start Object Disposed Exception");
-            }
-            catch (OperationCanceledException cancelException)
-            {
-                _logger.LogError(cancelException, "Start Operation Canceled Exception");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Start Exception");
+                try
+                {
+                    var server = _iec104ServerFactory.CreateServer(serverModel);
+                    server.Start();
+                    _servers.Add(server);
+                    _logger.LogServerStart(serverModel.ServerName, serverModel.Port);
+                }
+                catch (ObjectDisposedException disposeException)
+                {
+                    _logger.LogError(disposeException, "Start Object Disposed Exception");
+                }
+                catch (OperationCanceledException cancelException)
+                {
+                    _logger.LogError(cancelException, "Start Operation Canceled Exception");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Start Exception");
+                }
             }
         }, stoppingToken);
     }
@@ -57,4 +57,10 @@ public sealed class IEC104ServersStarterService : BackgroundService
 
         base.Dispose();
     }
+}
+
+internal static partial class IEC104ServersStarterServiceLogExtension
+{
+    [LoggerMessage(EventId = 0, Level = LogLevel.Information, Message = "Start IEC104 server \"{ServerName}\" on port: {Port}")]
+    public static partial void LogServerStart(this ILogger logger, string serverName, int port);
 }

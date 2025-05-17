@@ -48,17 +48,17 @@ public readonly struct F_DR_TA_1_Sequence
 
     public static string Description => Properties.Resources._126_F_DR_TA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         var address1 = MemoryMarshal.AsRef<Address3>(buffer[..Address3.Size]);
         for (var i = 0; i < header.Count; i++)
         {
             var value = MemoryMarshal.AsRef<F_DR_TA_1_Sequence>(buffer);
-            notification.Notify_F_DR_TA(ref header, address1.Address, value.NODF, value.LOF, value.SOF, value.DateTime, value.TimeStatus);
+            notification.Notify_F_DR_TA(in header, address1.Address, value.NODF, value.LOF, value.SOF, value.DateTime, value.TimeStatus);
         }
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, Address3 address, F_DR_TA_1_Sequence[] F_DR_TA_1_Sequences)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, Address3 address, F_DR_TA_1_Sequence[] F_DR_TA_1_Sequences)
     {
         header.SerializeUnsafe(buffer, 0);
         address.SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size);

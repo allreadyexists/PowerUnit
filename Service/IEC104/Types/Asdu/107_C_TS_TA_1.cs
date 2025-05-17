@@ -37,13 +37,13 @@ public readonly struct C_TS_TA_1
 
     public static string Description => Properties.Resources._107_C_TS_TA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         var value = MemoryMarshal.AsRef<C_TS_TA_1>(buffer[..Size]);
-        notification.Notify_C_TS_TA(ref header, value.Address, value.TSC, value.DateTime, value.Status);
+        notification.Notify_C_TS_TA(in header, value.Address, value.TSC, value.DateTime, value.Status);
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, ref C_TS_TA_1 C_TS_TA_1)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, in C_TS_TA_1 C_TS_TA_1)
     {
         header.SerializeUnsafe(buffer, 0);
         C_TS_TA_1.SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size);

@@ -2,8 +2,9 @@ using PowerUnit.Asdu;
 
 namespace PowerUnit;
 
-public record AnalogValue(AsduType AsduType, ushort Address, float Value, DateTime? ValueDt, DateTime RegistrationDt, byte/*TODO type*/ Status);
-public record DiscretValue(AsduType AsduType, ushort Address, bool Value, DateTime? ValueDt, DateTime RegistrationDt, byte/*TODO type*/ Status);
+public record BaseValue(AsduType AsduType, ushort Address, DateTime? ValueDt, DateTime RegistrationDt, byte/*TODO type*/ Status);
+public record AnalogValue(AsduType AsduType, ushort Address, float Value, DateTime? ValueDt, DateTime RegistrationDt, byte/*TODO type*/ Status) : BaseValue(AsduType, Address, ValueDt, RegistrationDt, Status);
+public record DiscretValue(AsduType AsduType, ushort Address, bool Value, DateTime? ValueDt, DateTime RegistrationDt, byte/*TODO type*/ Status) : BaseValue(AsduType, Address, ValueDt, RegistrationDt, Status);
 
 public interface IDataProvider
 {

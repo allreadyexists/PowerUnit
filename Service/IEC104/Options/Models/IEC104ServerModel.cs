@@ -1,5 +1,3 @@
-using PowerUnit.Models;
-
 namespace PowerUnit;
 
 public sealed record class IEC104ServerModel : ServerModel

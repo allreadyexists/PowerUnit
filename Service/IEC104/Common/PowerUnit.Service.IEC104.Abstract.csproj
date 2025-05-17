@@ -12,6 +12,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Options.csproj" />
 		<ProjectReference Include="..\Types\PowerUnit.Service.IEC104.Types.csproj" />
 	</ItemGroup>
 

@@ -34,16 +34,16 @@ public readonly struct M_ME_TF_1_Single
 
     public static string Description => Properties.Resources._036_M_ME_TF_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         for (ushort i = 0; i < header.Count; i++)
         {
             var value = MemoryMarshal.AsRef<M_ME_TF_1_Single>(buffer.Slice(i * Size, Size));
-            notification.Notify_M_ME(ref header, value.Address, value.Value, value.Status, value.DateTime, value.TimeStatus);
+            notification.Notify_M_ME(in header, value.Address, value.Value, value.Status, value.DateTime, value.TimeStatus);
         }
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, M_ME_TF_1_Single[] M_ME_TF_1_Singles)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, M_ME_TF_1_Single[] M_ME_TF_1_Singles)
     {
         header.SerializeUnsafe(buffer, 0);
         var size = 0;

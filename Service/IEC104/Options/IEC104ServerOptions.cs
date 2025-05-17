@@ -1,6 +1,6 @@
 namespace PowerUnit;
 
-public sealed record class IEC104ServerOptions : ServerOptions
+public sealed record class IEC104ServerOptions : ServerModel
 {
     public int Id { get; set; }
     public IEC104ChannelLayerOption ChannelLayerOption { get; set; } = new IEC104ChannelLayerOption();

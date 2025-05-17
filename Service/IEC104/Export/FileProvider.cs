@@ -1,28 +1,42 @@
+using Microsoft.Extensions.Logging;
+
 using System.Collections.Concurrent;
+using System.Text;
 
 namespace PowerUnit;
 
-internal static class FileInfoExtension
-{
-    public static bool IsReady(this FileInfo? fileInfo)
-    {
-        return fileInfo?.Length <= 0xFFFFFF;
-    }
-}
-
 internal sealed class FileProvider : IFileProvider, IDisposable
 {
-    private readonly string _cachePath;
+    private int? _id1;
+    private Guid? _id2;
+    private string _cachePath;
+    private readonly IEnviromentManager _enviromentManager;
+    private readonly ILogger<FileProvider> _logger;
+    private string _extension = string.Empty;
+    private readonly string _writeTemplate = "{0}.w.{1}";
+    private readonly string _readTemplate = "{0}.r.{1}";
+
+    private readonly ConcurrentDictionary<string, bool> _readFiles = [];
+    private readonly ConcurrentDictionary<string, bool> _writeFiles = [];
 
     private readonly ConcurrentDictionary<ushort, FileStream> _fileStreams = new ConcurrentDictionary<ushort, FileStream>();
 
-    public FileProvider(IEnviromentManager enviromentManager)
+    public FileProvider(IEnviromentManager enviromentManager, ILogger<FileProvider> logger)
     {
-        _cachePath = enviromentManager.GetCachePath();
+        _enviromentManager = enviromentManager;
+        _logger = logger;
     }
 
     void IDisposable.Dispose()
     {
+        var id = "." + _id2.ToString();
+        var allFiles = Directory.EnumerateFiles(_cachePath);
+        var myFiles = allFiles.Select(x => Path.GetExtension(x));
+        foreach (var file in Directory.EnumerateFiles(_cachePath).Where(x => Path.GetExtension(x) == id))
+        {
+            File.Delete(file);
+        }
+
         foreach (var fileReadState in _fileStreams)
         {
             fileReadState.Value.Close();
@@ -30,6 +44,23 @@ internal sealed class FileProvider : IFileProvider, IDisposable
         }
 
         _fileStreams.Clear();
+    }
+
+    void IFileProvider.SetId(int id1, Guid id2)
+    {
+        if (_id1 != null)
+            throw new ArgumentException(nameof(IFileProvider.SetId), nameof(id1));
+        if (_id2 != null)
+            throw new ArgumentException(nameof(IFileProvider.SetId), nameof(id2));
+
+        _id1 = id1;
+        _id2 = id2;
+        _cachePath = Path.Combine(_enviromentManager.GetCachePath(), id1.ToString());
+
+        if (!Directory.Exists(_cachePath))
+            Directory.CreateDirectory(_cachePath);
+
+        _extension = $".{_id2}";
     }
 
     IEnumerable<FileSystemItem> IFileProvider.GetDirectoryContent(uint address, ushort fileName)
@@ -47,6 +78,7 @@ internal sealed class FileProvider : IFileProvider, IDisposable
             }
         }
     }
+
     private FileStream CreateFileReadState(ushort fileName)
     {
         var file = Path.Combine(_cachePath, $"{fileName}");
@@ -67,32 +99,135 @@ internal sealed class FileProvider : IFileProvider, IDisposable
         }
     }
 
-    byte[] IFileProvider.GetSection(ushort fileName, byte sectionName, uint sectionMaxLength)
+    bool IFileProvider.PrepareReadFile(ushort fileName/*, int sectionLength*/, out FileReadCache? fileCache)
     {
-        var fileStream = _fileStreams.AddOrUpdate(fileName, CreateFileReadState, (fileName, oldValue) => oldValue);
-
-        var sectionLength = SectionLength((int)fileStream.Length, sectionName, sectionMaxLength);
-        var buffer = new byte[sectionLength];
-        var offset = (int)((sectionName - 1) * sectionMaxLength);
-
-        fileStream.Seek(offset, SeekOrigin.Begin);
-        _ = fileStream.Read(buffer, 0, (int)sectionLength);
-
-        return buffer;
-    }
-
-    FileInfo? IFileProvider.GetFileInfo(ushort fileName)
-    {
-        var file = Path.Combine(_cachePath, $"{fileName}");
-        return File.Exists(file) ? new FileInfo(file) : null;
-    }
-
-    void IFileProvider.CloseFile(ushort fileName)
-    {
-        if (_fileStreams.TryRemove(fileName, out var fileStream))
+        var cnt = 3;
+        fileCache = default;
+        while (true)
         {
-            fileStream.Close();
-            fileStream.Dispose();
+            try
+            {
+                var fileSrc = Path.Combine(_cachePath, $"{fileName}");
+                if (!File.Exists(fileSrc))
+                    return false;
+
+                var fileDst = Path.Combine(_cachePath, string.Format(_readTemplate, fileName, _id2));
+                if (_readFiles.ContainsKey(fileDst))
+                    return false;
+
+                var fileInfo = new FileInfo(fileSrc);
+                if (fileInfo.Length > 0xFFFFFF)
+                    return false;
+
+                File.Copy(fileSrc, fileDst);
+
+                fileInfo = new FileInfo(fileDst);
+                if (fileInfo.Length > 0xFFFFFF)
+                    return false;
+
+                var sectionLength = Math.Floor(fileInfo.Length / 128m);
+                if (sectionLength == 0)
+                {
+                    sectionLength = fileInfo.Length;
+                }
+
+                fileCache = new FileReadCache(fileDst, (int)fileInfo.Length, (int)sectionLength);
+                _readFiles.TryAdd(fileDst, true);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, nameof(IFileProvider.PrepareReadFile));
+                cnt--;
+                if (cnt == 0)
+                    return false;
+            }
+        }
+    }
+
+    bool IFileProvider.PrepareWriteFile(ushort fileName/*, int sectionLength*/, out FileWriteCache? fileCache)
+    {
+        var cnt = 3;
+        fileCache = default;
+        while (true)
+        {
+            try
+            {
+                var fileDst = Path.Combine(_cachePath, string.Format(_writeTemplate, fileName, _id2));
+                if (_writeFiles.ContainsKey(fileDst))
+                    return false;
+
+                using var _ = File.Create(fileDst);
+                fileCache = new FileWriteCache();
+                _writeFiles.TryAdd(fileDst, true);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, nameof(IFileProvider.PrepareWriteFile));
+                cnt--;
+                if (cnt == 0)
+                    return false;
+            }
+        }
+    }
+
+    void IFileProvider.CompliteReadFile(ushort fileName)
+    {
+        var fileDst = Path.Combine(_cachePath, string.Format(_readTemplate, fileName, _id2));
+        var cnt = 3;
+
+        while (true)
+        {
+            try
+            {
+                _readFiles.Remove(fileDst, out _);
+                File.Delete(fileDst);
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, nameof(IFileProvider.CompliteReadFile));
+                cnt--;
+                if (cnt == 0)
+                    return;
+            }
+        }
+    }
+
+    void IFileProvider.CompliteWriteFile(ushort fileName, IEnumerable<byte[]> sections)
+    {
+        var fileDst = Path.Combine(_cachePath, string.Format(_writeTemplate, fileName, _id2));
+        var fileDst2 = Path.Combine(_cachePath, $"{fileName}");
+
+        var cnt = 3;
+
+        while (true)
+        {
+            try
+            {
+                _writeFiles.Remove(fileDst, out _);
+
+                using var stream = File.Open(fileDst, FileMode.OpenOrCreate);
+                {
+                    using var writer = new BinaryWriter(stream, Encoding.UTF8);
+                    foreach (var section in sections)
+                        writer.Write(section);
+                }
+
+                File.Move(fileDst, fileDst2, true);
+
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, nameof(IFileProvider.CompliteWriteFile));
+                cnt--;
+                if (cnt == 0)
+                    return;
+            }
         }
     }
 }

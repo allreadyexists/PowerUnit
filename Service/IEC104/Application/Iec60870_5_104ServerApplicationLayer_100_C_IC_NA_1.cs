@@ -13,7 +13,7 @@ public partial class Iec60870_5_104ServerApplicationLayer
             {
                 var headerReq = new AsduPacketHeader_2_2(header.AsduType, header.SQ, header.Count, COT.ACTIVATE_CONFIRMATION, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
                 var C_IC_NA_1 = new C_IC_NA_1(qoi);
-                var length = C_IC_NA_1.Serialize(buffer, ref headerReq, ref C_IC_NA_1);
+                var length = C_IC_NA_1.Serialize(buffer, in headerReq, in C_IC_NA_1);
                 _packetSender!.Send(buffer[..length]);
 
                 var errorTransaction = false;
@@ -31,19 +31,10 @@ public partial class Iec60870_5_104ServerApplicationLayer
                             {
                                 case AsduType.M_SP_NA_1: // Одноэлементная информация без метки времени
                                     break;
-                                case AsduType.M_SP_TA_1: // Одноэлементная информация с меткой времени
+                                case AsduType.M_SP_TB_1: // Одноэлементная информация с меткой времени СР56Время2а
                                     break;
                                 case AsduType.M_DP_NA_1: // Двухэлементная информация без метки времени
                                     break;
-                                case AsduType.M_DP_TA_1: // Двухэлементная информация с меткой времени
-                                    headerReq = new AsduPacketHeader_2_2(groupData.AsduType, SQ.Single, 1, (COT)qoi, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-
-                                    length = M_DP_TA_1_Single.Serialize(buffer, ref headerReq, [new M_DP_TA_1_Single(
-                                        groupData.Address, groupData.Value ? DIQ_Value.On : DIQ_Value.Off, (DIQ_Status)groupData.Status, TimeOnly.FromDateTime(_timeProvider.GetUtcNow().DateTime))]);
-
-                                    _packetSender!.Send(buffer[..length]);
-                                    break;
-                                case AsduType.M_SP_TB_1: // Одноэлементная информация с меткой времени СР56Время2а
                                 case AsduType.M_DP_TB_1: // Двухэлементная информация с меткой времени СР56Время2а
                                     break;
                             }
@@ -55,17 +46,12 @@ public partial class Iec60870_5_104ServerApplicationLayer
                             {
                                 case AsduType.M_ME_NC_1: // Значение измеряемой величины, короткий формате плавающей запятой
                                     headerReq = new AsduPacketHeader_2_2(groupData.AsduType, SQ.Single, 1, (COT)qoi, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                                    length = M_ME_NC_1_Single.Serialize(buffer, ref headerReq, [new M_ME_NC_1_Single(groupData.Address, groupData.Value, (QDS_Status)groupData.Status)]);
-                                    _packetSender!.Send(buffer[..length]);
-                                    break;
-                                case AsduType.M_ME_TC_1: // Значение измеряемой величины, короткий формате с плавающей запятой с меткой времени
-                                    headerReq = new AsduPacketHeader_2_2(groupData.AsduType, SQ.Single, 1, (COT)qoi, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                                    length = M_ME_TC_1_Single.Serialize(buffer, ref headerReq, [new M_ME_TC_1_Single(groupData.Address, groupData.Value, (QDS_Status)groupData.Status, groupData.ValueDt!.Value, 0)]);
+                                    length = M_ME_NC_1_Single.Serialize(buffer, in headerReq, [new M_ME_NC_1_Single(groupData.Address, groupData.Value, (QDS_Status)groupData.Status)]);
                                     _packetSender!.Send(buffer[..length]);
                                     break;
                                 case AsduType.M_ME_TF_1: // Значение измеряемой величины, короткий формат с плавающей запятой с меткой времени СР56Время2а
                                     headerReq = new AsduPacketHeader_2_2(groupData.AsduType, SQ.Single, 1, (COT)qoi, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                                    length = M_ME_TF_1_Single.Serialize(buffer, ref headerReq, [new M_ME_TF_1_Single(groupData.Address, groupData.Value, (QDS_Status)groupData.Status, groupData.ValueDt!.Value, 0)]);
+                                    length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, [new M_ME_TF_1_Single(groupData.Address, groupData.Value, (QDS_Status)groupData.Status, groupData.ValueDt!.Value, 0)]);
                                     _packetSender!.Send(buffer[..length]);
                                     break;
                             }
@@ -94,7 +80,7 @@ public partial class Iec60870_5_104ServerApplicationLayer
                 {
                     headerReq = new AsduPacketHeader_2_2(header.AsduType, header.SQ, header.Count, COT.ACTIVATE_COMPLETION, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress, pn: errorTransaction ? PN.Negative : PN.Positive);
                     C_IC_NA_1 = new C_IC_NA_1(qoi);
-                    length = C_IC_NA_1.Serialize(buffer, ref headerReq, ref C_IC_NA_1);
+                    length = C_IC_NA_1.Serialize(buffer, in headerReq, in C_IC_NA_1);
                     _packetSender!.Send(buffer[..length]);
                     _readTransactionManager.DeleteTransaction(transactionId);
                 }
@@ -111,7 +97,7 @@ public partial class Iec60870_5_104ServerApplicationLayer
                 initAddr: header.InitAddr,
                 commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
                 var C_IC_NA_1 = new C_IC_NA_1(qoi);
-                var length = C_IC_NA_1.Serialize(buffer, ref headerReq, ref C_IC_NA_1);
+                var length = C_IC_NA_1.Serialize(buffer, in headerReq, in C_IC_NA_1);
                 _packetSender!.Send(buffer[..length]);
                 return Task.CompletedTask;
             });

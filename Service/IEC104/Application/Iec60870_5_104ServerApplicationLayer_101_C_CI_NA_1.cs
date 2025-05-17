@@ -14,7 +14,7 @@ public partial class Iec60870_5_104ServerApplicationLayer
                     initAddr: header.InitAddr,
                     commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
                 var C_CI_NA_1 = new C_CI_NA_1(qcc);
-                var length = C_CI_NA_1.Serialize(buffer, ref headerReq, ref C_CI_NA_1);
+                var length = C_CI_NA_1.Serialize(buffer, in headerReq, in C_CI_NA_1);
                 _packetSender!.Send(buffer[..length]);
                 return Task.CompletedTask;
             });

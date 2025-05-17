@@ -75,16 +75,16 @@ public readonly struct M_SP_NA_1_Single
 
     public static string Description => Properties.Resources._001_M_SP_NA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         for (ushort i = 0; i < header.Count; i++)
         {
             var value = MemoryMarshal.AsRef<M_SP_NA_1_Single>(buffer.Slice(i * Size, Size));
-            notification.Notify_M_SP(ref header, value.Address, value.Value, value.Status, dateTime, 0);
+            notification.Notify_M_SP(in header, value.Address, value.Value, value.Status, dateTime, 0);
         }
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, ref M_SP_NA_1_Single M_SP_NA_1_Single)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, in M_SP_NA_1_Single M_SP_NA_1_Single)
     {
         throw new NotImplementedException();
     }
@@ -133,17 +133,17 @@ public readonly struct M_SP_NA_1_Sequence
 
     public static string Description => Properties.Resources._001_M_SP_NA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         var address1 = MemoryMarshal.AsRef<Address3>(buffer[..Address3.Size]);
         for (var i = 0; i < header.Count; i++)
         {
             var value = MemoryMarshal.AsRef<M_SP_NA_1_Sequence>(buffer.Slice(Address3.Size + i * Size, Size));
-            notification.Notify_M_SP(ref header, (ushort)(address1.Address + i), value.Value, value.Status, dateTime, 0);
+            notification.Notify_M_SP(in header, (ushort)(address1.Address + i), value.Value, value.Status, dateTime, 0);
         }
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, ref M_SP_NA_1_Sequence M_SP_NA_1_Sequence)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, in M_SP_NA_1_Sequence M_SP_NA_1_Sequence)
     {
         throw new NotImplementedException();
     }

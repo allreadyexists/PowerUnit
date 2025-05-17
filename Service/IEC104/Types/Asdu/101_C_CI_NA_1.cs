@@ -41,13 +41,13 @@ public readonly struct C_CI_NA_1
 
     public static string Description => Properties.Resources._101_C_CI_NA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         var qcc = MemoryMarshal.AsRef<C_CI_NA_1>(buffer[..Size]);
-        notification.Notify_C_CI_NA(ref header, qcc.Address, qcc.QCC);
+        notification.Notify_C_CI_NA(in header, qcc.Address, qcc.QCC);
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, ref C_CI_NA_1 C_CI_NA_1)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, in C_CI_NA_1 C_CI_NA_1)
     {
         header.SerializeUnsafe(buffer, 0);
         C_CI_NA_1.SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size);

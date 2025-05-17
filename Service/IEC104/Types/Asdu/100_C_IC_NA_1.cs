@@ -34,13 +34,13 @@ public readonly struct C_IC_NA_1
 
     public static string Description => Properties.Resources._100_C_IC_NA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         var qoi = MemoryMarshal.AsRef<C_IC_NA_1>(buffer[..Size]);
-        notification.Notify_C_IC_NA(ref header, qoi.Address, qoi.QOI);
+        notification.Notify_C_IC_NA(in header, qoi.Address, qoi.QOI);
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, ref C_IC_NA_1 C_IC_NA_1)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, in C_IC_NA_1 C_IC_NA_1)
     {
         header.SerializeUnsafe(buffer, 0);
         C_IC_NA_1.SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size);

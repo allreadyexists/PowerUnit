@@ -36,7 +36,11 @@ public class PowerUnitDbContext : DbContext
     /// <summary>
     /// Настройки МЭК104 сервера
     /// </summary>
-    public DbSet<IEC104ServerChannelLayerOptionItem> IEC104ServerChannelLayerOption { get; set; }
+    public DbSet<IEC104ServerApplicationLayerOptionItem> IEC104ServerApplicationLayerOptions { get; set; }
+    /// <summary>
+    /// Настройки МЭК104 сервера
+    /// </summary>
+    public DbSet<IEC104ServerChannelLayerOptionItem> IEC104ServerChannelLayerOptions { get; set; }
     /// <summary>
     /// НСИ МЭК104 типы
     /// </summary>

@@ -34,13 +34,13 @@ public readonly struct F_SG_NA_1
 
     public static string Description => Properties.Resources._125_F_SG_NA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         var value = MemoryMarshal.AsRef<F_SG_NA_1>(buffer);
-        notification.Notify_F_SG_NA(ref header, value.Address, value.NOF, value.NOS, buffer[Size..(Size + value.LOS)].ToArray());
+        notification.Notify_F_SG_NA(in header, value.Address, value.NOF, value.NOS, buffer[Size..(Size + value.LOS)]);
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, ref F_SG_NA_1 F_SG_NA_1, byte[] segment)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, in F_SG_NA_1 F_SG_NA_1, byte[] segment)
     {
         header.SerializeUnsafe(buffer, 0);
         F_SG_NA_1.SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size);

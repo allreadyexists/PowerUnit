@@ -31,17 +31,17 @@ public readonly struct M_SP_TA_1_Single
 
     public static string Description => Properties.Resources._002_M_SP_TA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         for (ushort i = 0; i < header.Count; i++)
         {
             var value = MemoryMarshal.AsRef<M_SP_TA_1_Single>(buffer.Slice(i * Size, Size));
-            notification.Notify_M_SP(ref header,
+            notification.Notify_M_SP(in header,
                 value.Address, value.Value, value.Status, value._cp24.DateTime(dateTime), value._cp24.TimeStatus);
         }
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, ref M_SP_TA_1_Single M_SP_TA_1_Single)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, in M_SP_TA_1_Single M_SP_TA_1_Single)
     {
         throw new NotImplementedException();
     }

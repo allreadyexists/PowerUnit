@@ -6,102 +6,8 @@ namespace PowerUnit;
 
 public partial class Iec60870_5_104ServerApplicationLayer
 {
-    private sealed class FileReadState
-    {
-        public SortedDictionary<byte, byte> SectionControlSum { get; } = [];
-        public FileInfo? FileInfo { get; set; }
-    }
-
-    private readonly ConcurrentDictionary<ushort, FileReadState> _fileReadStates = [];
-
-    private static uint AdjustSectionLength(int fileSize, uint sectionMinLength)
-    {
-        var calcSectionLength = (uint)fileSize / 253;
-        return calcSectionLength < sectionMinLength ? sectionMinLength : calcSectionLength;
-    }
-
-    private static uint SectionLength(int fileSize, byte sectionName, uint sectionMinLength)
-    {
-        var sectionLength = AdjustSectionLength(fileSize, sectionMinLength);
-
-        var sectionOffset = (sectionName - 1) * sectionLength;
-        if (sectionOffset + sectionLength < fileSize)
-            return sectionLength;
-        else
-        {
-            if (fileSize > sectionOffset)
-                return (uint)(fileSize - sectionOffset);
-            else
-                return 0;
-        }
-    }
-
-    private uint GetSectionLength(ushort fileName, byte sectionName, uint sectionMinLength)
-    {
-        var fileReadState = _fileReadStates.GetOrAdd(fileName, (fileName) =>
-        {
-            var fileReadState = new FileReadState();
-            var fileInfo = _fileProvider.GetFileInfo(fileName);
-            if (fileInfo != null && fileInfo.Length < 0xFFFFFF)
-            {
-                fileReadState.FileInfo = fileInfo;
-            }
-
-            return fileReadState;
-        });
-
-        return SectionLength((int)(fileReadState.FileInfo?.Length ?? 0), sectionName, sectionMinLength);
-    }
-
-    private FileReadState UpdateFileReadStateSectionCs(ushort fileName, byte sectionName, byte sectionCs)
-    {
-        return _fileReadStates.AddOrUpdate(fileName, (fileName) =>
-        {
-            var fileReadState = new FileReadState();
-            var fileInfo = _fileProvider.GetFileInfo(fileName);
-            if (fileInfo != null && fileInfo.Length < 0xFFFFFF)
-            {
-                fileReadState.FileInfo = fileInfo;
-            }
-
-            return fileReadState;
-        },
-        (fileName, oldValue) =>
-        {
-            if (!oldValue.SectionControlSum.TryGetValue(sectionName, out var value))
-            {
-                oldValue.SectionControlSum[sectionName] = sectionCs;
-            }
-
-            return oldValue;
-        });
-    }
-
-    private byte GetFileCs(ushort fileName)
-    {
-        var fileInfo = _fileProvider?.GetFileInfo(fileName);
-        var sectionLength = AdjustSectionLength((int)(fileInfo?.Length ?? 0), _applicationLayerOption.FileSectionSize);
-        var sectionFullCount = fileInfo.Length / sectionLength;
-        var sectionPartCount = fileInfo.Length % sectionLength != 0 ? 1 : 0;
-
-        _fileReadStates.TryGetValue(fileName, out var fileReadState);
-
-        byte fileCs = 0;
-        for (byte sectionName = 1; sectionName <= sectionFullCount + sectionPartCount; sectionName++)
-        {
-            byte sectionCs;
-            if (!fileReadState.SectionControlSum.TryGetValue(sectionName, out sectionCs))
-            {
-                var section = _fileProvider.GetSection(fileName, sectionName, SectionLength((int)fileInfo.Length, sectionName, _applicationLayerOption.FileSectionSize));
-                var newSectionCs = section.Aggregate<byte, byte>(0, (x, t) => (byte)(x + t));
-                fileReadState.SectionControlSum[sectionName] = sectionCs = newSectionCs;
-            }
-
-            fileCs = (byte)(fileCs + sectionCs);
-        }
-
-        return fileCs;
-    }
+    private readonly ConcurrentDictionary<ushort, FileReadCache> _fileReadStates = [];
+    private readonly ConcurrentDictionary<ushort, FileWriteCache> _fileWriteStates = [];
 
     /// <summary>
     /// Готовность файла F_FR_NA_1 = 120,
@@ -119,13 +25,20 @@ public partial class Iec60870_5_104ServerApplicationLayer
         {
             _ = SendInRentBuffer(buffer =>
                 {
+                    var fileReady = _fileProvider.PrepareWriteFile(nof, out var fileInfo);
+                    if (fileReady)
+                    {
+                        _fileWriteStates[nof] = new FileWriteCache();
+                    }
+
                     var headerReq = new AsduPacketHeader_2_2(AsduType.F_SC_NA_1, SQ.Single, 1,
                         COT.FILE_TRANSFER,
-                        PN.Positive,
+                        fileReady ? PN.Positive : PN.Negative,
                         initAddr: header.InitAddr,
                         commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+
                     var F_SC_NA_1 = new F_SC_NA_1(address, nof, 1, SCQ.FileRequest);
-                    var length = F_SC_NA_1.Serialize(buffer, ref headerReq, ref F_SC_NA_1);
+                    var length = F_SC_NA_1.Serialize(buffer, in headerReq, in F_SC_NA_1);
                     _packetSender!.Send(buffer[..length]);
                     return Task.CompletedTask;
                 });
@@ -153,13 +66,15 @@ public partial class Iec60870_5_104ServerApplicationLayer
         {
             _ = SendInRentBuffer(buffer =>
             {
+                var fileReady = _fileWriteStates.TryGetValue(nof, out _);
+
                 var headerReq = new AsduPacketHeader_2_2(AsduType.F_SC_NA_1, SQ.Single, 1,
                     COT.FILE_TRANSFER,
-                    PN.Positive,
+                    fileReady ? PN.Positive : PN.Negative,
                     initAddr: header.InitAddr,
                     commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
                 var F_SC_NA_1 = new F_SC_NA_1(address, nof, nos, SCQ.SectionRequest);
-                var length = F_SC_NA_1.Serialize(buffer, ref headerReq, ref F_SC_NA_1);
+                var length = F_SC_NA_1.Serialize(buffer, in headerReq, in F_SC_NA_1);
                 _packetSender!.Send(buffer[..length]);
                 return Task.CompletedTask;
             });
@@ -211,7 +126,7 @@ public partial class Iec60870_5_104ServerApplicationLayer
                                         directoryContentChank[i].FileOrDirectoryTimeStamp);
                                 }
 
-                                var length = F_DR_TA_1_Sequence.Serialize(buffer, ref headerReq, new Address3(address), F_DR_TA_1_Sequences[0..directoryContentChank.Length]);
+                                var length = F_DR_TA_1_Sequence.Serialize(buffer, in headerReq, new Address3(address), F_DR_TA_1_Sequences[0..directoryContentChank.Length]);
                                 _packetSender!.Send(buffer[..length]);
                                 address += (ushort)directoryContentChank.Length;
                             }
@@ -223,7 +138,7 @@ public partial class Iec60870_5_104ServerApplicationLayer
                                 PN.Positive,
                                 initAddr: header.InitAddr,
                                 commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                            var length = F_DR_TA_1_Sequence.Serialize(buffer, ref headerReq, new Address3(address), []);
+                            var length = F_DR_TA_1_Sequence.Serialize(buffer, in headerReq, new Address3(address), []);
                             _packetSender!.Send(buffer[..length]);
                         }
 
@@ -236,71 +151,83 @@ public partial class Iec60870_5_104ServerApplicationLayer
                         switch (scq)
                         {
                             case SCQ.FileSelect: // инициализация чтения файла
-                                // ответ IEC 60870-5-101/104 ASDU: ASDU=1 F_FR_NA_1 File    IOA=0 'file ready'
-                                var fileInfo = _fileProvider.GetFileInfo(nof);
-                                var fileReady = fileInfo != null && fileInfo.Length < 0xFFFFFF;
-
+                                                 // ответ IEC 60870-5-101/104 ASDU: ASDU=1 F_FR_NA_1 File    IOA=0 'file ready'
                                 var headerReq = new AsduPacketHeader_2_2(AsduType.F_FR_NA_1, SQ.Single, 1,
                                     COT.FILE_TRANSFER,
                                     PN.Positive,
                                     initAddr: header.InitAddr,
                                     commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
 
-                                var F_FR_NA_1 = new F_FR_NA_1(address, nof, fileReady ? (uint)fileInfo!.Length : 0, fileReady ? FRQ.Positive : FRQ.Negative);
+                                var fileReady = _fileProvider.PrepareReadFile(nof, out var fileInfo);
+                                if (fileReady)
+                                {
+                                    _fileReadStates[nof] = fileInfo!;
+                                }
 
-                                var length = F_FR_NA_1.Serialize(
-                                    buffer, ref headerReq, ref F_FR_NA_1);
+                                var F_FR_NA_1 = new F_FR_NA_1(address, nof, fileReady ? (uint)fileInfo!.Length : 0, fileReady ? FRQ.Positive : FRQ.Negative);
+                                var length = F_FR_NA_1.Serialize(buffer, in headerReq, in F_FR_NA_1);
+
                                 _packetSender!.Send(buffer[..length]);
+
                                 break;
                             case SCQ.FileRequest: // запрос секции
                                 //ответ IEC 60870 - 5 - 101 / 104 ASDU: ASDU = 1 F_SR_NA_1 File    IOA = 0 'section ready'
-                                var fileInfo1 = _fileProvider.GetFileInfo(nof);
-                                var fileReady1 = fileInfo1 != null && fileInfo1.Length < 0xFFFFFF;
+                                F_SR_NA_1 F_SR_NA_1;
+                                int length1;
 
-                                var lengthOfSection = GetSectionLength(nof, nos, _applicationLayerOption.FileSectionSize);
+                                var fileReady1 = _fileReadStates.TryGetValue(nof, out var fileCache);
+
                                 var headerReq1 = new AsduPacketHeader_2_2(AsduType.F_SR_NA_1, SQ.Single, 1,
-                                COT.FILE_TRANSFER,
-                                PN.Positive,
-                                initAddr: header.InitAddr,
-                                commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+                                    COT.FILE_TRANSFER,
+                                    PN.Positive,
+                                    initAddr: header.InitAddr,
+                                    commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
 
-                                var F_SR_NA_1 = new F_SR_NA_1(address, nof, nos, fileReady1 ? lengthOfSection : 0, fileReady1 ? SRQ.Ready : SRQ.NotReady);
+                                if (fileReady1)
+                                {
+                                    F_SR_NA_1 = new F_SR_NA_1(address, nof, nos, (ushort)fileCache!.Length, SRQ.Ready);
+                                }
+                                else
+                                {
+                                    F_SR_NA_1 = new F_SR_NA_1(address, nof, nos, 0, SRQ.NotReady);
+                                }
 
-                                var length1 = F_SR_NA_1.Serialize(buffer, ref headerReq1, ref F_SR_NA_1);
+                                length1 = F_SR_NA_1.Serialize(buffer, in headerReq1, in F_SR_NA_1);
                                 _packetSender!.Send(buffer[..length1]);
                                 break;
                             case SCQ.SectionRequest: // запрос секции
                                                      // ответ - готовые сегменты IEC 60870-5-101/104 ASDU: ASDU=1 F_SG_NA_1 File    IOA=0 'segment'
                                                      // когда сегменты закончатся: IEC 60870 - 5 - 101 / 104 ASDU: ASDU = 1 F_LS_NA_1 File    IOA = 0 'last section, last segment'
-                                var fileInfo2 = _fileProvider.GetFileInfo(nof)!;
-                                var section = _fileProvider.GetSection(nof, nos, AdjustSectionLength((int)fileInfo2.Length, _applicationLayerOption.FileSectionSize));
-                                var sectionCs = section.Aggregate<byte, byte>(0, (x, t) => (byte)(x + t));
-                                UpdateFileReadStateSectionCs(nof, nos, sectionCs);
+                                var fileReady2 = _fileReadStates.TryGetValue(nof, out var fileCache1);
 
-                                foreach (var segment in section.Chunk((byte)_applicationLayerOption.FileSegmentSize))
+                                if (fileReady2)
                                 {
-                                    var headerReq2 = new AsduPacketHeader_2_2(AsduType.F_SG_NA_1, SQ.Single, 1,
-                                        COT.FILE_TRANSFER,
-                                        PN.Positive,
-                                        initAddr: header.InitAddr,
-                                        commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+                                    var (section, cs) = fileCache1!.Sections[nos - 1];
+                                    foreach (var segment in section.Chunk((byte)_applicationLayerOption.FileSegmentSize))
+                                    {
+                                        var headerReq2 = new AsduPacketHeader_2_2(AsduType.F_SG_NA_1, SQ.Single, 1,
+                                            COT.FILE_TRANSFER,
+                                            PN.Positive,
+                                            initAddr: header.InitAddr,
+                                            commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
 
-                                    var F_SG_NA_1 = new F_SG_NA_1(address, nof, nos, (byte)segment.Length);
+                                        var F_SG_NA_1 = new F_SG_NA_1(address, nof, nos, (byte)segment.Length);
 
-                                    var length2 = F_SG_NA_1.Serialize(buffer, ref headerReq2, ref F_SG_NA_1, segment);
-                                    _packetSender!.Send(buffer[..length2]);
+                                        var length2 = F_SG_NA_1.Serialize(buffer, in headerReq2, in F_SG_NA_1, segment);
+                                        _packetSender!.Send(buffer[..length2]);
+                                    }
+
+                                    var headerReq3 = new AsduPacketHeader_2_2(AsduType.F_LS_NA_1, SQ.Single, 1,
+                                            COT.FILE_TRANSFER,
+                                            PN.Positive,
+                                            initAddr: header.InitAddr,
+                                            commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+
+                                    var F_LS_NA_1 = new F_LS_NA_1(address, nof, nos, LSQ.SectionSendWithoutDeactivation, cs);
+
+                                    var length3 = F_LS_NA_1.Serialize(buffer, in headerReq3, in F_LS_NA_1);
+                                    _packetSender!.Send(buffer[..length3]);
                                 }
-
-                                var headerReq3 = new AsduPacketHeader_2_2(AsduType.F_LS_NA_1, SQ.Single, 1,
-                                        COT.FILE_TRANSFER,
-                                        PN.Positive,
-                                        initAddr: header.InitAddr,
-                                        commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-
-                                var F_LS_NA_1 = new F_LS_NA_1(address, nof, nos, LSQ.SectionSendWithoutDeactivation, sectionCs);
-
-                                var length3 = F_LS_NA_1.Serialize(buffer, ref headerReq3, ref F_LS_NA_1);
-                                _packetSender!.Send(buffer[..length3]);
                                 break;
                             default:
                                 throw new Iec60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} scq {scq}");
@@ -329,13 +256,59 @@ public partial class Iec60870_5_104ServerApplicationLayer
     {
         _ = SendInRentBuffer(buffer =>
             {
+                var fileReady = _fileWriteStates.TryGetValue(nof, out var fileCache);
+                var isFile = lsq is LSQ.FileSendWithoutDeactivation or LSQ.FileSendWithDeactivation;
+
+                AFQ afq = AFQ.Default;
+
+                if (fileReady)
+                {
+                    if (isFile)
+                    {
+                        var fileCs = fileCache.Sections.SelectMany(x => x.Value).Aggregate<byte[], byte>(0, (x, t) => (byte)(x + t.Aggregate<byte, byte>(0, (xx, tt) => (byte)(xx + tt))));
+                        if (fileCs == chs)
+                        {
+                            afq = AFQ.FileConfirmPositive;
+                            _fileProvider.CompliteWriteFile(nof, fileCache.Sections.SelectMany(x => x.Value));
+                        }
+                        else
+                        {
+                            afq = AFQ.ErrorCS;
+                        }
+                    }
+                    else
+                    {
+                        // check section CS
+                        if (fileCache.Sections.TryGetValue(nos, out var section))
+                        {
+                            var sectionCs = section.Aggregate<byte[], byte>(0, (x, t) => (byte)(x + t.Aggregate<byte, byte>(0, (xx, tt) => (byte)(xx + tt))));
+                            if (sectionCs == chs)
+                            {
+                                afq = AFQ.SectionConfirmPositive;
+                            }
+                            else
+                            {
+                                afq = AFQ.ErrorCS;
+                            }
+                        }
+                        else
+                        {
+                            afq = AFQ.UndefinedSectionName;
+                        }
+                    }
+                }
+                else
+                {
+                    afq = AFQ.UndefinedFileName;
+                }
+
                 var headerReq = new AsduPacketHeader_2_2(AsduType.F_AF_NA_1, SQ.Single, 1,
                     COT.FILE_TRANSFER,
                     PN.Positive,
                     initAddr: header.InitAddr,
                     commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                var F_AF_NA_1 = new F_AF_NA_1(address, nof, nos, (lsq is LSQ.FileSendWithoutDeactivation or LSQ.FileSendWithDeactivation) ? AFQ.FileConfirmPositive : AFQ.SectionConfirmPositive);
-                var length = F_AF_NA_1.Serialize(buffer, ref headerReq, ref F_AF_NA_1);
+                var F_AF_NA_1 = new F_AF_NA_1(address, nof, nos, afq);
+                var length = F_AF_NA_1.Serialize(buffer, in headerReq, in F_AF_NA_1);
                 _packetSender!.Send(buffer[..length]);
                 return Task.CompletedTask;
             });
@@ -359,43 +332,55 @@ public partial class Iec60870_5_104ServerApplicationLayer
                 {
                     case AFQ.SectionConfirmPositive:
                         // продолжить передачу секций если они есть
-                        var newNos = (byte)(nos + 1);
-                        var fileInfo1 = _fileProvider.GetFileInfo(nof);
-                        var fileReady1 = fileInfo1 != null && fileInfo1!.Length < 0xFFFFFF;
-                        var lengthOfSection = GetSectionLength(nof, newNos, _applicationLayerOption.FileSectionSize);
-
+                        var newNos = nos + 1;
                         AsduPacketHeader_2_2 headerReq1;
                         int length1;
 
-                        if (lengthOfSection > 0)
+                        var fileReady = _fileReadStates.TryGetValue(nof, out var fileCache);
+
+                        if (fileReady)
                         {
-                            headerReq1 = new AsduPacketHeader_2_2(AsduType.F_SR_NA_1, SQ.Single, 1,
-                            COT.FILE_TRANSFER,
-                            PN.Positive,
-                            initAddr: header.InitAddr,
-                            commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+                            if (newNos <= fileCache!.Sections.Count)
+                            {
+                                try
+                                {
+                                    var section = fileCache!.Sections[newNos - 1];
 
-                            var F_SR_NA_1 = new F_SR_NA_1(address, nof, newNos, fileReady1 ? lengthOfSection : 0, fileReady1 ? SRQ.Ready : SRQ.NotReady);
+                                    headerReq1 = new AsduPacketHeader_2_2(AsduType.F_SR_NA_1, SQ.Single, 1,
+                                    COT.FILE_TRANSFER,
+                                    PN.Positive,
+                                    initAddr: header.InitAddr,
+                                    commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
 
-                            length1 = F_SR_NA_1.Serialize(buffer, ref headerReq1, ref F_SR_NA_1);
+                                    var F_SR_NA_1 = new F_SR_NA_1(address, nof, (byte)newNos, (uint)section.section.Length, SRQ.Ready);
+
+                                    length1 = F_SR_NA_1.Serialize(buffer, in headerReq1, in F_SR_NA_1);
+                                }
+                                catch (ArgumentOutOfRangeException ex)
+                                {
+                                    length1 = 0;
+                                    newNos = 0;
+                                }
+                            }
+                            else
+                            {
+                                headerReq1 = new AsduPacketHeader_2_2(AsduType.F_LS_NA_1, SQ.Single, 1,
+                                COT.FILE_TRANSFER,
+                                PN.Positive,
+                                initAddr: header.InitAddr,
+                                commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+
+                                var F_LS_NA_1 = new F_LS_NA_1(address, nof, nos, LSQ.FileSendWithoutDeactivation, fileCache.Cs);
+
+                                length1 = F_LS_NA_1.Serialize(buffer, in headerReq1, in F_LS_NA_1);
+                            }
+
+                            _packetSender!.Send(buffer[..length1]);
                         }
-                        else
-                        {
-                            headerReq1 = new AsduPacketHeader_2_2(AsduType.F_LS_NA_1, SQ.Single, 1,
-                            COT.FILE_TRANSFER,
-                            PN.Positive,
-                            initAddr: header.InitAddr,
-                            commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-
-                            var F_LS_NA_1 = new F_LS_NA_1(address, nof, nos, LSQ.FileSendWithoutDeactivation, GetFileCs(nof));
-
-                            length1 = F_LS_NA_1.Serialize(buffer, ref headerReq1, ref F_LS_NA_1);
-                        }
-
-                        _packetSender!.Send(buffer[..length1]);
                         break;
                     case AFQ.FileConfirmPositive:
-                        _fileProvider.CloseFile(nof);
+                        _fileReadStates.Remove(nof, out _);
+                        _fileProvider.CompliteReadFile(nof);
                         break;
                     default:
                         throw new Iec60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} afq {afq}");
@@ -414,8 +399,17 @@ public partial class Iec60870_5_104ServerApplicationLayer
     /// <param name="nos"></param>
     /// <param name="segment"></param>
     /// <param name="ct"></param>
-    internal void Process_F_SG_NA_1(AsduPacketHeader_2_2 header, ushort address, ushort nof, byte nos, byte[] segment, CancellationToken ct)
+    internal void Process_F_SG_NA_1(AsduPacketHeader_2_2 header, ushort address, ushort nof, byte nos, Span<byte> segment, CancellationToken ct)
     {
+        var fileReady = _fileWriteStates.TryGetValue(nof, out var fileCache);
+        if (!fileReady)
+            throw new Iec60870_5_104ApplicationException(header);
+
+        if (!fileCache!.Sections.TryGetValue(nos, out var sections))
+        {
+            fileCache!.Sections[nos] = sections = [];
+        }
+        sections.Add(segment.ToArray());
     }
 
     /// <summary>

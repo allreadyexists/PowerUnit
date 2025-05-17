@@ -26,13 +26,13 @@ public readonly struct C_RD_NA_1
 
     public static string Description => Properties.Resources._102_C_RD_NA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         var address = MemoryMarshal.AsRef<C_RD_NA_1>(buffer[..Size]);
-        notification.Notify_C_RD_NA(ref header, address.Address);
+        notification.Notify_C_RD_NA(in header, address.Address);
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, ref C_RD_NA_1 C_RD_NA_1)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, in C_RD_NA_1 C_RD_NA_1)
     {
         header.SerializeUnsafe(buffer, 0);
         C_RD_NA_1.SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size);

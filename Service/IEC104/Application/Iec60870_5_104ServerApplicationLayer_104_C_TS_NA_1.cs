@@ -14,7 +14,7 @@ public partial class Iec60870_5_104ServerApplicationLayer
                 initAddr: header.InitAddr,
                 commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
                 var C_TS_NA_1 = new C_TS_NA_1(fbp);
-                var length = C_TS_NA_1.Serialize(buffer, ref headerReq, ref C_TS_NA_1);
+                var length = C_TS_NA_1.Serialize(buffer, in headerReq, in C_TS_NA_1);
                 _packetSender!.Send(buffer[..length]);
                 return Task.CompletedTask;
             });
@@ -30,7 +30,7 @@ public partial class Iec60870_5_104ServerApplicationLayer
                 initAddr: header.InitAddr,
                 commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
                 var C_TS_TA_1 = new C_TS_TA_1(tsc, dateTime, status);
-                var length = C_TS_TA_1.Serialize(buffer, ref headerReq, ref C_TS_TA_1);
+                var length = C_TS_TA_1.Serialize(buffer, in headerReq, in C_TS_TA_1);
                 _packetSender!.Send(buffer[..length]);
                 return Task.CompletedTask;
             });

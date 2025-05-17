@@ -51,6 +51,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerUnit.Common.Options", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerUnit.Common.Other", "Common\PowerUnit.Common.Other\PowerUnit.Common.Other.csproj", "{6D6EF3E4-1213-C195-8EDA-9AA46523E2EE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerUnit.Infrastructure.Monitoring", "PowerUnit.Infrastructure.Monitoring\PowerUnit.Infrastructure.Monitoring.csproj", "{9212B719-92FE-4492-8CCA-B93EF3A1B0A4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +127,10 @@ Global
 		{6D6EF3E4-1213-C195-8EDA-9AA46523E2EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6D6EF3E4-1213-C195-8EDA-9AA46523E2EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6D6EF3E4-1213-C195-8EDA-9AA46523E2EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9212B719-92FE-4492-8CCA-B93EF3A1B0A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9212B719-92FE-4492-8CCA-B93EF3A1B0A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9212B719-92FE-4492-8CCA-B93EF3A1B0A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9212B719-92FE-4492-8CCA-B93EF3A1B0A4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -148,6 +154,7 @@ Global
 		{F81BE445-51BD-88D9-07BB-0342E90E0919} = {5D9B21FA-B7F1-487F-AEAC-4C8B48C1E653}
 		{42CF48F1-75CF-4B5F-BE3A-64A449DCDEAF} = {FCF12A82-48DE-4B83-AA88-48F429468158}
 		{6D6EF3E4-1213-C195-8EDA-9AA46523E2EE} = {FCF12A82-48DE-4B83-AA88-48F429468158}
+		{9212B719-92FE-4492-8CCA-B93EF3A1B0A4} = {5D9B21FA-B7F1-487F-AEAC-4C8B48C1E653}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {3B75BB3F-D7FF-47AB-9B16-D6F915D5B9EC}

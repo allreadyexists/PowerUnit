@@ -42,13 +42,13 @@ public readonly struct F_SR_NA_1
 
     public static string Description => Properties.Resources._121_F_SR_NA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         var value = MemoryMarshal.AsRef<F_SR_NA_1>(buffer);
-        notification.Notify_F_SR_NA(ref header, value.Address, value.NOF, value.NOS, value.LOS, value.SRQ);
+        notification.Notify_F_SR_NA(in header, value.Address, value.NOF, value.NOS, value.LOS, value.SRQ);
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, ref F_SR_NA_1 F_SR_NA_1)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, in F_SR_NA_1 F_SR_NA_1)
     {
         header.SerializeUnsafe(buffer, 0);
         F_SR_NA_1.SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size);

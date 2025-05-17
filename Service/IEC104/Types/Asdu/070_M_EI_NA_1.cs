@@ -25,13 +25,13 @@ public readonly struct M_EI_NA_1
 
     public static string Description => Properties.Resources._070_M_EI_NA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         var coi = MemoryMarshal.AsRef<M_EI_NA_1>(buffer[..Size]);
-        notification.Notify_M_EI_NA(ref header, coi.Address, coi.COI);
+        notification.Notify_M_EI_NA(in header, coi.Address, coi.COI);
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, ref M_EI_NA_1 M_EI_NA_1)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, in M_EI_NA_1 M_EI_NA_1)
     {
         header.SerializeUnsafe(buffer, 0);
         M_EI_NA_1.SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size);

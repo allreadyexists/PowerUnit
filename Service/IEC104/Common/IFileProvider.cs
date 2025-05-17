@@ -8,8 +8,37 @@ public record FileItem(ushort FileOrSubDirectoryName, uint FileSize, SOF SOF, Da
 
 public record DirectoryItem(ushort FileOrSubDirectoryName, DateTime FileOrDirectoryTimeStamp) : FileSystemItem(FileOrSubDirectoryName, 0, SOF.IsSubDirectory, FileOrDirectoryTimeStamp);
 
+public class FileWriteCache
+{
+    public SortedDictionary<byte, List<byte[]>> Sections { get; } = [];
+}
+
+public class FileReadCache
+{
+    public List<(byte[] section, byte cs)> Sections { get; } = [];
+    public byte Cs { get; }
+    public int Length { get; }
+
+    public FileReadCache(string file, int length, int sectionLength)
+    {
+        Cs = 0;
+        Length = length;
+        foreach (var section in File.ReadAllBytes(file).Chunk(sectionLength))
+        {
+            var sectionCs = section.Aggregate<byte, byte>(0, (x, t) => (byte)(x + t));
+            Sections.Add(new(section, sectionCs));
+            Cs = (byte)(Cs + sectionCs);
+        }
+    }
+}
+
 public interface IFileProvider
 {
+    /// <summary>
+    /// Установить идентификатор провайдера
+    /// </summary>
+    /// <param name="id"></param>
+    void SetId(int id1, Guid id2);
     /// <summary>
     /// Получить список файлов сервера
     /// </summary>
@@ -18,22 +47,26 @@ public interface IFileProvider
     /// <returns></returns>
     IEnumerable<FileSystemItem> GetDirectoryContent(uint address, ushort fileName);
     /// <summary>
-    /// Получить информацию о файле
+    /// Подготовить чтение файла
     /// </summary>
     /// <param name="fileName"></param>
     /// <returns></returns>
-    FileInfo? GetFileInfo(ushort fileName);
+    bool PrepareReadFile(ushort fileName/*, int sectionLength*/, out FileReadCache? fileCache);
     /// <summary>
-    /// Получить секцию файла
+    /// Подготовить заптсь файла
     /// </summary>
     /// <param name="fileName"></param>
-    /// <param name="sectionName"></param>
-    /// <param name="sectionMaxLength"></param>
+    /// <param name="fileCache"></param>
     /// <returns></returns>
-    byte[] GetSection(ushort fileName, byte sectionName, uint sectionMaxLength);
+    bool PrepareWriteFile(ushort fileName/*, int sectionLength*/, out FileWriteCache? fileCache);
     /// <summary>
-    /// Завершить работу с файлом
+    /// Завершить работу с файлом на чтение
     /// </summary>
     /// <param name="fileName"></param>
-    void CloseFile(ushort fileName);
+    void CompliteReadFile(ushort fileName);
+    /// <summary>
+    /// Завершить работу с файлом на запись
+    /// </summary>
+    /// <param name="fileName"></param>
+    void CompliteWriteFile(ushort fileName, IEnumerable<byte[]> sections);
 }

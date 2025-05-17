@@ -30,13 +30,13 @@ public readonly struct C_CS_NA_1
 
     public static string Description => Properties.Resources._103_C_CS_NA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         var dateTimeFromPacket = MemoryMarshal.AsRef<C_CS_NA_1>(buffer[..Size]);
-        notification.Notify_C_CS_NA(ref header, dateTimeFromPacket.Address, dateTimeFromPacket.DateTime, dateTimeFromPacket.TimeStatus);
+        notification.Notify_C_CS_NA(in header, dateTimeFromPacket.Address, dateTimeFromPacket.DateTime, dateTimeFromPacket.TimeStatus);
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, ref C_CS_NA_1 C_CS_NA_1)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, in C_CS_NA_1 C_CS_NA_1)
     {
         header.SerializeUnsafe(buffer, 0);
         C_CS_NA_1.SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size);

@@ -35,16 +35,16 @@ public readonly struct M_DP_TA_1_Single
 
     public static string Description => Properties.Resources._004_M_DP_TA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, ref AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
     {
         for (ushort i = 0; i < header.Count; i++)
         {
             var value = MemoryMarshal.AsRef<M_DP_TA_1_Single>(buffer.Slice(i * Size, Size));
-            notification.Notify_M_DP(ref header, value.Address, value.Value, value.Status, value.DateTime(dateTime), value.TimeStatus);
+            notification.Notify_M_DP(in header, value.Address, value.Value, value.Status, value.DateTime(dateTime), value.TimeStatus);
         }
     }
 
-    public static int Serialize(byte[] buffer, ref AsduPacketHeader_2_2 header, M_DP_TA_1_Single[] M_DP_TA_1_Singles)
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, M_DP_TA_1_Single[] M_DP_TA_1_Singles)
     {
         var length = AsduPacketHeader_2_2.Size;
         header.SerializeUnsafe(buffer, 0);
