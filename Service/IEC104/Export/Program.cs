@@ -6,7 +6,8 @@ using NLog.Targets;
 using NLog.Targets.Wrappers;
 using NLog.Web;
 
-using OpenTelemetry;
+using Npgsql;
+
 using OpenTelemetry.Metrics;
 
 namespace PowerUnit;
@@ -67,13 +68,16 @@ internal sealed class Program
                         .AddRuntimeInstrumentation()
                         .AddProcessInstrumentation()
                         .AddAspNetCoreInstrumentation()
+                        .AddSqlClientInstrumentation()
+                        .AddNpgsqlInstrumentation()
                         .AddPrometheusExporter(opt =>
                         {
                             opt.ScrapeEndpointPath = "/metrics";
                         })
-                        .AddOtlpExporter(opt =>
+                        .AddOtlpExporter((opt, readerOpt) =>
                         {
-                            opt.Endpoint = new Uri("grpc://host.docker.internal:4317");
+                            opt.Endpoint = new Uri("http://host.docker.internal:4317");
+                            readerOpt.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 5000;
                         });
                     });
 
