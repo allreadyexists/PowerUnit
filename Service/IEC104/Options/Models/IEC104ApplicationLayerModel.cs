@@ -18,10 +18,10 @@ public sealed record class IEC104ApplicationLayerModel
     /// Разрешена отправка спорадики клиентам
     /// </summary>
     public bool SporadicSendEnabled { get; set; }
-    /// <summary>
-    /// Размер файловой секции
-    /// </summary>
-    public uint FileSectionSize { get; set; } = 1024;
+    ///// <summary>
+    ///// Размер файловой секции
+    ///// </summary>
+    //public uint FileSectionSize { get; set; } = 1024;
     /// <summary>
     /// Размер файлового сегмента
     /// </summary>

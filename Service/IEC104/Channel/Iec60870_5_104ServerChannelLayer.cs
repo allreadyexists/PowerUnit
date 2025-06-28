@@ -220,7 +220,7 @@ public class Iec60870_5_104ServerChannelLayer :
     #endregion
 
     private readonly IServiceProvider _serviceProvider;
-    private readonly Guid _connectionId;
+
     private readonly TimeProvider _timeProvider;
 
     private IAsduNotification? _asduNotification;
@@ -272,11 +272,11 @@ public class Iec60870_5_104ServerChannelLayer :
         new APCI(PacketU.Size, new PacketU(UControl.TestFrCon)).SerializeUnsafe(_testCon, 0);
     }
 
-    private static Iec60870_5_104ServerApplicationLayer GetApplicationLayer(IServiceProvider serviceProvider, Guid connectionId, IEC104ServerModel serverOptions, IChannelLayerPacketSender channelLayerPacketSender, IPhysicalLayerCommander physicalLayerCommander)
+    private static Iec60870_5_104ServerApplicationLayer GetApplicationLayer(IServiceProvider serviceProvider, IEC104ServerModel serverOptions, IChannelLayerPacketSender channelLayerPacketSender, IPhysicalLayerCommander physicalLayerCommander)
     {
         var applicationLayerOption = serverOptions.ApplicationLayerModel;
         var logger = serviceProvider.GetRequiredService<ILogger<Iec60870_5_104ServerApplicationLayer>>();
-        var serverApplicationLayer = new Iec60870_5_104ServerApplicationLayer(serviceProvider, connectionId, applicationLayerOption,
+        var serverApplicationLayer = new Iec60870_5_104ServerApplicationLayer(serviceProvider, applicationLayerOption,
             channelLayerPacketSender, physicalLayerCommander, logger);
 
         return serverApplicationLayer;
@@ -285,13 +285,12 @@ public class Iec60870_5_104ServerChannelLayer :
     /// <summary>
     /// Конструктор
     /// </summary>
-    public Iec60870_5_104ServerChannelLayer(IServiceProvider serviceProvider, Guid connectionId, IPhysicalLayerCommander physicalLayerController,
+    public Iec60870_5_104ServerChannelLayer(IServiceProvider serviceProvider, IPhysicalLayerCommander physicalLayerController,
         IEC104ServerModel serverOptions,
         ILogger<Iec60870_5_104ServerChannelLayer> logger,
         CancellationToken ct)
     {
         _serviceProvider = serviceProvider;
-        _connectionId = connectionId;
         _timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
         _timeoutsProcessService = serviceProvider.GetRequiredService<ITimeoutService>();
         _physicalLayerController = physicalLayerController;
@@ -555,7 +554,7 @@ public class Iec60870_5_104ServerChannelLayer :
             case UControl.StartDtAct:
                 if (!_isEstablishedConnection)
                 {
-                    _asduNotification = GetApplicationLayer(_serviceProvider, _connectionId, _serverOptions, this, _physicalLayerController);
+                    _asduNotification = GetApplicationLayer(_serviceProvider, _serverOptions, this, _physicalLayerController);
 
                     _isEstablishedConnection = true;
                     _timeout0Id = await StopTimerAsync(_timeout0Id, ct);

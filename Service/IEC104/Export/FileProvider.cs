@@ -1,7 +1,4 @@
-using Microsoft.Extensions.Logging;
-
 using System.Collections.Concurrent;
-using System.Text;
 
 namespace PowerUnit;
 
@@ -16,10 +13,11 @@ internal sealed class FileProvider : IFileProvider, IDisposable
     private readonly string _writeTemplate = "{0}.w.{1}";
     private readonly string _readTemplate = "{0}.r.{1}";
 
-    private readonly ConcurrentDictionary<string, bool> _readFiles = [];
+    //private readonly ConcurrentDictionary<string, bool> _readFiles = [];
     private readonly ConcurrentDictionary<string, bool> _writeFiles = [];
 
-    private readonly ConcurrentDictionary<ushort, FileStream> _fileStreams = new ConcurrentDictionary<ushort, FileStream>();
+    private readonly ConcurrentDictionary<ushort, FileReaderState> _fileBinaryReaders = new ConcurrentDictionary<ushort, FileReaderState>();
+    private readonly ConcurrentDictionary<ushort, FileWriterState> _fileBinaryWriters = new ConcurrentDictionary<ushort, FileWriterState>();
 
     public FileProvider(IEnviromentManager enviromentManager, ILogger<FileProvider> logger)
     {
@@ -37,24 +35,26 @@ internal sealed class FileProvider : IFileProvider, IDisposable
             File.Delete(file);
         }
 
-        foreach (var fileReadState in _fileStreams)
+        foreach (var fileBinaryReader in _fileBinaryReaders)
         {
-            fileReadState.Value.Close();
-            fileReadState.Value.Dispose();
+            fileBinaryReader.Value.Reader.Close();
+            fileBinaryReader.Value.Reader.Dispose();
         }
 
-        _fileStreams.Clear();
+        foreach (var fileBinaryWriter in _fileBinaryWriters)
+        {
+            fileBinaryWriter.Value.Writer.Close();
+            fileBinaryWriter.Value.Writer.Dispose();
+        }
     }
 
-    void IFileProvider.SetId(int id1, Guid id2)
+    void IFileProvider.SetId(int id1)
     {
         if (_id1 != null)
             throw new ArgumentException(nameof(IFileProvider.SetId), nameof(id1));
-        if (_id2 != null)
-            throw new ArgumentException(nameof(IFileProvider.SetId), nameof(id2));
 
         _id1 = id1;
-        _id2 = id2;
+        _id2 = Guid.NewGuid();
         _cachePath = Path.Combine(_enviromentManager.GetCachePath(), id1.ToString());
 
         if (!Directory.Exists(_cachePath))
@@ -71,73 +71,43 @@ internal sealed class FileProvider : IFileProvider, IDisposable
             if (ushort.TryParse(fileNameWithoutExtension, out var fileNameAsNumber))
             {
                 var fileInfo = new FileInfo(item);
-                if (fileInfo.Length < 0xFFFFFF)
-                {
-                    yield return new FileSystemItem(fileNameAsNumber, (uint)fileInfo.Length, 0, fileInfo.CreationTimeUtc);
-                }
+                yield return new FileSystemItem(fileNameAsNumber, fileInfo.Length, 0, fileInfo.CreationTimeUtc);
             }
         }
     }
 
-    private FileStream CreateFileReadState(ushort fileName)
-    {
-        var file = Path.Combine(_cachePath, $"{fileName}");
-        return File.OpenRead(file);
-    }
-
-    private static uint SectionLength(int fileSize, byte sectionName, uint sectionMaxLength)
-    {
-        var sectionOffset = (sectionName - 1) * sectionMaxLength;
-        if (sectionOffset + sectionMaxLength < fileSize)
-            return sectionMaxLength;
-        else
-        {
-            if (fileSize > sectionOffset)
-                return (uint)(fileSize - sectionOffset);
-            else
-                return 0;
-        }
-    }
-
-    bool IFileProvider.PrepareReadFile(ushort fileName/*, int sectionLength*/, out FileReadCache? fileCache)
+    bool IFileProvider.PrepareReadFile(ushort fileName, out FileReaderState? readState)
     {
         var cnt = 3;
-        fileCache = default;
+        readState = null;
         while (true)
         {
             try
             {
                 var fileSrc = Path.Combine(_cachePath, $"{fileName}");
-                if (!File.Exists(fileSrc))
-                    return false;
-
                 var fileDst = Path.Combine(_cachePath, string.Format(_readTemplate, fileName, _id2));
-                if (_readFiles.ContainsKey(fileDst))
+
+                if (!File.Exists(fileSrc) && !File.Exists(fileDst))
                     return false;
 
-                var fileInfo = new FileInfo(fileSrc);
-                if (fileInfo.Length > 0xFFFFFF)
+                if (_fileBinaryReaders.ContainsKey(fileName))
                     return false;
 
-                File.Copy(fileSrc, fileDst);
+                if (!File.Exists(fileDst))
+                    File.Move(fileSrc, fileDst);
 
-                fileInfo = new FileInfo(fileDst);
-                if (fileInfo.Length > 0xFFFFFF)
-                    return false;
+                readState = new FileReaderState(fileDst, fileSrc, new BinaryReader(File.OpenRead(fileDst)), 0);
 
-                var sectionLength = Math.Floor(fileInfo.Length / 128m);
-                if (sectionLength == 0)
-                {
-                    sectionLength = fileInfo.Length;
-                }
-
-                fileCache = new FileReadCache(fileDst, (int)fileInfo.Length, (int)sectionLength);
-                _readFiles.TryAdd(fileDst, true);
-
+                _fileBinaryReaders.TryAdd(fileName, readState);
                 return true;
             }
             catch (Exception ex)
             {
+                if (readState != null)
+                {
+                    readState.Reader.Dispose();
+                }
+
                 _logger.LogError(ex, nameof(IFileProvider.PrepareReadFile));
                 cnt--;
                 if (cnt == 0)
@@ -146,26 +116,38 @@ internal sealed class FileProvider : IFileProvider, IDisposable
         }
     }
 
-    bool IFileProvider.PrepareWriteFile(ushort fileName/*, int sectionLength*/, out FileWriteCache? fileCache)
+    bool IFileProvider.PrepareWriteFile(ushort fileName, out FileWriterState? writeState)
     {
         var cnt = 3;
-        fileCache = default;
+        writeState = null;
         while (true)
         {
             try
             {
+                var fileSrc = Path.Combine(_cachePath, $"{fileName}");
                 var fileDst = Path.Combine(_cachePath, string.Format(_writeTemplate, fileName, _id2));
-                if (_writeFiles.ContainsKey(fileDst))
+
+                if (!File.Exists(fileSrc) && !File.Exists(fileDst))
                     return false;
 
-                using var _ = File.Create(fileDst);
-                fileCache = new FileWriteCache();
-                _writeFiles.TryAdd(fileDst, true);
+                if (_fileBinaryWriters.ContainsKey(fileName))
+                    return false;
 
+                if (!File.Exists(fileDst))
+                    File.Move(fileSrc, fileDst);
+
+                writeState = new FileWriterState(fileDst, fileSrc, new BinaryWriter(File.OpenWrite(fileDst)), 0);
+
+                _fileBinaryWriters.TryAdd(fileName, writeState);
                 return true;
             }
             catch (Exception ex)
             {
+                if (writeState != null)
+                {
+                    writeState.Writer.Dispose();
+                }
+
                 _logger.LogError(ex, nameof(IFileProvider.PrepareWriteFile));
                 cnt--;
                 if (cnt == 0)
@@ -176,15 +158,17 @@ internal sealed class FileProvider : IFileProvider, IDisposable
 
     void IFileProvider.CompliteReadFile(ushort fileName)
     {
-        var fileDst = Path.Combine(_cachePath, string.Format(_readTemplate, fileName, _id2));
         var cnt = 3;
 
         while (true)
         {
             try
             {
-                _readFiles.Remove(fileDst, out _);
-                File.Delete(fileDst);
+                if (_fileBinaryReaders.Remove(fileName, out var fileReaderState))
+                {
+                    File.Move(fileReaderState.Name, fileReaderState.OriginName);
+                }
+
                 return;
             }
             catch (Exception ex)
@@ -197,27 +181,18 @@ internal sealed class FileProvider : IFileProvider, IDisposable
         }
     }
 
-    void IFileProvider.CompliteWriteFile(ushort fileName, IEnumerable<byte[]> sections)
+    void IFileProvider.CompliteWriteFile(ushort fileName)
     {
-        var fileDst = Path.Combine(_cachePath, string.Format(_writeTemplate, fileName, _id2));
-        var fileDst2 = Path.Combine(_cachePath, $"{fileName}");
-
         var cnt = 3;
 
         while (true)
         {
             try
             {
-                _writeFiles.Remove(fileDst, out _);
-
-                using var stream = File.Open(fileDst, FileMode.OpenOrCreate);
+                if (_fileBinaryWriters.Remove(fileName, out var fileWriterState))
                 {
-                    using var writer = new BinaryWriter(stream, Encoding.UTF8);
-                    foreach (var section in sections)
-                        writer.Write(section);
+                    File.Move(fileWriterState.Name, fileWriterState.OriginName);
                 }
-
-                File.Move(fileDst, fileDst2, true);
 
                 return;
             }

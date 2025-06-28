@@ -1,6 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
 using NetCoreServer;
 
 using System.Net.Sockets;
@@ -27,7 +24,7 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
         _logger = _provider.GetRequiredService<ILogger<IEC104ServerSession>>();
 
         // Канальный уровень
-        _channelLayer = new Iec60870_5_104ServerChannelLayer(_provider, Id, this, _options, _provider.GetRequiredService<ILogger<Iec60870_5_104ServerChannelLayer>>(), _cancellationTokenSource.Token);
+        _channelLayer = new Iec60870_5_104ServerChannelLayer(_provider, this, _options, _provider.GetRequiredService<ILogger<Iec60870_5_104ServerChannelLayer>>(), _cancellationTokenSource.Token);
     }
 
     protected override void OnConnecting()

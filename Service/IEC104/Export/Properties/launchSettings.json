@@ -6,7 +6,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "https://localhost:54499;http://localhost:54500"
+      "applicationUrl": "http://localhost:5000/metrics"
     }
   }
 }

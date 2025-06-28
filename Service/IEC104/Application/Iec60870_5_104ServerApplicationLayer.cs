@@ -55,13 +55,13 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
         }
     }
 
-    public Iec60870_5_104ServerApplicationLayer(IServiceProvider serviceProvider, Guid connectionId, IEC104ApplicationLayerModel applicationLayerOption, IChannelLayerPacketSender packetSender, IPhysicalLayerCommander physicalLayerCommander, ILogger<Iec60870_5_104ServerApplicationLayer> logger)
+    public Iec60870_5_104ServerApplicationLayer(IServiceProvider serviceProvider, IEC104ApplicationLayerModel applicationLayerOption, IChannelLayerPacketSender packetSender, IPhysicalLayerCommander physicalLayerCommander, ILogger<Iec60870_5_104ServerApplicationLayer> logger)
     {
         _serviceProvider = serviceProvider;
         _timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
         _readTransactionManager = new ApplicationLayerReadTransactionManager();
         _fileProvider = serviceProvider.GetRequiredService<IFileProvider>();
-        _fileProvider.SetId(applicationLayerOption.ServerId, connectionId);
+        _fileProvider.SetId(applicationLayerOption.ServerId);
         _applicationLayerOption = applicationLayerOption;
         _packetSender = packetSender;
         _physicalLayerCommander = physicalLayerCommander;
