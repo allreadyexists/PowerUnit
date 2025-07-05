@@ -47,7 +47,6 @@ internal sealed class Program
                     // внешний
                     services.AddScoped<IDataProvider, DataProvider>();
                     services.AddSingleton<IConfigProvider, ConfigProvider>();
-                    services.AddTransient<IFileProvider, FileProvider>();
 
                     // внутренний
                     services.AddSingleton<IEC104ServerFactory>();
@@ -76,7 +75,8 @@ internal sealed class Program
                         })
                         .AddOtlpExporter((opt, readerOpt) =>
                         {
-                            opt.Endpoint = new Uri("http://host.docker.internal:4317");
+                            //opt.Endpoint = new Uri("http://host.docker.internal:4317");
+                            opt.Endpoint = new Uri("http://localhost:4317");
                             readerOpt.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 5000;
                         });
                     });

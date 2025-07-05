@@ -14,8 +14,6 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
 
     private readonly ApplicationLayerReadTransactionManager _readTransactionManager;
 
-    private readonly IFileProvider _fileProvider;
-
     private readonly IEC104ApplicationLayerModel _applicationLayerOption;
 
     private readonly IPhysicalLayerCommander _physicalLayerCommander;
@@ -60,8 +58,6 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
         _serviceProvider = serviceProvider;
         _timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
         _readTransactionManager = new ApplicationLayerReadTransactionManager();
-        _fileProvider = serviceProvider.GetRequiredService<IFileProvider>();
-        _fileProvider.SetId(applicationLayerOption.ServerId);
         _applicationLayerOption = applicationLayerOption;
         _packetSender = packetSender;
         _physicalLayerCommander = physicalLayerCommander;
@@ -196,7 +192,6 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
 
     void IDisposable.Dispose()
     {
-        (_fileProvider as IDisposable)?.Dispose();
         _cts.Cancel();
         _cts.Dispose();
     }

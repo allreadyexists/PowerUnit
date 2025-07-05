@@ -8,6 +8,7 @@ namespace PowerUnit.Asdu;
 public readonly struct M_ME_TF_1_Single
 {
     public static byte Size => (byte)Marshal.SizeOf<M_ME_TF_1_Single>();
+    public static byte MaxItemCount => (byte)(LengthHelper.PACKET_CONST_PART / Size);
 
     [FieldOffset(0)]
     private readonly Address3 _address;
@@ -48,6 +49,19 @@ public readonly struct M_ME_TF_1_Single
         header.SerializeUnsafe(buffer, 0);
         var size = 0;
         for (byte i = 0; i < M_ME_TF_1_Singles.Length; i++)
+        {
+            M_ME_TF_1_Singles[i].SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size + i * Size);
+            size += Size;
+        }
+
+        return AsduPacketHeader_2_2.Size + size;
+    }
+
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, M_ME_TF_1_Single[] M_ME_TF_1_Singles, byte length)
+    {
+        header.SerializeUnsafe(buffer, 0);
+        var size = 0;
+        for (byte i = 0; i < Math.Min(M_ME_TF_1_Singles.Length, length); i++)
         {
             M_ME_TF_1_Singles[i].SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size + i * Size);
             size += Size;

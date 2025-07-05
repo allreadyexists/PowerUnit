@@ -226,37 +226,40 @@ public class IecParserGenerator
                 Console.WriteLine("Not Implemented - Size");
             }
 
-            var serializeLikeMethod = type.Key.GetMethod("Serialize", BindingFlags.Static | BindingFlags.Public);
-            if (serializeLikeMethod == null)
+            var serializeLikeMethods = type.Key.GetMethods(BindingFlags.Static | BindingFlags.Public).Where(x => x.Name.Equals("Serialize"));
+            foreach (var serializeLikeMethod in serializeLikeMethods)
             {
-                Console.WriteLine("Not Implemented - Serialize");
-            }
-            else
-            {
-                var parameters = serializeLikeMethod.GetParameters();
-                if (parameters.Length < 2)
+                if (serializeLikeMethod == null)
                 {
-                    Console.WriteLine("Check method - Serialize");
+                    Console.WriteLine("Not Implemented - Serialize");
                 }
                 else
                 {
-                    var param0 = parameters[1];
-                    var param1 = parameters[0];
-
-                    if (!param0.ParameterType.IsByRef || param0.ParameterType.GetElementType() != typeof(AsduPacketHeader_2_2))
+                    var parameters = serializeLikeMethod.GetParameters();
+                    if (parameters.Length < 2)
                     {
-                        Console.WriteLine("Check method param 0 - Serialize");
+                        Console.WriteLine("Check method - Serialize");
                     }
-
-                    if (param1.ParameterType != typeof(byte[]))
+                    else
                     {
-                        Console.WriteLine("Check method param 1 - Serialize");
-                    }
+                        var param0 = parameters[1];
+                        var param1 = parameters[0];
 
-                    var @return = serializeLikeMethod.ReturnParameter;
-                    if (@return.ParameterType != typeof(int))
-                    {
-                        Console.WriteLine("Check return param type - must be int");
+                        if (!param0.ParameterType.IsByRef || param0.ParameterType.GetElementType() != typeof(AsduPacketHeader_2_2))
+                        {
+                            Console.WriteLine("Check method param 0 - Serialize");
+                        }
+
+                        if (param1.ParameterType != typeof(byte[]))
+                        {
+                            Console.WriteLine("Check method param 1 - Serialize");
+                        }
+
+                        var @return = serializeLikeMethod.ReturnParameter;
+                        if (@return.ParameterType != typeof(int))
+                        {
+                            Console.WriteLine("Check return param type - must be int");
+                        }
                     }
                 }
             }
