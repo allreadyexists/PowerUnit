@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Abstract;
 
 /// <summary>
 /// Получение уведомлений от физического канала связи

@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-using PowerUnit.Asdu;
+using PowerUnit.Service.IEC104.Abstract;
+using PowerUnit.Service.IEC104.Types;
+using PowerUnit.Service.IEC104.Types.Asdu;
 
 namespace PowerUnit;
 

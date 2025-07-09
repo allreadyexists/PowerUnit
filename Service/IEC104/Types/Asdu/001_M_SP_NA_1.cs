@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace PowerUnit.Asdu;
+namespace PowerUnit.Service.IEC104.Types.Asdu;
 
 /*
 001 - Одноэлементная информация без метки времени

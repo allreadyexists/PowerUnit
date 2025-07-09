@@ -2,11 +2,13 @@
   "profiles": {
     "PowerUnit.Service.IEC104.Export": {
       "commandName": "Project",
+      "dotnetRunMessages": true,
       "launchBrowser": true,
+      "launchUrl": "metrics",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "http://localhost:5000/metrics"
+      "applicationUrl": "http://localhost:5000"
     }
   }
 }

@@ -10,7 +10,14 @@ using Npgsql;
 
 using OpenTelemetry.Metrics;
 
-namespace PowerUnit;
+using PowerUnit.Common.EnviromentManager;
+using PowerUnit.Common.Subsciption;
+using PowerUnit.Infrastructure.IEC104ServerDb;
+using PowerUnit.Service.IEC104.Abstract;
+using PowerUnit.Service.IEC104.Options;
+using PowerUnit.Service.IEC104.Types;
+
+namespace PowerUnit.Service.IEC104.Export;
 
 internal sealed class Program
 {
@@ -42,10 +49,13 @@ internal sealed class Program
 
                     services.AddEnviromentManager(SERVICE_NAME);
 
-                    services.AddPowerUnitDbContext(hostBuilderContext.Configuration);
+                    services.AddPowerUnitIEC104ServerDbContext(hostBuilderContext.Configuration);
 
                     // внешний
-                    services.AddScoped<IDataProvider, DataProvider>();
+                    //services.AddScoped<IDataSource, TestDataSource>();
+                    //services.AddScoped<IDataProvider, TestDataProvider>();
+                    services.AddSingleton<IDataSource<AnalogValue>, AnalogValueTestDataSource>();
+                    services.AddSingleton<IDataSource<DiscretValue>, DiscretValueTestDataSource>();
                     services.AddSingleton<IConfigProvider, ConfigProvider>();
 
                     // внутренний
@@ -69,6 +79,8 @@ internal sealed class Program
                         .AddAspNetCoreInstrumentation()
                         .AddSqlClientInstrumentation()
                         .AddNpgsqlInstrumentation()
+                        .AddEventCountersInstrumentation(c =>
+                            c.AddEventSources("System.Net.Sockets"))
                         .AddPrometheusExporter(opt =>
                         {
                             opt.ScrapeEndpointPath = "/metrics";
@@ -103,7 +115,7 @@ internal sealed class Program
 
                 using (var scope = host.Services.CreateScope())
                 {
-                    var db = scope.ServiceProvider.GetRequiredService<PowerUnitDbContext>();
+                    var db = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
                     await db.Database.MigrateAsync();
                 }
 

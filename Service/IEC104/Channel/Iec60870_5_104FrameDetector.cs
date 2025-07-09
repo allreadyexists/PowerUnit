@@ -1,6 +1,7 @@
-using PowerUnit;
+using PowerUnit.Service.IEC104.Abstract;
+using PowerUnit.Service.IEC104.Types;
 
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Channel;
 
 public class Iec60870_5_104FrameDetector : IFrameDetector
 {

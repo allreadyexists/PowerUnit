@@ -1,14 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace PowerUnit;
+namespace PowerUnit.Infrastructure.Db;
 
-internal interface IEntityEnabled
+public interface IEntityEnabled
 {
-    public bool Enable { get; set; }
+    bool Enable { get; set; }
 }
 
-internal static class EntityEnabledHelper
+public static class EntityEnabledHelper
 {
     public static void ConfigureEnabled<T>(this EntityTypeBuilder<T> builder) where T : class, IEntityEnabled
     {

@@ -1,9 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Concurrent;
 
-namespace System.Diagnostics.Metrics
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
+
+namespace PowerUnit.Infrastructure.Monitoring
 {
     /// <summary>
     /// AggregatorStore is a high performance map from an unordered list of labels (KeyValuePairs) to an instance of TAggregator
@@ -65,10 +71,10 @@ namespace System.Diagnostics.Metrics
 
         public TAggregator? GetAggregator(ReadOnlySpan<KeyValuePair<string, object?>> labels)
         {
-            AggregatorLookupFunc<TAggregator>? lookupFunc = _cachedLookupFunc;
+            var lookupFunc = _cachedLookupFunc;
             if (lookupFunc != null)
             {
-                if (lookupFunc(labels, out TAggregator? aggregator))
+                if (lookupFunc(labels, out var aggregator))
                     return aggregator;
             }
 
@@ -79,20 +85,20 @@ namespace System.Diagnostics.Metrics
 
         private TAggregator? GetAggregatorSlow(ReadOnlySpan<KeyValuePair<string, object?>> labels)
         {
-            AggregatorLookupFunc<TAggregator> lookupFunc = LabelInstructionCompiler.Create(ref this, _createAggregatorFunc, labels);
+            var lookupFunc = LabelInstructionCompiler.Create(ref this, _createAggregatorFunc, labels);
             _cachedLookupFunc = lookupFunc;
-            bool match = lookupFunc(labels, out TAggregator? aggregator);
+            var match = lookupFunc(labels, out var aggregator);
             Debug.Assert(match);
             return aggregator;
         }
 
         public readonly void Collect(Action<LabeledAggregationStatistics> visitFunc)
         {
-            object? stateUnion = _stateUnion;
+            var stateUnion = _stateUnion;
             switch (_stateUnion)
             {
                 case TAggregator agg:
-                    IAggregationStatistics stats = agg.Collect();
+                    var stats = agg.Collect();
                     visitFunc(new LabeledAggregationStatistics(stats));
                     break;
 
@@ -123,14 +129,14 @@ namespace System.Diagnostics.Metrics
         {
             while (true)
             {
-                object? state = _stateUnion;
+                var state = _stateUnion;
                 if (state == null)
                 {
                     // running this delegate will increment the counter for the number of time series
                     // even though in the rare race condition we don't store it. If we wanted to be perfectly
                     // accurate we need to decrement the counter again, but I don't think mitigating that
                     // error is worth the complexity
-                    TAggregator? newState = _createAggregatorFunc();
+                    var newState = _createAggregatorFunc();
                     if (newState == null)
                     {
                         return newState;
@@ -167,7 +173,7 @@ namespace System.Diagnostics.Metrics
         {
             while (true)
             {
-                object? state = _stateUnion;
+                var state = _stateUnion;
                 if (state == null)
                 {
                     FixedSizeLabelNameDictionary<TStringSequence, TObjectSequence, TAggregator> newState = new();
@@ -241,7 +247,7 @@ namespace System.Diagnostics.Metrics
         {
             if (NoLabelAggregator == null)
             {
-                TAggregator? aggregator = createFunc();
+                var aggregator = createFunc();
                 if (aggregator != null)
                 {
                     Interlocked.CompareExchange(ref NoLabelAggregator, aggregator, null);
@@ -296,7 +302,7 @@ namespace System.Diagnostics.Metrics
         {
             if (NoLabelAggregator != null)
             {
-                IAggregationStatistics stats = NoLabelAggregator.Collect();
+                var stats = NoLabelAggregator.Collect();
                 visitFunc(new LabeledAggregationStatistics(stats));
             }
             Label1?.Collect(visitFunc);
@@ -328,14 +334,14 @@ namespace System.Diagnostics.Metrics
             ReadOnlySpan<KeyValuePair<string, object?>> labels)
             where TAggregator : Aggregator
         {
-            LabelInstruction[] instructions = Compile(labels);
+            var instructions = Compile(labels);
             Array.Sort(instructions, (a, b) => string.CompareOrdinal(a.LabelName, b.LabelName));
-            int expectedLabels = labels.Length;
+            var expectedLabels = labels.Length;
             switch (instructions.Length)
             {
                 case 0:
-                    TAggregator? defaultAggregator = aggregatorStore.GetAggregator();
-                    return (ReadOnlySpan<KeyValuePair<string, object?>> l, out TAggregator? aggregator) =>
+                    var defaultAggregator = aggregatorStore.GetAggregator();
+                    return (l, out aggregator) =>
                     {
                         if (l.Length != expectedLabels)
                         {
@@ -347,43 +353,43 @@ namespace System.Diagnostics.Metrics
                     };
 
                 case 1:
-                    StringSequence1 names1 = new StringSequence1(instructions[0].LabelName);
-                    ConcurrentDictionary<ObjectSequence1, TAggregator> valuesDict1 =
+                    var names1 = new StringSequence1(instructions[0].LabelName);
+                    var valuesDict1 =
                         aggregatorStore.GetLabelValuesDictionary<StringSequence1, ObjectSequence1>(names1);
-                    LabelInstructionInterpreter<ObjectSequence1, TAggregator> interpreter1 =
+                    var interpreter1 =
                         new LabelInstructionInterpreter<ObjectSequence1, TAggregator>(
                         expectedLabels, instructions, valuesDict1, createAggregatorFunc);
                     return interpreter1.GetAggregator;
 
                 case 2:
-                    StringSequence2 names2 = new StringSequence2(instructions[0].LabelName, instructions[1].LabelName);
-                    ConcurrentDictionary<ObjectSequence2, TAggregator> valuesDict2 =
+                    var names2 = new StringSequence2(instructions[0].LabelName, instructions[1].LabelName);
+                    var valuesDict2 =
                         aggregatorStore.GetLabelValuesDictionary<StringSequence2, ObjectSequence2>(names2);
-                    LabelInstructionInterpreter<ObjectSequence2, TAggregator> interpreter2 =
+                    var interpreter2 =
                         new LabelInstructionInterpreter<ObjectSequence2, TAggregator>(
                         expectedLabels, instructions, valuesDict2, createAggregatorFunc);
                     return interpreter2.GetAggregator;
 
                 case 3:
-                    StringSequence3 names3 = new StringSequence3(instructions[0].LabelName, instructions[1].LabelName,
+                    var names3 = new StringSequence3(instructions[0].LabelName, instructions[1].LabelName,
                         instructions[2].LabelName);
-                    ConcurrentDictionary<ObjectSequence3, TAggregator> valuesDict3 =
+                    var valuesDict3 =
                         aggregatorStore.GetLabelValuesDictionary<StringSequence3, ObjectSequence3>(names3);
-                    LabelInstructionInterpreter<ObjectSequence3, TAggregator> interpreter3 =
+                    var interpreter3 =
                         new LabelInstructionInterpreter<ObjectSequence3, TAggregator>(
                         expectedLabels, instructions, valuesDict3, createAggregatorFunc);
                     return interpreter3.GetAggregator;
 
                 default:
-                    string[] labelNames = new string[instructions.Length];
-                    for (int i = 0; i < instructions.Length; i++)
+                    var labelNames = new string[instructions.Length];
+                    for (var i = 0; i < instructions.Length; i++)
                     {
                         labelNames[i] = instructions[i].LabelName;
                     }
-                    StringSequenceMany namesMany = new StringSequenceMany(labelNames);
-                    ConcurrentDictionary<ObjectSequenceMany, TAggregator> valuesDictMany =
+                    var namesMany = new StringSequenceMany(labelNames);
+                    var valuesDictMany =
                         aggregatorStore.GetLabelValuesDictionary<StringSequenceMany, ObjectSequenceMany>(namesMany);
-                    LabelInstructionInterpreter<ObjectSequenceMany, TAggregator> interpreter4 =
+                    var interpreter4 =
                         new LabelInstructionInterpreter<ObjectSequenceMany, TAggregator>(
                         expectedLabels, instructions, valuesDictMany, createAggregatorFunc);
                     return interpreter4.GetAggregator;
@@ -392,8 +398,8 @@ namespace System.Diagnostics.Metrics
 
         private static LabelInstruction[] Compile(ReadOnlySpan<KeyValuePair<string, object?>> labels)
         {
-            LabelInstruction[] valueFetches = new LabelInstruction[labels.Length];
-            for (int i = 0; i < labels.Length; i++)
+            var valueFetches = new LabelInstruction[labels.Length];
+            for (var i = 0; i < labels.Length; i++)
             {
                 valueFetches[i] = new LabelInstruction(i, labels[i].Key);
             }
@@ -443,13 +449,13 @@ namespace System.Diagnostics.Metrics
                 values = (TObjectSequence)(object)new ObjectSequenceMany(new object[_expectedLabelCount]);
             }
 #if MEMORYMARSHAL_SUPPORT
-            Span<object?> indexedValues = values.AsSpan();
+            var indexedValues = values.AsSpan();
 #else
             ref TObjectSequence indexedValues = ref values;
 #endif
-            for (int i = 0; i < _instructions.Length; i++)
+            for (var i = 0; i < _instructions.Length; i++)
             {
-                LabelInstruction instr = _instructions[i];
+                var instr = _instructions[i];
                 if (instr.LabelName != labels[instr.SourceIndex].Key)
                 {
                     return false;
@@ -482,26 +488,26 @@ namespace System.Diagnostics.Metrics
     {
         public void Collect(Action<LabeledAggregationStatistics> visitFunc)
         {
-            foreach (KeyValuePair<TStringSequence, ConcurrentDictionary<TObjectSequence, TAggregator>> kvName in this)
+            foreach (var kvName in this)
             {
 #if MEMORYMARSHAL_SUPPORT
-                Span<string> indexedNames = kvName.Key.AsSpan();
+                var indexedNames = kvName.Key.AsSpan();
 #else
                 TStringSequence indexedNames = kvName.Key;
 #endif
-                foreach (KeyValuePair<TObjectSequence, TAggregator> kvValue in kvName.Value)
+                foreach (var kvValue in kvName.Value)
                 {
 #if MEMORYMARSHAL_SUPPORT
-                    Span<object?> indexedValues = kvValue.Key.AsSpan();
+                    var indexedValues = kvValue.Key.AsSpan();
 #else
                     TObjectSequence indexedValues = kvValue.Key;
 #endif
-                    KeyValuePair<string, string>[] labels = new KeyValuePair<string, string>[indexedNames.Length];
-                    for (int i = 0; i < labels.Length; i++)
+                    var labels = new KeyValuePair<string, string>[indexedNames.Length];
+                    for (var i = 0; i < labels.Length; i++)
                     {
                         labels[i] = new KeyValuePair<string, string>(indexedNames[i], indexedValues[i]?.ToString() ?? "");
                     }
-                    IAggregationStatistics stats = kvValue.Value.Collect();
+                    var stats = kvValue.Value.Collect();
                     visitFunc(new LabeledAggregationStatistics(stats, labels));
                 }
             }

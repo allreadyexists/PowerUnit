@@ -4,14 +4,14 @@ using NLog;
 using NLog.Extensions.Logging;
 using NLog.Web;
 
-using PowerUnit;
+using PowerUnit.Infrastructure.IEC104ServerDb;
 
 internal sealed class Program
 {
     private static async Task ApplyMigrations(IHost host)
     {
         using var scope = host.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<PowerUnitDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
         await db.Database.MigrateAsync();
     }
 
@@ -27,7 +27,7 @@ internal sealed class Program
                     hostOptions.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.StopHost;
                 });
 
-                services.AddPowerUnitDbContext(hostBuilderContext.Configuration);
+                services.AddPowerUnitIEC104ServerDbContext(hostBuilderContext.Configuration);
             })
             .ConfigureLogging((hostBuilderContext, logging) =>
             {
@@ -53,31 +53,31 @@ internal sealed class Program
 
         using var scope = host.Services.CreateAsyncScope();
         {
-            using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitDbContext>();
-            var result1 = await dbContext.MeasurementTypes.AsNoTracking().Select(x => x).ToArrayAsync(cts.Token);
-            if (result1.Length > 0)
-            {
-            }
+            using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
+            //var result1 = await dbContext.MeasurementTypes.AsNoTracking().Select(x => x).ToArrayAsync(cts.Token);
+            //if (result1.Length > 0)
+            //{
+            //}
 
-            var query = dbContext.ParameterTypes.AsNoTracking()
-                .Include(x => x.DiscretType)
-                .Include(x => x.MeasurementType).OrderBy(x => x.Id).Select(x => new { x.Id, x.Description, DiscretDescription = x.DiscretType.Description, MeasurementDescription = x.MeasurementType.Description });
+            //var query = dbContext.ParameterTypes.AsNoTracking()
+            //    .Include(x => x.DiscretType)
+            //    .Include(x => x.MeasurementType).OrderBy(x => x.Id).Select(x => new { x.Id, x.Description, DiscretDescription = x.DiscretType.Description, MeasurementDescription = x.MeasurementType.Description });
 
-            var result2 = await query.ToArrayAsync(cts.Token);
-            foreach (var r2 in result2)
-            {
-                logger.LogInformation($"{r2.Id} {r2.Description} {r2.DiscretDescription} {r2.MeasurementDescription}");
-            }
+            //var result2 = await query.ToArrayAsync(cts.Token);
+            //foreach (var r2 in result2)
+            //{
+            //    logger.LogInformation($"{r2.Id} {r2.Description} {r2.DiscretDescription} {r2.MeasurementDescription}");
+            //}
 
-            var serverId = 1;
-            var address = 105;
-            var result3 = await dbContext.IEC104Mappings.AsNoTracking().Include(x => x.Equipment).Where(x => x.ServerId == serverId && x.Address == address)
-                .Join(dbContext.Measurements.AsNoTracking(), u => u.EquipmentId, v => v.EquipmentId, (u, v) => new { u.IEC104TypeId, u.Address, v.Value, v.ValueDt, v.RegistrationDt }).OrderByDescending(x => x.ValueDt).FirstOrDefaultAsync();
+            //var serverId = 1;
+            //var address = 105;
+            //var result3 = await dbContext.IEC104Mappings.AsNoTracking().Include(x => x.Equipment).Where(x => x.ServerId == serverId && x.Address == address)
+            //    .Join(dbContext.Measurements.AsNoTracking(), u => u.EquipmentId, v => v.EquipmentId, (u, v) => new { u.IEC104TypeId, u.Address, v.Value, v.ValueDt, v.RegistrationDt }).OrderByDescending(x => x.ValueDt).FirstOrDefaultAsync();
 
-            if (result3 != null)
-            {
-                logger.LogInformation($"{result3.IEC104TypeId} {result3.Address} {result3.Value} {result3.ValueDt} {result3.RegistrationDt}");
-            }
+            //if (result3 != null)
+            //{
+            //    logger.LogInformation($"{result3.IEC104TypeId} {result3.Address} {result3.Value} {result3.ValueDt} {result3.RegistrationDt}");
+            //}
 
             var servers = await dbContext.IEC104Servers.AsNoTracking().Include(x => x.ChannelLayerOption).ToArrayAsync();
             foreach (var server in servers)

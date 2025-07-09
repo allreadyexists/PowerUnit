@@ -1,8 +1,8 @@
-using PowerUnit.Asdu;
+using PowerUnit.Service.IEC104.Types.Asdu;
 
 using System.Runtime.InteropServices;
 
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Types;
 
 public interface IApciNotification
 {

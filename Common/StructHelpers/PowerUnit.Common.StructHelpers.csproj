@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+	<PropertyGroup>
+	  <RootNamespace>PowerUnit.Common.StructHelpers</RootNamespace>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.7.0-beta.3">
 			<PrivateAssets>all</PrivateAssets>

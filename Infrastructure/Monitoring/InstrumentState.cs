@@ -1,9 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics.Metrics;
 using System.Security;
 
-namespace System.Diagnostics.Metrics
+namespace PowerUnit.Infrastructure.Monitoring
 {
     internal abstract class InstrumentState
     {
@@ -37,7 +38,7 @@ namespace System.Diagnostics.Metrics
         [SecuritySafeCritical]
         public override void Update(double measurement, ReadOnlySpan<KeyValuePair<string, object?>> labels)
         {
-            TAggregator? aggregator = _aggregatorStore.GetAggregator(labels);
+            var aggregator = _aggregatorStore.GetAggregator(labels);
             aggregator?.Update(measurement);
         }
 

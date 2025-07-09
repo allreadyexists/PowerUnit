@@ -1,6 +1,8 @@
+using PowerUnit.Common.StructHelpers;
+
 using System.Runtime.InteropServices;
 
-namespace PowerUnit.Asdu;
+namespace PowerUnit.Service.IEC104.Types.Asdu;
 
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
 [AsduTypeInfo(AsduType.C_TS_NA_1, SQ.Single,

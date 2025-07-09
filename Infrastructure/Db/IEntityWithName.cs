@@ -1,14 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace PowerUnit;
+namespace PowerUnit.Infrastructure.Db;
 
-internal interface IEntityWithName
+public interface IEntityWithName
 {
-    public string Name { get; set; }
+    string Name { get; set; }
 }
 
-internal static class EntityWithNameHelper
+public static class EntityWithNameHelper
 {
     public static void ConfigureName<T>(this EntityTypeBuilder<T> builder, int length = 64) where T : class, IEntityWithName
     {

@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace PowerUnit;
+namespace PowerUnit.Common.Shell;
 
 /// <summary>
 /// Класс выполнения консольных команд.

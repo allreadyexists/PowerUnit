@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Types;
 
 /// <summary>
 /// Заголовок пакета - причина передачи 2 байта, общий адрес ASDU 2 байта

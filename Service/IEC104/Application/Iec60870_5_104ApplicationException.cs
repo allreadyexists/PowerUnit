@@ -1,3 +1,5 @@
+using PowerUnit.Service.IEC104.Types;
+
 namespace PowerUnit;
 
 internal sealed class Iec60870_5_104ApplicationException : RegularException

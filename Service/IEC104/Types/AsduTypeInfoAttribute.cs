@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Types;
 
 [AttributeUsage(AttributeTargets.Struct)]
 public class AsduTypeInfoAttribute : Attribute

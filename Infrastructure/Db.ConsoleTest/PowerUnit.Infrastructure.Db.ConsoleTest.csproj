@@ -2,26 +2,27 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net9.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+		<RootNamespace>PowerUnit.Infrastructure.Db.ConsoleTest</RootNamespace>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="EFCore.NamingConventions" Version="$(EFCoreNamingConventionsVersion)" />
-		<PackageReference Include="NLog.Extensions.Logging" Version="$(NLogVersion)" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="$(MicrosoftEntityFrameworkCoreVersion)" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="$(MicrosoftEntityFrameworkCoreVersion)">
+		<PackageReference Include="NLog.Extensions.Logging" Version="6.0.1" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.6" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.6">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="$(MicrosoftEntityFrameworkCoreVersion)" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.6" />
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(NpgsqlEntityFrameworkCorePostgreSQLVersion)" />
-		<PackageReference Include="NLog.Web.AspNetCore" Version="$(NLogVersion)" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="6.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Db\PowerUnit.Infrastructure.Db.csproj" />
+	  <ProjectReference Include="..\DbContexts\Iec104ServerContext\PowerUnit.Infrastructure.IEC104ServerDb.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

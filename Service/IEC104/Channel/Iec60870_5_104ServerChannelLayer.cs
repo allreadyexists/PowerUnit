@@ -1,12 +1,15 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-using PowerUnit;
+using PowerUnit.Common.StructHelpers;
+using PowerUnit.Service.IEC104.Abstract;
+using PowerUnit.Service.IEC104.Options.Models;
+using PowerUnit.Service.IEC104.Types;
 
 using System.Runtime.InteropServices;
 using System.Threading.Channels;
 
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Channel;
 
 #region События канального уровня
 
@@ -67,7 +70,7 @@ public class Iec60870_5_104ServerChannelLayer :
     /// <summary>
     /// Очередь происходящих событий
     /// </summary>
-    private readonly Channel<IEvent> _events = Channel.CreateUnbounded<IEvent>();
+    private readonly Channel<IEvent> _events = System.Threading.Channels.Channel.CreateUnbounded<IEvent>();
     /// <summary>
     /// Событие подключения
     /// </summary>
@@ -88,12 +91,31 @@ public class Iec60870_5_104ServerChannelLayer :
     /// <summary>
     /// Очередь принятых пакетов
     /// </summary>
-    private readonly Channel<byte[]> _rxQueue = Channel.CreateUnbounded<byte[]>();
+    private readonly Channel<byte[]> _rxQueue = System.Threading.Channels.Channel.CreateUnbounded<byte[]>();
+
+    //private sealed class PacketComparer : IComparer<(byte[] Packet, ChannelLayerPacketPriority Priority)>
+    //{
+    //    int IComparer<(byte[] Packet, ChannelLayerPacketPriority Priority)>.Compare((byte[] Packet, ChannelLayerPacketPriority Priority) x, (byte[] Packet, ChannelLayerPacketPriority Priority) y)
+    //    {
+    //        if (x.Priority > y.Priority)
+    //            return 1;
+    //        if (x.Priority < y.Priority)
+    //            return -1;
+    //        return 0;
+    //    }
+    //}
+
+    //private static readonly PacketComparer _comparer = new PacketComparer();
 
     /// <summary>
     /// Очередь пакетов на передачу
     /// </summary>
-    private readonly Channel<byte[]> _txQueue = Channel.CreateUnbounded<byte[]>();
+    private readonly Channel<(byte[] Packet, ChannelLayerPacketPriority Priority)> _txQueue = System.Threading.Channels.Channel.CreateUnbounded<(byte[] Packet, ChannelLayerPacketPriority Priority)>/*Prioritized*/(
+        //new UnboundedPrioritizedChannelOptions<(byte[], ChannelLayerPacketPriority)>()
+        //{
+        //    Comparer = _comparer
+        //}
+    );
 
     /// <summary>
     /// Очередь переданных, но не подтвержденных пакетов
@@ -362,8 +384,21 @@ public class Iec60870_5_104ServerChannelLayer :
         var txQueueCount = _txQueue.Reader.Count;
         while (txQueueCount > 0)
         {
-            _txButNotAckQueue.Add(await _txQueue.Reader.ReadAsync(ct));
+            var (Packet, Priority) = await _txQueue.Reader.ReadAsync(ct);
             txQueueCount--;
+            if (Priority == ChannelLayerPacketPriority.Low && _txButNotAckQueue.Count > _serverOptions.ChannelLayerModel.MaxQueueSize)
+            {
+                continue;
+            }
+            else
+            {
+                if (Priority == ChannelLayerPacketPriority.Normal)
+                {
+                    _logger.LogInformation("Normal packet. Queue size: {@size}", _txButNotAckQueue.Count);
+                }
+
+                _txButNotAckQueue.Add(Packet);
+            }
         }
 
         // только если позволяет окно
@@ -749,9 +784,9 @@ public class Iec60870_5_104ServerChannelLayer :
     /// </summary>
     /// <param name="packet"></param>
     /// <returns></returns>
-    void IChannelLayerPacketSender.Send(byte[] packet)
+    void IChannelLayerPacketSender.Send(byte[] packet, ChannelLayerPacketPriority priority)
     {
-        _txQueue.Writer.TryWrite(packet);
+        _txQueue.Writer.TryWrite((packet, priority));
         _events.Writer.TryWrite(_txEvent);
     }
 

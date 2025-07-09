@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+	<PropertyGroup>
+	  <RootNamespace>PowerUnit.Common.Shell</RootNamespace>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="editorconfig" Version="$(EditorConfigVersion)">
 		  <TreatAsUsed>true</TreatAsUsed>

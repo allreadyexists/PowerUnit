@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Types;
 
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
 public readonly struct APCI

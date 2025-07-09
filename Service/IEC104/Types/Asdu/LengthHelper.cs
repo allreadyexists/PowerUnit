@@ -1,4 +1,4 @@
-namespace PowerUnit.Asdu;
+namespace PowerUnit.Service.IEC104.Types.Asdu;
 
 public static class LengthHelper
 {

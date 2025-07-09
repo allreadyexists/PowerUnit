@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using System.Runtime.InteropServices;
 
-namespace PowerUnit;
+namespace PowerUnit.Common.DateTimeManager;
 
 public static class DataTimeMangerDiExtension
 {

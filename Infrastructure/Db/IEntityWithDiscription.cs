@@ -1,14 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace PowerUnit;
+namespace PowerUnit.Infrastructure.Db;
 
-internal interface IEntityWithDescription
+public interface IEntityWithDescription
 {
     string Description { get; set; }
 }
 
-internal static class EntityWithDiscriptionHelper
+public static class EntityWithDiscriptionHelper
 {
     public static void ConfigureDiscription<T>(this EntityTypeBuilder<T> builder, int length = 128) where T : class, IEntityWithDescription
     {

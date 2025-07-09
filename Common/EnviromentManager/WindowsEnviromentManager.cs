@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Common.EnviromentManager;
 
 internal sealed class WindowsEnviromentManager(string name) : CommonEnviromentManager(name)
 {

@@ -1,4 +1,6 @@
-namespace PowerUnit;
+using PowerUnit.Common.Options;
+
+namespace PowerUnit.Service.IEC104.Options.Models;
 
 public sealed record class IEC104ServerModel : ServerModel
 {

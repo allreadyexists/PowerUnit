@@ -1,9 +1,17 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-using PowerUnit.Asdu;
+using PowerUnit.Common.StringHelpers;
+using PowerUnit.Common.StructHelpers;
+using PowerUnit.Common.Subsciption;
+using PowerUnit.Service.IEC104.Abstract;
+using PowerUnit.Service.IEC104.Options.Models;
+using PowerUnit.Service.IEC104.Types;
+using PowerUnit.Service.IEC104.Types.Asdu;
 
 using System.Buffers;
+using System.Collections.Concurrent;
+using System.Reactive.Linq;
 
 namespace PowerUnit;
 
@@ -23,6 +31,11 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
     private readonly IChannelLayerPacketSender _packetSender;
 
     private readonly CancellationTokenSource _cts;
+
+    private readonly IDisposable _subscriber1;
+    private IDisposable? _subscriber2;
+
+    private readonly ConcurrentDictionary<ushort, BaseValue> _values = new ConcurrentDictionary<ushort, BaseValue>();
 
     internal async Task SendInRentBuffer(Func<byte[], Task> action)
     {
@@ -62,6 +75,18 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
         _packetSender = packetSender;
         _physicalLayerCommander = physicalLayerCommander;
         _cts = new CancellationTokenSource();
+
+        var dataSourceAnalogValue = serviceProvider.GetRequiredService<IDataSource<AnalogValue>>();
+        _subscriber1 = new BatchSubscriber<AnalogValue>(100, TimeSpan.FromMilliseconds(500), dataSourceAnalogValue, values =>
+        {
+            foreach (var value in values)
+            {
+                _values.AddOrUpdate(value.Address, address => value, (address, oldValue) => value);
+            }
+
+            return Task.CompletedTask;
+        });
+
         _logger = logger;
 
         _ = SendInRentBuffer(buffer =>
@@ -72,6 +97,50 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
             var M_EI_NA_1 = new M_EI_NA_1(COI.Empty);
             var length = M_EI_NA_1.Serialize(buffer, in headerReq, in M_EI_NA_1);
             _packetSender!.Send(buffer[..length]);
+
+            if (applicationLayerOption.SporadicSendEnabled)
+            {
+                _subscriber2 = new BatchSubscriber<AnalogValue>(M_ME_TF_1_Single.MaxItemCount, TimeSpan.FromMilliseconds(500), dataSourceAnalogValue, values =>
+                {
+                    var M_ME_TF_1_SingleArray = ArrayPool<M_ME_TF_1_Single>.Shared.Rent(M_ME_TF_1_Single.MaxItemCount);
+                    try
+                    {
+                        byte count = 0;
+                        foreach (var value in values/*.GroupBy(x => x.Address).SelectMany(x => x.OrderBy(y => y.ValueDt).Take(1))*/)
+                        {
+                            switch (value)
+                            {
+                                case AnalogValue analogValue:
+                                    if (value.AsduType == AsduType.M_ME_TF_1)
+                                    {
+                                        M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(analogValue.Address, analogValue.Value, 0, analogValue.ValueDt ?? _timeProvider.GetUtcNow().DateTime, TimeStatus.OK);
+                                    }
+
+                                    break;
+                            }
+                        }
+
+                        if (count > 0)
+                        {
+                            _ = SendInRentBuffer(buffer =>
+                            {
+                                headerReq = new AsduPacketHeader_2_2(AsduType.M_ME_TF_1, SQ.Single, count, COT.SPORADIC, 0/*???*/,
+                                                        commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+                                length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
+                                _packetSender!.Send(buffer[..length], ChannelLayerPacketPriority.Low);
+                                return Task.CompletedTask;
+                            });
+                        }
+                    }
+                    finally
+                    {
+                        ArrayPool<M_ME_TF_1_Single>.Shared.Return(M_ME_TF_1_SingleArray);
+                    }
+
+                    return Task.CompletedTask;
+                });
+            }
+
             return Task.CompletedTask;
         });
     }
@@ -192,6 +261,8 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
 
     void IDisposable.Dispose()
     {
+        _subscriber1.Dispose();
+        _subscriber2?.Dispose();
         _cts.Cancel();
         _cts.Dispose();
     }

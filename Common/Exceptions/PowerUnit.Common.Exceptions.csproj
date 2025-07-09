@@ -1,4 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+	  <RootNamespace>PowerUnit.Common.Exceptions</RootNamespace>
+	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="editorconfig" Version="$(EditorConfigVersion)" />
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.7.0-beta.3">

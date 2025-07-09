@@ -1,3 +1,6 @@
+using PowerUnit.Common.StructHelpers;
+using PowerUnit.Service.IEC104.Types;
+
 using System.Collections.Immutable;
 
 namespace PowerUnit;

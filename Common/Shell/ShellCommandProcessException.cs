@@ -1,4 +1,4 @@
-﻿namespace PowerUnit;
+namespace PowerUnit.Common.Shell;
 
 /// <inheritdoc />
 /// <summary>

@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+	<PropertyGroup>
+	  <RootNamespace>PowerUnit.Service.IEC104.Types</RootNamespace>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<Compile Remove="Link\**" />
 		<EmbeddedResource Remove="Link\**" />

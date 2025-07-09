@@ -2,7 +2,7 @@ using System.Collections.Frozen;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Types;
 
 public class IecParserGenerator
 {

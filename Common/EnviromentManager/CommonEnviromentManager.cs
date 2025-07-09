@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace PowerUnit;
+namespace PowerUnit.Common.EnviromentManager;
 
 internal abstract class CommonEnviromentManager : IEnviromentManager
 {

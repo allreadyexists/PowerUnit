@@ -3,7 +3,7 @@
 
 using System.Runtime.InteropServices;
 
-namespace System.Diagnostics.Metrics
+namespace PowerUnit.Infrastructure.Monitoring
 {
     internal sealed class CounterAggregator : Aggregator
     {
@@ -26,7 +26,7 @@ namespace System.Diagnostics.Metrics
         public override void Update(double value)
         {
             // Get the deltas array.
-            PaddedDouble[] deltas = _deltas;
+            var deltas = _deltas;
 
             // Get the delta best associated with the current thread, preferring to use core ID rather than
             // thread ID to reduce contention.

@@ -1,11 +1,13 @@
-
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 using Polly;
 using Polly.Retry;
 
-namespace PowerUnit;
+using PowerUnit.Infrastructure.IEC104ServerDb;
+using PowerUnit.Service.IEC104.Abstract;
+using PowerUnit.Service.IEC104.Options.Models;
+
+namespace PowerUnit.Service.IEC104.Export;
 
 internal sealed class ConfigProvider : IConfigProvider
 {
@@ -21,7 +23,7 @@ internal sealed class ConfigProvider : IConfigProvider
         return _policyReadServersSettings.ExecuteAsync(async (context) =>
         {
             using var scope = _serviceProvider.CreateAsyncScope();
-            using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitDbContext>();
+            using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
             var servers = await dbContext.IEC104Servers.AsNoTracking().Where(x => x.Enable)
                 .Include(x => x.ChannelLayerOption)
                 .Include(x => x.ApplicationLayerOption).OrderBy(x => x.Id)
@@ -44,8 +46,7 @@ internal sealed class ConfigProvider : IConfigProvider
                     ServerId = x.Id,
                     CommonASDUAddress = x.CommonASDUAddress,
                     CheckCommonASDUAddress = x.ApplicationLayerOption!.CheckCommonASDUAddress,
-                    SporadicSendEnabled = x.ApplicationLayerOption!.SporadicSendEnabled,
-                    FileSegmentSize = x.ApplicationLayerOption!.FileSegmentSize,
+                    SporadicSendEnabled = x.ApplicationLayerOption!.SporadicSendEnabled
                 },
                 ChannelLayerModel = new IEC104ChannelLayerModel()
                 {

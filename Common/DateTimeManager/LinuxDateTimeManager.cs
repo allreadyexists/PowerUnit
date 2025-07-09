@@ -1,6 +1,8 @@
+using PowerUnit.Common.Shell;
+
 using System.Runtime.Versioning;
 
-namespace PowerUnit;
+namespace PowerUnit.Common.DateTimeManager;
 
 internal sealed class LinuxDateTimeManager : IDateTimeManager
 {

@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Options.Models;
 
 public sealed record class IEC104ChannelLayerModel
 {
@@ -32,5 +32,11 @@ public sealed record class IEC104ChannelLayerModel
     /// Использовать фрагментированную отправка ответов
     /// </summary>
     public bool UseFragmentSend { get; set; }
+
+    /// <summary>
+    /// Максимальное количество элементов в очереди, после которого низкоприоритетные пакеты
+    /// от прикладного уровня будут выкинуты каналкой
+    /// </summary>
+    public int MaxQueueSize { get; set; } = 100;
 }
 

@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Options;
 
 public sealed record class IEC104ApplicationLayerOption
 {

@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Common.EnviromentManager;
 
 public interface IEnviromentManager
 {

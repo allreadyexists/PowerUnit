@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace PowerUnit;
+namespace PowerUnit.Common.StructHelpers;
 
 public static class StructHelper
 {

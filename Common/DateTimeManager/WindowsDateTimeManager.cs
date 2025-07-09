@@ -1,9 +1,9 @@
-using PowerUnit.Properties;
+using PowerUnit.Common.DateTimeManager.Properties;
 
 using System.Management;
 using System.Runtime.Versioning;
 
-namespace PowerUnit;
+namespace PowerUnit.Common.DateTimeManager;
 
 internal sealed class WindowsDateTimeManager : IDateTimeManager
 {

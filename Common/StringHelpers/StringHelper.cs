@@ -1,6 +1,6 @@
 using LinkDotNet.StringBuilder;
 
-namespace PowerUnit;
+namespace PowerUnit.Common.StringHelpers;
 
 public static class StringHelper
 {

@@ -1,7 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-using PowerUnit.Asdu;
+using PowerUnit.Service.IEC104.Abstract;
+using PowerUnit.Service.IEC104.Types;
+using PowerUnit.Service.IEC104.Types.Asdu;
 
 using System.Buffers;
 
@@ -11,152 +12,113 @@ public partial class Iec60870_5_104ServerApplicationLayer
 {
     private void Activate(AsduPacketHeader_2_2 header, ushort address, QOI qoi, int transactionId, CancellationToken ct, CancellationToken transactionCt)
     {
-        _ = SendInRentBuffer(async (buffer) =>
+        _ = SendInRentBuffer((buffer) =>
             {
                 var headerReq = new AsduPacketHeader_2_2(header.AsduType, header.SQ, header.Count, COT.ACTIVATE_CONFIRMATION, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
                 var C_IC_NA_1 = new C_IC_NA_1(qoi);
                 var length = C_IC_NA_1.Serialize(buffer, in headerReq, in C_IC_NA_1);
                 _packetSender!.Send(buffer[..length]);
+                _logger.LogInformation("Send ack {@qoi}", qoi);
 
                 var errorTransaction = false;
                 var cancelTransaction = false;
-                await using var scope = _serviceProvider.CreateAsyncScope();
+
+                var M_ME_NC_1_SingleArray = ArrayPool<M_ME_NC_1_Single>.Shared.Rent(M_ME_NC_1_Single.MaxItemCount);
+                var M_ME_TF_1_SingleArray = ArrayPool<M_ME_TF_1_Single>.Shared.Rent(M_ME_TF_1_Single.MaxItemCount);
+
+                int countTotal = 0;
+                byte count = 0;
+
+                AsduType currentType = 0;
+                var currentTypeMaxCount = 0;
+
+                var isInit = false;
+
+                try
                 {
-                    var dataProvider = scope.ServiceProvider.GetRequiredService<IDataProvider>();
-                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct, transactionCt);
-
-                    try
+                    foreach (var groupData in _values)
                     {
-                        await foreach (var groupData in dataProvider.GetDiscretGroup(_applicationLayerOption.ServerId, qoi, cts.Token))
+                        _logger.LogDebug("{@countTotal} {@type}", countTotal++, groupData.Value.AsduType);
+
+                        if (groupData.Value.AsduType == AsduType.M_ME_NC_1 || groupData.Value.AsduType == AsduType.M_ME_TF_1)
                         {
-                            switch (groupData.AsduType)
+                            if (!isInit)
                             {
-                                case AsduType.M_SP_NA_1: // Одноэлементная информация без метки времени
-                                    break;
-                                case AsduType.M_SP_TB_1: // Одноэлементная информация с меткой времени СР56Время2а
-                                    break;
-                                case AsduType.M_DP_NA_1: // Двухэлементная информация без метки времени
-                                    break;
-                                case AsduType.M_DP_TB_1: // Двухэлементная информация с меткой времени СР56Время2а
-                                    break;
-                            }
-                        }
-
-                        var M_ME_NC_1_SingleArray = ArrayPool<M_ME_NC_1_Single>.Shared.Rent(M_ME_NC_1_Single.MaxItemCount);
-                        var M_ME_TF_1_SingleArray = ArrayPool<M_ME_TF_1_Single>.Shared.Rent(M_ME_TF_1_Single.MaxItemCount);
-
-                        int countTotal = 0;
-                        byte count = 0;
-
-                        AsduType currentType = 0;
-                        var currentTypeMaxCount = 0;
-
-                        var isInit = false;
-
-                        try
-                        {
-                            await foreach (var groupData in dataProvider.GetAnalogGroup(_applicationLayerOption.ServerId, qoi, cts.Token))
-                            {
-                                _logger.LogDebug("{@countTotal} {@type}", countTotal++, groupData.AsduType);
-
-                                if (groupData.AsduType == AsduType.M_ME_NC_1 || groupData.AsduType == AsduType.M_ME_TF_1)
+                                currentType = groupData.Value.AsduType;
+                                isInit = true;
+                                if (groupData.Value.AsduType == AsduType.M_ME_NC_1)
                                 {
-                                    if (!isInit)
-                                    {
-                                        currentType = groupData.AsduType;
-                                        isInit = true;
-                                        if (groupData.AsduType == AsduType.M_ME_NC_1)
-                                        {
-                                            currentTypeMaxCount = M_ME_NC_1_Single.MaxItemCount;
-                                            M_ME_NC_1_SingleArray[count++] = new M_ME_NC_1_Single(groupData.Address, groupData.Value, (QDS_Status)groupData.Status);
-                                        }
-                                        else if (groupData.AsduType == AsduType.M_ME_TF_1)
-                                        {
-                                            currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
-                                            M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(groupData.Address, groupData.Value, (QDS_Status)groupData.Status, groupData.ValueDt!.Value, 0);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (currentType != groupData.AsduType || count == currentTypeMaxCount)
-                                        {
-                                            headerReq = new AsduPacketHeader_2_2(currentType, SQ.Single, count, (COT)qoi, initAddr: header.InitAddr,
-                                                            commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                                            if (currentType == AsduType.M_ME_NC_1)
-                                            {
-                                                length = M_ME_NC_1_Single.Serialize(buffer, in headerReq, M_ME_NC_1_SingleArray, count);
-                                            }
-                                            else if (currentType == AsduType.M_ME_TF_1)
-                                            {
-                                                length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
-                                            }
-
-                                            _logger.LogDebug("!!! {@send} {@type}", count, currentType);
-                                            _packetSender!.Send(buffer[..length]);
-
-                                            if (groupData.AsduType == AsduType.M_ME_NC_1)
-                                                currentTypeMaxCount = M_ME_NC_1_Single.MaxItemCount;
-                                            else if (groupData.AsduType == AsduType.M_ME_TF_1)
-                                                currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
-
-                                            currentType = groupData.AsduType;
-                                            count = 0;
-                                        }
-
-                                        if (groupData.AsduType == AsduType.M_ME_NC_1)
-                                        {
-                                            M_ME_NC_1_SingleArray[count++] = new M_ME_NC_1_Single(groupData.Address, groupData.Value, (QDS_Status)groupData.Status);
-                                        }
-                                        else if (groupData.AsduType == AsduType.M_ME_TF_1)
-                                        {
-                                            M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(groupData.Address, groupData.Value, (QDS_Status)groupData.Status, groupData.ValueDt!.Value, 0);
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (count > 0)
-                            {
-                                headerReq = new AsduPacketHeader_2_2(currentType, SQ.Single, count, (COT)qoi, initAddr: header.InitAddr,
-                                                            commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                                if (currentType == AsduType.M_ME_NC_1)
-                                {
-                                    length = M_ME_NC_1_Single.Serialize(buffer, in headerReq, M_ME_NC_1_SingleArray, count);
                                     currentTypeMaxCount = M_ME_NC_1_Single.MaxItemCount;
+                                    M_ME_NC_1_SingleArray[count++] = new M_ME_NC_1_Single(groupData.Value.Address, ((AnalogValue)groupData.Value).Value, 0);
                                 }
-                                else if (currentType == AsduType.M_ME_TF_1)
+                                else if (groupData.Value.AsduType == AsduType.M_ME_TF_1)
                                 {
-                                    length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
                                     currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
+                                    M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(groupData.Value.Address, ((AnalogValue)groupData.Value).Value, 0, ((AnalogValue)groupData.Value).ValueDt!.Value, 0);
+                                }
+                            }
+                            else
+                            {
+                                if (currentType != groupData.Value.AsduType || count == currentTypeMaxCount)
+                                {
+                                    headerReq = new AsduPacketHeader_2_2(currentType, SQ.Single, count, (COT)qoi, initAddr: header.InitAddr,
+                                                    commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+                                    if (currentType == AsduType.M_ME_NC_1)
+                                    {
+                                        length = M_ME_NC_1_Single.Serialize(buffer, in headerReq, M_ME_NC_1_SingleArray, count);
+                                    }
+                                    else if (currentType == AsduType.M_ME_TF_1)
+                                    {
+                                        length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
+                                    }
+
+                                    _logger.LogDebug("!!! {@send} {@type}", count, currentType);
+                                    _packetSender!.Send(buffer[..length]);
+
+                                    if (groupData.Value.AsduType == AsduType.M_ME_NC_1)
+                                        currentTypeMaxCount = M_ME_NC_1_Single.MaxItemCount;
+                                    else if (groupData.Value.AsduType == AsduType.M_ME_TF_1)
+                                        currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
+
+                                    currentType = groupData.Value.AsduType;
+                                    count = 0;
                                 }
 
-                                _logger.LogDebug("!!! {@send} {@type}", count, currentType);
-                                _packetSender!.Send(buffer[..length]);
+                                if (groupData.Value.AsduType == AsduType.M_ME_NC_1)
+                                {
+                                    M_ME_NC_1_SingleArray[count++] = new M_ME_NC_1_Single(groupData.Value.Address, ((AnalogValue)groupData.Value).Value, 0);
+                                }
+                                else if (groupData.Value.AsduType == AsduType.M_ME_TF_1)
+                                {
+                                    M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(groupData.Value.Address, ((AnalogValue)groupData.Value).Value, 0, ((AnalogValue)groupData.Value).ValueDt!.Value, 0);
+                                }
                             }
                         }
-                        finally
-                        {
-                            ArrayPool<M_ME_NC_1_Single>.Shared.Return(M_ME_NC_1_SingleArray);
-                            ArrayPool<M_ME_TF_1_Single>.Shared.Return(M_ME_TF_1_SingleArray);
-                        }
                     }
-                    catch (OperationCanceledException)
+
+                    if (count > 0)
                     {
-                        // отмена транзакции
-                        if (transactionCt.IsCancellationRequested)
+                        headerReq = new AsduPacketHeader_2_2(currentType, SQ.Single, count, (COT)qoi, initAddr: header.InitAddr,
+                                                    commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+                        if (currentType == AsduType.M_ME_NC_1)
                         {
-                            cancelTransaction = true;
+                            length = M_ME_NC_1_Single.Serialize(buffer, in headerReq, M_ME_NC_1_SingleArray, count);
+                            currentTypeMaxCount = M_ME_NC_1_Single.MaxItemCount;
                         }
-                        else
+                        else if (currentType == AsduType.M_ME_TF_1)
                         {
-                            return;
+                            length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
+                            currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
                         }
+
+                        _logger.LogDebug("!!! {@send} {@type}", count, currentType);
+                        _packetSender!.Send(buffer[..length]);
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Transaction error");
-                        errorTransaction = true;
-                    }
+                }
+                finally
+                {
+                    ArrayPool<M_ME_NC_1_Single>.Shared.Return(M_ME_NC_1_SingleArray);
+                    ArrayPool<M_ME_TF_1_Single>.Shared.Return(M_ME_TF_1_SingleArray);
                 }
 
                 if (!cancelTransaction)
@@ -165,8 +127,11 @@ public partial class Iec60870_5_104ServerApplicationLayer
                     C_IC_NA_1 = new C_IC_NA_1(qoi);
                     length = C_IC_NA_1.Serialize(buffer, in headerReq, in C_IC_NA_1);
                     _packetSender!.Send(buffer[..length]);
+                    _logger.LogInformation("Send complite {@qoi}", qoi);
                     _readTransactionManager.DeleteTransaction(transactionId);
                 }
+
+                return Task.CompletedTask;
             });
     }
 
@@ -198,21 +163,23 @@ public partial class Iec60870_5_104ServerApplicationLayer
                 if (_readTransactionManager.CreateTransaction(transactionId, out var transactionCt))
                 {
                     Activate(header, address, qoi, transactionId, ct, transactionCt);
+                    break;
                 }
                 else
                 {
                     // 2. есть транзакция - подтвердить, но не исполнять, а поставить а очередь на исполнение?
                     // или просто промолчать - тут вопрос к поведению клиента, зачем он прислал еще один запрос на чтение
                     // если не получил ответ на первый?
+                    throw new Iec60870_5_104ApplicationException(header);
                 }
-
-                break;
             case COT.DEACTIVATE:
                 // 1. отметить транзакцию - если она была
                 var result = _readTransactionManager.DeleteTransaction(transactionId);
                 // 2. отправить DEACTIVATE_CONFIRMATION
                 Deactivate(header, address, qoi, result, ct);
                 break;
+            default:
+                throw new Iec60870_5_104ApplicationException(header);
         }
     }
 }

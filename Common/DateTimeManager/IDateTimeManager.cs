@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Common.DateTimeManager;
 
 public interface IDateTimeManager
 {

@@ -1,4 +1,4 @@
-namespace PowerUnit.Asdu;
+namespace PowerUnit.Service.IEC104.Types.Asdu;
 
 [Flags]
 public enum DIQ_Value : byte

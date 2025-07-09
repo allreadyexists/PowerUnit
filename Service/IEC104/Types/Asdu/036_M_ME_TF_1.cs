@@ -1,6 +1,8 @@
+using PowerUnit.Common.StructHelpers;
+
 using System.Runtime.InteropServices;
 
-namespace PowerUnit.Asdu;
+namespace PowerUnit.Service.IEC104.Types.Asdu;
 
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
 [AsduTypeInfo(AsduType.M_ME_TF_1, SQ.Single,
@@ -42,6 +44,13 @@ public readonly struct M_ME_TF_1_Single
             var value = MemoryMarshal.AsRef<M_ME_TF_1_Single>(buffer.Slice(i * Size, Size));
             notification.Notify_M_ME(in header, value.Address, value.Value, value.Status, value.DateTime, value.TimeStatus);
         }
+    }
+
+    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, M_ME_TF_1_Single M_ME_TF_1_Single)
+    {
+        header.SerializeUnsafe(buffer, 0);
+        M_ME_TF_1_Single.SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size);
+        return AsduPacketHeader_2_2.Size + Size;
     }
 
     public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, M_ME_TF_1_Single[] M_ME_TF_1_Singles)

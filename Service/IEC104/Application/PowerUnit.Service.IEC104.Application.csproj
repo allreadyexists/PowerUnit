@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+	<PropertyGroup>
+	  <RootNamespace>PowerUnit.Service.IEC104.Application</RootNamespace>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.7.0-beta.3">
 		  <PrivateAssets>all</PrivateAssets>
@@ -9,12 +13,14 @@
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsLoggingAbstractionsVersion)" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.6" />
+		<PackageReference Include="System.Reactive" Version="6.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\Common\Exceptions\PowerUnit.Common.Exceptions.csproj" />
 		<ProjectReference Include="..\..\..\Common\PowerUnit.Common.Other\PowerUnit.Common.Other.csproj" />
+		<ProjectReference Include="..\..\..\Common\PowerUnit.Common.Subsciption\PowerUnit.Common.Subsciption.csproj" />
 		<ProjectReference Include="..\..\..\Common\StringHelpers\PowerUnit.Common.StringHelpers.csproj" />
 		<ProjectReference Include="..\Common\PowerUnit.Service.IEC104.Abstract.csproj" />
 		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Options.csproj" />

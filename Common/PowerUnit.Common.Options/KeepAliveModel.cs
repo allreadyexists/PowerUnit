@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Common.Options;
 
 public record class KeepAliveModel
 {
