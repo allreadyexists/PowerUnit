@@ -14,7 +14,6 @@ using PowerUnit.Common.EnviromentManager;
 using PowerUnit.Common.Subsciption;
 using PowerUnit.Infrastructure.IEC104ServerDb;
 using PowerUnit.Service.IEC104.Abstract;
-using PowerUnit.Service.IEC104.Options;
 using PowerUnit.Service.IEC104.Types;
 
 namespace PowerUnit.Service.IEC104.Export;
@@ -52,15 +51,14 @@ internal sealed class Program
                     services.AddPowerUnitIEC104ServerDbContext(hostBuilderContext.Configuration);
 
                     // внешний
-                    //services.AddScoped<IDataSource, TestDataSource>();
-                    //services.AddScoped<IDataProvider, TestDataProvider>();
-                    services.AddSingleton<IDataSource<AnalogValue>, AnalogValueTestDataSource>();
-                    services.AddSingleton<IDataSource<DiscretValue>, DiscretValueTestDataSource>();
+                    services.AddSingleton<IDataSource<BaseValue>, BaseValueTestDataSource>();
+                    //services.AddSingleton<IDataSource<AnalogValue>, AnalogValueTestDataSource>();
+                    //services.AddSingleton<IDataSource<DiscretValue>, DiscretValueTestDataSource>();
                     services.AddSingleton<IConfigProvider, ConfigProvider>();
 
                     // внутренний
                     services.AddSingleton<IEC104ServerFactory>();
-                    services.AddOptions<IEC104ServersOptions>().Bind(hostBuilderContext.Configuration.GetSection(nameof(IEC104ServersOptions)));
+                    //services.AddOptions<IEC104ServersOptions>().Bind(hostBuilderContext.Configuration.GetSection(nameof(IEC104ServersOptions)));
                     services.AddTransient<IEC104Server>();
                     services.AddTimeoutService();
 

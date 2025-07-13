@@ -63,5 +63,23 @@ internal sealed class ConfigProvider : IConfigProvider
 
 
     }
+
+    async Task<IEC104MappingModel[]> IConfigProvider.GetMappingModelsAsync(CancellationToken stoppingToken)
+    {
+        using var scope = _serviceProvider.CreateAsyncScope();
+        using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
+        return await dbContext.IEC104Mappings.AsNoTracking().Join(dbContext.IEC104Groups.AsNoTracking(),
+            f => f.Id,
+            s => s.IEC104MappingId,
+            (f, s) => new IEC104MappingModel()
+            {
+                ServerId = f.ServerId,
+                Group = s.Group,
+                Address = f.Address,
+                AsduType = (byte)f.IEC104TypeId,
+                EquipmentId = f.EquipmentId,
+                ParameterId = f.ParameterId,
+            }).ToArrayAsync(stoppingToken);
+    }
 }
 

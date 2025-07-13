@@ -19,11 +19,13 @@ public sealed class IEC104ServersStarterService : BackgroundService
     {
         return Task.Run(async () =>
         {
+            var mappings = (await _configProvider.GetMappingModelsAsync(stoppingToken)).ToLookup(x => x.ServerId);
+
             foreach (var serverModel in await _configProvider.GetServersAsync(stoppingToken))
             {
                 try
                 {
-                    var server = _iec104ServerFactory.CreateServer(serverModel);
+                    var server = _iec104ServerFactory.CreateServer(serverModel, mappings[serverModel.ApplicationLayerModel.ServerId]);
                     server.Start();
                     _servers.Add(server);
                     _logger.LogServerStart(serverModel.ServerName, serverModel.Port);

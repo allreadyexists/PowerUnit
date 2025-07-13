@@ -14,5 +14,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Common\PowerUnit.Common.Options\PowerUnit.Common.Options.csproj" />
+    <ProjectReference Include="..\Types\PowerUnit.Service.IEC104.Types.csproj" />
   </ItemGroup>
 </Project>

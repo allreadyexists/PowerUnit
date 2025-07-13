@@ -10,6 +10,8 @@ namespace PowerUnit;
 
 public partial class Iec60870_5_104ServerApplicationLayer
 {
+
+
     private void Activate(AsduPacketHeader_2_2 header, ushort address, QOI qoi, int transactionId, CancellationToken ct, CancellationToken transactionCt)
     {
         _ = SendInRentBuffer((buffer) =>
@@ -23,102 +25,141 @@ public partial class Iec60870_5_104ServerApplicationLayer
                 var errorTransaction = false;
                 var cancelTransaction = false;
 
-                var M_ME_NC_1_SingleArray = ArrayPool<M_ME_NC_1_Single>.Shared.Rent(M_ME_NC_1_Single.MaxItemCount);
-                var M_ME_TF_1_SingleArray = ArrayPool<M_ME_TF_1_Single>.Shared.Rent(M_ME_TF_1_Single.MaxItemCount);
-
-                int countTotal = 0;
-                byte count = 0;
-
-                AsduType currentType = 0;
-                var currentTypeMaxCount = 0;
-
-                var isInit = false;
-
-                try
+                if (_groups.TryGetValue((int)qoi, out var group))
                 {
-                    foreach (var groupData in _values)
+                    var M_SP_TB_1_SingleArray = ArrayPool<M_SP_TB_1_Single>.Shared.Rent(M_SP_TB_1_Single.MaxItemCount);
+                    var M_DP_TB_1_SingleArray = ArrayPool<M_DP_TB_1_Single>.Shared.Rent(M_DP_TB_1_Single.MaxItemCount);
+                    var M_ME_TF_1_SingleArray = ArrayPool<M_ME_TF_1_Single>.Shared.Rent(M_ME_TF_1_Single.MaxItemCount);
+
+                    int countTotal = 0;
+                    byte count = 0;
+
+                    byte currentType = 0;
+                    var currentTypeMaxCount = 0;
+
+                    var isInit = false;
+
+                    try
                     {
-                        _logger.LogDebug("{@countTotal} {@type}", countTotal++, groupData.Value.AsduType);
-
-                        if (groupData.Value.AsduType == AsduType.M_ME_NC_1 || groupData.Value.AsduType == AsduType.M_ME_TF_1)
+                        foreach (var groupData in _values.Where(x => group.Contains(x.Key)))
                         {
-                            if (!isInit)
-                            {
-                                currentType = groupData.Value.AsduType;
-                                isInit = true;
-                                if (groupData.Value.AsduType == AsduType.M_ME_NC_1)
-                                {
-                                    currentTypeMaxCount = M_ME_NC_1_Single.MaxItemCount;
-                                    M_ME_NC_1_SingleArray[count++] = new M_ME_NC_1_Single(groupData.Value.Address, ((AnalogValue)groupData.Value).Value, 0);
-                                }
-                                else if (groupData.Value.AsduType == AsduType.M_ME_TF_1)
-                                {
-                                    currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
-                                    M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(groupData.Value.Address, ((AnalogValue)groupData.Value).Value, 0, ((AnalogValue)groupData.Value).ValueDt!.Value, 0);
-                                }
-                            }
-                            else
-                            {
-                                if (currentType != groupData.Value.AsduType || count == currentTypeMaxCount)
-                                {
-                                    headerReq = new AsduPacketHeader_2_2(currentType, SQ.Single, count, (COT)qoi, initAddr: header.InitAddr,
-                                                    commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                                    if (currentType == AsduType.M_ME_NC_1)
-                                    {
-                                        length = M_ME_NC_1_Single.Serialize(buffer, in headerReq, M_ME_NC_1_SingleArray, count);
-                                    }
-                                    else if (currentType == AsduType.M_ME_TF_1)
-                                    {
-                                        length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
-                                    }
+                            _logger.LogDebug("{@countTotal} {@type}", countTotal++, groupData.Value.Type);
 
-                                    _logger.LogDebug("!!! {@send} {@type}", count, currentType);
-                                    _packetSender!.Send(buffer[..length]);
-
-                                    if (groupData.Value.AsduType == AsduType.M_ME_NC_1)
-                                        currentTypeMaxCount = M_ME_NC_1_Single.MaxItemCount;
-                                    else if (groupData.Value.AsduType == AsduType.M_ME_TF_1)
+                            if (groupData.Value.Type == (byte)AsduType.M_SP_TB_1 ||
+                                groupData.Value.Type == (byte)AsduType.M_DP_TB_1 ||
+                                groupData.Value.Type == (byte)AsduType.M_ME_TF_1)
+                            {
+                                if (!isInit)
+                                {
+                                    currentType = groupData.Value.Type;
+                                    isInit = true;
+                                    if (groupData.Value.Type == (byte)AsduType.M_SP_TB_1)
+                                    {
+                                        currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
+                                        M_SP_TB_1_SingleArray[count++] = new M_SP_TB_1_Single(groupData.Key,
+                                            ((DiscretValue)groupData.Value.Value).Value ? SIQ_Value.On : SIQ_Value.Off, 0,
+                                            ((DiscretValue)groupData.Value.Value).ValueDt!.Value, 0);
+                                    }
+                                    else if (groupData.Value.Type == (byte)AsduType.M_DP_TB_1)
+                                    {
+                                        currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
+                                        M_DP_TB_1_SingleArray[count++] = new M_DP_TB_1_Single(groupData.Key,
+                                            ((DiscretValue)groupData.Value.Value).Value ? DIQ_Value.On : DIQ_Value.Off, 0,
+                                            ((DiscretValue)groupData.Value.Value).ValueDt!.Value, 0);
+                                    }
+                                    else if (groupData.Value.Type == (byte)AsduType.M_ME_TF_1)
+                                    {
                                         currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
-
-                                    currentType = groupData.Value.AsduType;
-                                    count = 0;
+                                        M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(groupData.Key,
+                                            ((AnalogValue)groupData.Value.Value).Value, 0,
+                                            ((AnalogValue)groupData.Value.Value).ValueDt!.Value, 0);
+                                    }
                                 }
+                                else
+                                {
+                                    if (currentType != groupData.Value.Type || count == currentTypeMaxCount)
+                                    {
+                                        headerReq = new AsduPacketHeader_2_2((AsduType)currentType, SQ.Single, count, (COT)qoi, initAddr: header.InitAddr,
+                                                        commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+                                        if (currentType == (byte)AsduType.M_SP_TB_1)
+                                        {
+                                            length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1_SingleArray, count);
+                                        }
+                                        else if (currentType == (byte)AsduType.M_DP_TB_1)
+                                        {
+                                            length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1_SingleArray, count);
+                                        }
+                                        else if (currentType == (byte)AsduType.M_ME_TF_1)
+                                        {
+                                            length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
+                                        }
 
-                                if (groupData.Value.AsduType == AsduType.M_ME_NC_1)
-                                {
-                                    M_ME_NC_1_SingleArray[count++] = new M_ME_NC_1_Single(groupData.Value.Address, ((AnalogValue)groupData.Value).Value, 0);
-                                }
-                                else if (groupData.Value.AsduType == AsduType.M_ME_TF_1)
-                                {
-                                    M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(groupData.Value.Address, ((AnalogValue)groupData.Value).Value, 0, ((AnalogValue)groupData.Value).ValueDt!.Value, 0);
+                                        _logger.LogDebug("!!! {@send} {@type}", count, currentType);
+                                        _packetSender!.Send(buffer[..length]);
+
+                                        if (groupData.Value.Type == (byte)AsduType.M_SP_TB_1)
+                                            currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
+                                        if (groupData.Value.Type == (byte)AsduType.M_DP_TB_1)
+                                            currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
+                                        else if (groupData.Value.Type == (byte)AsduType.M_ME_TF_1)
+                                            currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
+
+                                        currentType = groupData.Value.Type;
+                                        count = 0;
+                                    }
+
+                                    if (groupData.Value.Type == (byte)AsduType.M_SP_TB_1)
+                                    {
+                                        M_SP_TB_1_SingleArray[count++] = new M_SP_TB_1_Single(groupData.Key,
+                                            ((DiscretValue)groupData.Value.Value).Value ? SIQ_Value.On : SIQ_Value.Off, 0,
+                                            ((DiscretValue)groupData.Value.Value).ValueDt!.Value, 0);
+                                    }
+                                    else if (groupData.Value.Type == (byte)AsduType.M_DP_TB_1)
+                                    {
+                                        M_DP_TB_1_SingleArray[count++] = new M_DP_TB_1_Single(groupData.Key,
+                                            ((DiscretValue)groupData.Value.Value).Value ? DIQ_Value.On : DIQ_Value.Off, 0,
+                                            ((DiscretValue)groupData.Value.Value).ValueDt!.Value, 0);
+                                    }
+                                    else if (groupData.Value.Type == (byte)AsduType.M_ME_TF_1)
+                                    {
+                                        M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(groupData.Key,
+                                            ((AnalogValue)groupData.Value.Value).Value, 0,
+                                            ((AnalogValue)groupData.Value.Value).ValueDt!.Value, 0);
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    if (count > 0)
+                        if (count > 0)
+                        {
+                            headerReq = new AsduPacketHeader_2_2((AsduType)currentType, SQ.Single, count, (COT)qoi, initAddr: header.InitAddr,
+                                                        commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+                            if (currentType == (byte)AsduType.M_SP_TB_1)
+                            {
+                                length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1_SingleArray, count);
+                                currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
+                            }
+                            else if (currentType == (byte)AsduType.M_DP_TB_1)
+                            {
+                                length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1_SingleArray, count);
+                                currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
+                            }
+                            else if (currentType == (byte)AsduType.M_ME_TF_1)
+                            {
+                                length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
+                                currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
+                            }
+
+                            _logger.LogDebug("!!! {@send} {@type}", count, currentType);
+                            _packetSender!.Send(buffer[..length]);
+                        }
+                    }
+                    finally
                     {
-                        headerReq = new AsduPacketHeader_2_2(currentType, SQ.Single, count, (COT)qoi, initAddr: header.InitAddr,
-                                                    commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                        if (currentType == AsduType.M_ME_NC_1)
-                        {
-                            length = M_ME_NC_1_Single.Serialize(buffer, in headerReq, M_ME_NC_1_SingleArray, count);
-                            currentTypeMaxCount = M_ME_NC_1_Single.MaxItemCount;
-                        }
-                        else if (currentType == AsduType.M_ME_TF_1)
-                        {
-                            length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
-                            currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
-                        }
-
-                        _logger.LogDebug("!!! {@send} {@type}", count, currentType);
-                        _packetSender!.Send(buffer[..length]);
+                        ArrayPool<M_SP_TB_1_Single>.Shared.Return(M_SP_TB_1_SingleArray);
+                        ArrayPool<M_DP_TB_1_Single>.Shared.Return(M_DP_TB_1_SingleArray);
+                        ArrayPool<M_ME_TF_1_Single>.Shared.Return(M_ME_TF_1_SingleArray);
                     }
-                }
-                finally
-                {
-                    ArrayPool<M_ME_NC_1_Single>.Shared.Return(M_ME_NC_1_SingleArray);
-                    ArrayPool<M_ME_TF_1_Single>.Shared.Return(M_ME_TF_1_SingleArray);
                 }
 
                 if (!cancelTransaction)

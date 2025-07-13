@@ -1,5 +1,4 @@
 using PowerUnit.Service.IEC104.Abstract;
-using PowerUnit.Service.IEC104.Types;
 
 namespace PowerUnit.Service.IEC104.Export;
 
@@ -9,7 +8,7 @@ internal sealed class DiscretValueTestDataSource : TestDataSource<DiscretValue>
     { }
 
     protected override DiscretValue CreateNewValue(DateTime now) =>
-        new DiscretValue(AsduType.M_SP_TB_1, (ushort)Random.Shared.Next(200, 299), Random.Shared.NextDouble() < 0.5, now, now, 0);
+        new DiscretValue(Random.Shared.NextInt64(1, 100), Random.Shared.NextInt64(21, 20), /*AsduType.M_SP_TB_1, (ushort)Random.Shared.Next(200, 299),*/ Random.Shared.NextDouble() < 0.5, now, now);
 }
 
 //internal sealed class DataProvider : IDataProvider

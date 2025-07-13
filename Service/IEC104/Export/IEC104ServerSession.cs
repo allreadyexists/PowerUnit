@@ -13,23 +13,25 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
 {
     private readonly IServiceProvider _provider;
     private readonly IEC104ServerModel _options;
+    private readonly IEnumerable<IEC104MappingModel> _mapping;
 
     private readonly Iec60870_5_104ServerChannelLayer _channelLayer;
     private readonly ILogger<IEC104ServerSession> _logger;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
-    public IEC104ServerSession(IServiceProvider provider, IEC104ServerModel options, TcpServer server) : base(server)
+    public IEC104ServerSession(IServiceProvider provider, IEC104ServerModel options, IEnumerable<IEC104MappingModel> mapping, TcpServer server) : base(server)
     {
         OptionSendBufferSize = 256 * 3 / 2;
         OptionReceiveBufferSize = 256 * 3 / 2;
 
         _provider = provider;
         _options = options;
+        _mapping = mapping;
 
         _logger = _provider.GetRequiredService<ILogger<IEC104ServerSession>>();
 
         // Канальный уровень
-        _channelLayer = new Iec60870_5_104ServerChannelLayer(_provider, this, _options, _provider.GetRequiredService<ILogger<Iec60870_5_104ServerChannelLayer>>(), _cancellationTokenSource.Token);
+        _channelLayer = new Iec60870_5_104ServerChannelLayer(_provider, this, _options, _mapping, _provider.GetRequiredService<ILogger<Iec60870_5_104ServerChannelLayer>>(), _cancellationTokenSource.Token);
     }
 
     protected override void OnConnecting()

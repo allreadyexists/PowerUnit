@@ -11,8 +11,8 @@ public class IEC104ServerFactory
         _provider = provider;
     }
 
-    public IEC104Server CreateServer(IEC104ServerModel options)
+    public IEC104Server CreateServer(IEC104ServerModel options, IEnumerable<IEC104MappingModel> mapping)
     {
-        return new IEC104Server(_provider, options, _provider.GetRequiredService<ILogger<IEC104Server>>());
+        return new IEC104Server(_provider, options, mapping, _provider.GetRequiredService<ILogger<IEC104Server>>());
     }
 }

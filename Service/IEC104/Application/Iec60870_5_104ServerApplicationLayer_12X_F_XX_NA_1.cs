@@ -97,20 +97,20 @@ public partial class Iec60870_5_104ServerApplicationLayer
         throw new Iec60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} segment {segment.ToHex()}");
     }
 
-    /// <summary>
-    /// Директория F_DR_TA_1 = 126
-    /// </summary>
-    /// <param name="header"></param>
-    /// <param name="address"></param>
-    /// <param name="nodf"></param>
-    /// <param name="lof"></param>
-    /// <param name="sof"></param>
-    /// <param name="dateTime"></param>
-    /// <param name="timeStatus"></param>
-    /// <param name="ct"></param>
-    internal void Process_F_DR_TA_1(AsduPacketHeader_2_2 header, ushort address, ushort nodf, uint lof, SOF sof, DateTime dateTime, TimeStatus timeStatus, CancellationToken ct)
-    {
-        throw new Iec60870_5_104ApplicationException(header, $"address {address} nodf {nodf} lof {lof} sof {sof} dateTime {dateTime} timeStatus {timeStatus}");
-    }
+    ///// <summary>
+    ///// Директория F_DR_TA_1 = 126
+    ///// </summary>
+    ///// <param name="header"></param>
+    ///// <param name="address"></param>
+    ///// <param name="nodf"></param>
+    ///// <param name="lof"></param>
+    ///// <param name="sof"></param>
+    ///// <param name="dateTime"></param>
+    ///// <param name="timeStatus"></param>
+    ///// <param name="ct"></param>
+    //internal void Process_F_DR_TA_1(AsduPacketHeader_2_2 header, ushort address, ushort nodf, uint lof, SOF sof, DateTime dateTime, TimeStatus timeStatus, CancellationToken ct)
+    //{
+    //    throw new Iec60870_5_104ApplicationException(header, $"address {address} nodf {nodf} lof {lof} sof {sof} dateTime {dateTime} timeStatus {timeStatus}");
+    //}
 }
 

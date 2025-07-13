@@ -31,7 +31,9 @@ public static class PowerUnitIEC104ServerDbContextDiHelper
         services.AddDbContextPool<PowerUnitIEC104ServerDbContext>((p, x) => x
             .UseNpgsql(p.GetRequiredService<DbConnectionStringBuilder>().ConnectionString)
             .UseSnakeCaseNamingConvention()
-            .EnableSensitiveDataLogging()
+            .EnableSensitiveDataLogging(false)
+            .EnableThreadSafetyChecks()
+            .EnableDetailedErrors()
         );
 
         return services;

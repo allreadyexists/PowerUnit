@@ -11,18 +11,21 @@ using PowerUnit.Service.IEC104.Types.Asdu;
 
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Reactive.Linq;
 
 namespace PowerUnit;
 
 public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotification
 {
-    private readonly IServiceProvider _serviceProvider;
     private readonly TimeProvider _timeProvider;
 
     private readonly ApplicationLayerReadTransactionManager _readTransactionManager;
 
     private readonly IEC104ApplicationLayerModel _applicationLayerOption;
+
+    private readonly FrozenDictionary<(long EquipmentId, long ParameterId), IEC104MappingModel> _mapping;
+    private readonly FrozenDictionary<int, FrozenSet<int>> _groups;
 
     private readonly IPhysicalLayerCommander _physicalLayerCommander;
 
@@ -32,10 +35,11 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
 
     private readonly CancellationTokenSource _cts;
 
+    private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromMilliseconds(500);
     private readonly IDisposable _subscriber1;
     private IDisposable? _subscriber2;
 
-    private readonly ConcurrentDictionary<ushort, BaseValue> _values = new ConcurrentDictionary<ushort, BaseValue>();
+    private readonly ConcurrentDictionary<ushort, (byte Type, BaseValue Value)> _values = new ConcurrentDictionary<ushort, (byte Type, BaseValue Value)>();
 
     internal async Task SendInRentBuffer(Func<byte[], Task> action)
     {
@@ -66,26 +70,33 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
         }
     }
 
-    public Iec60870_5_104ServerApplicationLayer(IServiceProvider serviceProvider, IEC104ApplicationLayerModel applicationLayerOption, IChannelLayerPacketSender packetSender, IPhysicalLayerCommander physicalLayerCommander, ILogger<Iec60870_5_104ServerApplicationLayer> logger)
+    public Iec60870_5_104ServerApplicationLayer(IServiceProvider serviceProvider, IEC104ApplicationLayerModel applicationLayerOption,
+        IEnumerable<IEC104MappingModel> mapping,
+        IChannelLayerPacketSender packetSender, IPhysicalLayerCommander physicalLayerCommander, ILogger<Iec60870_5_104ServerApplicationLayer> logger)
     {
-        _serviceProvider = serviceProvider;
         _timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
         _readTransactionManager = new ApplicationLayerReadTransactionManager();
         _applicationLayerOption = applicationLayerOption;
+
+        var dictionary = new Dictionary<(long, long), IEC104MappingModel>();
+        foreach (var map in mapping.GroupBy(x => (x.EquipmentId, x.ParameterId, x.Address, x.AsduType)))
+        {
+            dictionary[(map.Key.EquipmentId, map.Key.ParameterId)] = map.First();
+        }
+
+        _mapping = dictionary.ToFrozenDictionary();
+        _groups = mapping.GroupBy(x => x.Group).ToFrozenDictionary(x => x.Key, y => y.Select(v => v.Address).ToFrozenSet());
+
         _packetSender = packetSender;
         _physicalLayerCommander = physicalLayerCommander;
         _cts = new CancellationTokenSource();
 
-        var dataSourceAnalogValue = serviceProvider.GetRequiredService<IDataSource<AnalogValue>>();
-        _subscriber1 = new BatchSubscriber<AnalogValue>(100, TimeSpan.FromMilliseconds(500), dataSourceAnalogValue, values =>
+        var dataSourceAnalogValue = serviceProvider.GetRequiredService<IDataSource<BaseValue>>();
+        _subscriber1 = new BatchSubscriber<BaseValue>(100, _bufferizationTimeout, dataSourceAnalogValue, values =>
         {
-            foreach (var value in values)
-            {
-                _values.AddOrUpdate(value.Address, address => value, (address, oldValue) => value);
-            }
-
+            Snapshot(values);
             return Task.CompletedTask;
-        });
+        }, filter: ValueFilter);
 
         _logger = logger;
 
@@ -100,45 +111,15 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
 
             if (applicationLayerOption.SporadicSendEnabled)
             {
-                _subscriber2 = new BatchSubscriber<AnalogValue>(M_ME_TF_1_Single.MaxItemCount, TimeSpan.FromMilliseconds(500), dataSourceAnalogValue, values =>
+                _subscriber2 = new BatchSubscriber<BaseValue>(100, _bufferizationTimeout, dataSourceAnalogValue, values =>
                 {
-                    var M_ME_TF_1_SingleArray = ArrayPool<M_ME_TF_1_Single>.Shared.Rent(M_ME_TF_1_Single.MaxItemCount);
-                    try
+                    return SendInRentBuffer(buffer =>
                     {
-                        byte count = 0;
-                        foreach (var value in values/*.GroupBy(x => x.Address).SelectMany(x => x.OrderBy(y => y.ValueDt).Take(1))*/)
-                        {
-                            switch (value)
-                            {
-                                case AnalogValue analogValue:
-                                    if (value.AsduType == AsduType.M_ME_TF_1)
-                                    {
-                                        M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(analogValue.Address, analogValue.Value, 0, analogValue.ValueDt ?? _timeProvider.GetUtcNow().DateTime, TimeStatus.OK);
-                                    }
-
-                                    break;
-                            }
-                        }
-
-                        if (count > 0)
-                        {
-                            _ = SendInRentBuffer(buffer =>
-                            {
-                                headerReq = new AsduPacketHeader_2_2(AsduType.M_ME_TF_1, SQ.Single, count, COT.SPORADIC, 0/*???*/,
-                                                        commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                                length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
-                                _packetSender!.Send(buffer[..length], ChannelLayerPacketPriority.Low);
-                                return Task.CompletedTask;
-                            });
-                        }
-                    }
-                    finally
-                    {
-                        ArrayPool<M_ME_TF_1_Single>.Shared.Return(M_ME_TF_1_SingleArray);
-                    }
-
-                    return Task.CompletedTask;
-                });
+                        Stream(buffer, values);
+                        return Task.CompletedTask;
+                    });
+                },
+                filter: ValueFilter);
             }
 
             return Task.CompletedTask;
@@ -220,11 +201,11 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
         Process_F_SG_NA_1(header, address, nof, nos, segment, _cts.Token);
     }
 
-    void IAsduNotification.Notify_F_DR_TA(in AsduPacketHeader_2_2 header, ushort address, ushort nodf, uint lof, SOF sof, DateTime dateTime, TimeStatus timeStatus)
-    {
-        _logger.LogTrace($"{address} {nodf} {lof} {sof} {dateTime} {timeStatus}");
-        Process_F_DR_TA_1(header, address, nodf, lof, sof, dateTime, timeStatus, _cts.Token);
-    }
+    //void IAsduNotification.Notify_F_DR_TA(in AsduPacketHeader_2_2 header, ushort address, ushort nodf, uint lof, SOF sof, DateTime dateTime, TimeStatus timeStatus)
+    //{
+    //    _logger.LogTrace($"{address} {nodf} {lof} {sof} {dateTime} {timeStatus}");
+    //    Process_F_DR_TA_1(header, address, nodf, lof, sof, dateTime, timeStatus, _cts.Token);
+    //}
 
     void IAsduNotification.Notify_C_TS_NA(in AsduPacketHeader_2_2 header, ushort address, ushort fbp)
     {

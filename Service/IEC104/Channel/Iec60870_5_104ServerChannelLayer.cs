@@ -251,6 +251,8 @@ public class Iec60870_5_104ServerChannelLayer :
 
     private readonly IEC104ServerModel _serverOptions;
 
+    private readonly IEnumerable<IEC104MappingModel> _mapping;
+
     private readonly IPhysicalLayerCommander _physicalLayerController;
 
     private readonly IecParserGenerator _iecReflection;
@@ -294,11 +296,13 @@ public class Iec60870_5_104ServerChannelLayer :
         new APCI(PacketU.Size, new PacketU(UControl.TestFrCon)).SerializeUnsafe(_testCon, 0);
     }
 
-    private static Iec60870_5_104ServerApplicationLayer GetApplicationLayer(IServiceProvider serviceProvider, IEC104ServerModel serverOptions, IChannelLayerPacketSender channelLayerPacketSender, IPhysicalLayerCommander physicalLayerCommander)
+    private static Iec60870_5_104ServerApplicationLayer GetApplicationLayer(IServiceProvider serviceProvider, IEC104ServerModel serverOptions,
+        IEnumerable<IEC104MappingModel> mapping,
+        IChannelLayerPacketSender channelLayerPacketSender, IPhysicalLayerCommander physicalLayerCommander)
     {
         var applicationLayerOption = serverOptions.ApplicationLayerModel;
         var logger = serviceProvider.GetRequiredService<ILogger<Iec60870_5_104ServerApplicationLayer>>();
-        var serverApplicationLayer = new Iec60870_5_104ServerApplicationLayer(serviceProvider, applicationLayerOption,
+        var serverApplicationLayer = new Iec60870_5_104ServerApplicationLayer(serviceProvider, applicationLayerOption, mapping,
             channelLayerPacketSender, physicalLayerCommander, logger);
 
         return serverApplicationLayer;
@@ -309,6 +313,7 @@ public class Iec60870_5_104ServerChannelLayer :
     /// </summary>
     public Iec60870_5_104ServerChannelLayer(IServiceProvider serviceProvider, IPhysicalLayerCommander physicalLayerController,
         IEC104ServerModel serverOptions,
+        IEnumerable<IEC104MappingModel> mapping,
         ILogger<Iec60870_5_104ServerChannelLayer> logger,
         CancellationToken ct)
     {
@@ -317,6 +322,7 @@ public class Iec60870_5_104ServerChannelLayer :
         _timeoutsProcessService = serviceProvider.GetRequiredService<ITimeoutService>();
         _physicalLayerController = physicalLayerController;
         _serverOptions = serverOptions;
+        _mapping = mapping;
         _iecReflection = serviceProvider.GetRequiredService<IecParserGenerator>();
         _ct = ct;
         _logger = logger;
@@ -589,7 +595,7 @@ public class Iec60870_5_104ServerChannelLayer :
             case UControl.StartDtAct:
                 if (!_isEstablishedConnection)
                 {
-                    _asduNotification = GetApplicationLayer(_serviceProvider, _serverOptions, this, _physicalLayerController);
+                    _asduNotification = GetApplicationLayer(_serviceProvider, _serverOptions, _mapping, this, _physicalLayerController);
 
                     _isEstablishedConnection = true;
                     _timeout0Id = await StopTimerAsync(_timeout0Id, ct);

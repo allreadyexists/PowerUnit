@@ -6,7 +6,7 @@ namespace PowerUnit.Service.IEC104.Types.Asdu;
 
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
 [AsduTypeInfo(AsduType.M_ME_TF_1, SQ.Single,
-    toClientCauseOfTransmits: [1, 2, 3, 5, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36])]
+toClientCauseOfTransmits: [1, 2, 3, 5, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36])]
 public readonly struct M_ME_TF_1_Single
 {
     public static byte Size => (byte)Marshal.SizeOf<M_ME_TF_1_Single>();

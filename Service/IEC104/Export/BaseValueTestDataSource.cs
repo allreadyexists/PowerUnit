@@ -2,13 +2,24 @@ using PowerUnit.Service.IEC104.Abstract;
 
 namespace PowerUnit.Service.IEC104.Export;
 
-internal sealed class AnalogValueTestDataSource : TestDataSource<AnalogValue>
+internal sealed class BaseValueTestDataSource : TestDataSource<BaseValue>
 {
-    public AnalogValueTestDataSource(TimeProvider timeProvider, ILogger<AnalogValueTestDataSource> logger) : base(timeProvider, logger)
+    public BaseValueTestDataSource(TimeProvider timeProvider, ILogger<BaseValueTestDataSource> logger) : base(timeProvider, logger)
     { }
 
-    protected override AnalogValue CreateNewValue(DateTime now) =>
-        new AnalogValue(1, Random.Shared.NextInt64(1, 5), /*AsduType.M_ME_TF_1, (ushort)Random.Shared.Next(100, 199),*/ (float)Random.Shared.NextDouble(), now, now);
+    protected override BaseValue CreateNewValue(DateTime now)
+    {
+        var randomType = Random.Shared.NextDouble();
+        var randomValue = Random.Shared.NextDouble();
+        if (randomType < 0.5)
+        {
+            return new AnalogValue(Random.Shared.NextInt64(1, 2), Random.Shared.NextInt64(1, 5), (float)randomValue, now, now);
+        }
+        else
+        {
+            return new DiscretValue(Random.Shared.NextInt64(2, 3), Random.Shared.NextInt64(1000, 1002), randomValue < 0.5, now, now);
+        }
+    }
 }
 
 //internal sealed class DataProvider : IDataProvider

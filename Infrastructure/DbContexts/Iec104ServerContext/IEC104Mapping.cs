@@ -21,9 +21,13 @@ public class IEC104MappingItem : IEntityTypeConfiguration<IEC104MappingItem>
     {
         builder.Property(e => e.ServerId).IsRequired();
         builder.Property(e => e.EquipmentId).IsRequired();
+        builder.Property(e => e.ParameterId).IsRequired();
         builder.Property(e => e.IEC104TypeId).IsRequired();
         builder.Property(e => e.Address).IsRequired();
+
         builder.HasOne(e => e.Server).WithMany().HasForeignKey(e => e.ServerId);
         builder.HasOne(e => e.IEC104Type).WithMany().HasForeignKey(e => e.IEC104TypeId);
+
+        builder.HasIndex(e => new { e.ServerId, e.EquipmentId, e.ParameterId, e.Address, e.IEC104TypeId }).IsUnique();
     }
 }

@@ -35,7 +35,7 @@ public interface IAsduNotification : IDisposable
     void Notify_F_LS_NA(in AsduPacketHeader_2_2 header, ushort address, ushort nof, byte nos, LSQ lsq, byte chs);
     void Notify_F_AF_NA(in AsduPacketHeader_2_2 header, ushort address, ushort nof, byte nos, AFQ afq);
     void Notify_F_SG_NA(in AsduPacketHeader_2_2 header, ushort address, ushort nof, byte nos, Span<byte> segment);
-    void Notify_F_DR_TA(in AsduPacketHeader_2_2 header, ushort address, ushort nodf, uint lof, SOF sof, DateTime dateTime, TimeStatus timeStatus);
+    //void Notify_F_DR_TA(in AsduPacketHeader_2_2 header, ushort address, ushort nodf, uint lof, SOF sof, DateTime dateTime, TimeStatus timeStatus);
 
     void Notify_Unknown_Asdu_Raw(in AsduPacketHeader_2_2 header, Span<byte> asduInfoRaw);
     void Notify_Unknown_Cot_Raw(in AsduPacketHeader_2_2 header, Span<byte> asduInfoRaw);
