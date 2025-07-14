@@ -3,44 +3,29 @@ using System.Threading.Channels;
 
 namespace PowerUnit.Common.Subsciption;
 
-public sealed class BatchSubscriber<T> : IDisposable
+public sealed class BatchSubscriber<T> : SubscriberBase<T>
 {
-    private readonly IDisposable _subscribe;
-    private readonly IDataSource<T> _dataSource;
-    private readonly CancellationTokenSource _tokenSource;
-
-    private readonly Action<Exception> _onError;
-    private readonly Action _onComplite;
-
     private readonly Channel<IEnumerable<T>> _channel;
 
     public BatchSubscriber(int count, TimeSpan timeSpan, IDataSource<T> dataSource,
         Func<IEnumerable<T>, Task> onNext,
         Action<Exception>? onError = null,
         Action? onComplite = null,
-        Predicate<T>? filter = null)
+        Predicate<T>? filter = null) : base(dataSource, onError, onComplite, filter)
     {
-        _dataSource = dataSource;
-        _tokenSource = new CancellationTokenSource();
-
         _channel = Channel.CreateUnbounded<IEnumerable<T>>(new UnboundedChannelOptions()
         {
             SingleReader = true,
             SingleWriter = true,
         });
 
-        _onError = onError ?? DelegateHelper.Empty<Exception>();
-        _onComplite = onComplite ?? DelegateHelper.Empty();
-
-        var valueFilter = filter ?? (static (value) => true);
-
-        _subscribe = _dataSource.Where(x => valueFilter(x)).Buffer(timeSpan, count).Subscribe(
+        Subscribe = DataSource.Where(x => Filter(x)).Buffer(timeSpan, count).Subscribe(
             value => _channel.Writer.TryWrite(value),
-            _onError,
-            _onComplite);
+            OnError,
+            OnComplite);
         _ = Task.Run(async () =>
         {
-            var token = _tokenSource.Token;
+            var token = TokenSource.Token;
             try
             {
                 while (!token.IsCancellationRequested)
@@ -53,27 +38,20 @@ public sealed class BatchSubscriber<T> : IDisposable
                         }
                         catch (Exception ex)
                         {
-                            _onError(ex);
+                            OnError(ex);
                         }
                     }
                 }
             }
             catch (Exception ocex)
             {
-                _onError(ocex);
+                OnError(ocex);
             }
             finally
             {
-                _onComplite();
+                OnComplite();
             }
         }
-        , _tokenSource.Token);
-    }
-
-    void IDisposable.Dispose()
-    {
-        _subscribe.Dispose();
-        _tokenSource.Cancel();
-        _tokenSource.Dispose();
+        , TokenSource.Token);
     }
 }

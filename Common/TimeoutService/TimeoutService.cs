@@ -71,7 +71,7 @@ internal sealed class TimeoutService : ITimeoutService, IDisposable
     public TimeoutService(ILogger<TimeoutService> logger)
     {
         _logger = logger;
-        _timer = new Timer(TimerCallbackAsync, this, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _timer = new Timer(TimerCallbackAsync!, this, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
     }
 
     private async Task<long> GetTicksLongAsync(CancellationToken cancellationToken)

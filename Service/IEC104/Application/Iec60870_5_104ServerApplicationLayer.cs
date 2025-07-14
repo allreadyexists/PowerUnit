@@ -35,6 +35,7 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
 
     private readonly CancellationTokenSource _cts;
 
+    private static readonly int _bufferizationSize = 100;
     private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromMilliseconds(500);
     private readonly IDisposable _subscriber1;
     private IDisposable? _subscriber2;
@@ -92,7 +93,7 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
         _cts = new CancellationTokenSource();
 
         var dataSourceAnalogValue = serviceProvider.GetRequiredService<IDataSource<BaseValue>>();
-        _subscriber1 = new BatchSubscriber<BaseValue>(100, _bufferizationTimeout, dataSourceAnalogValue, values =>
+        _subscriber1 = new BatchSubscriber<BaseValue>(_bufferizationSize, _bufferizationTimeout, dataSourceAnalogValue, values =>
         {
             Snapshot(values);
             return Task.CompletedTask;
@@ -111,7 +112,7 @@ public sealed partial class Iec60870_5_104ServerApplicationLayer : IAsduNotifica
 
             if (applicationLayerOption.SporadicSendEnabled)
             {
-                _subscriber2 = new BatchSubscriber<BaseValue>(100, _bufferizationTimeout, dataSourceAnalogValue, values =>
+                _subscriber2 = new BatchSubscriber<BaseValue>(_bufferizationSize, _bufferizationTimeout, dataSourceAnalogValue, values =>
                 {
                     return SendInRentBuffer(buffer =>
                     {
