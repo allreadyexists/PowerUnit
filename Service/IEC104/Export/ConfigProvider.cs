@@ -5,7 +5,6 @@ using Polly.Retry;
 
 using PowerUnit.Infrastructure.IEC104ServerDb;
 using PowerUnit.Service.IEC104.Abstract;
-using PowerUnit.Service.IEC104.Options.Models;
 
 namespace PowerUnit.Service.IEC104.Export;
 
@@ -20,14 +19,14 @@ internal sealed class ConfigProvider : IConfigProvider
 
     Task<IEC104ServerModel[]> IConfigProvider.GetServersAsync(CancellationToken stoppingToken)
     {
-        return _policyReadServersSettings.ExecuteAsync(async (context) =>
+        return _policyReadServersSettings.ExecuteAsync(async (ct) =>
         {
             using var scope = _serviceProvider.CreateAsyncScope();
             using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
             var servers = await dbContext.IEC104Servers.AsNoTracking().Where(x => x.Enable)
                 .Include(x => x.ChannelLayerOption)
                 .Include(x => x.ApplicationLayerOption).OrderBy(x => x.Id)
-                .ToArrayAsync(stoppingToken);
+                .ToArrayAsync(ct);
 
             foreach (var server in servers)
             {
@@ -60,26 +59,28 @@ internal sealed class ConfigProvider : IConfigProvider
                 }
             }).ToArray();
         }, stoppingToken);
-
-
     }
 
-    async Task<IEC104MappingModel[]> IConfigProvider.GetMappingModelsAsync(CancellationToken stoppingToken)
+    Task<IEC104MappingModel[]> IConfigProvider.GetMappingModelsAsync(CancellationToken stoppingToken)
     {
-        using var scope = _serviceProvider.CreateAsyncScope();
-        using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
-        return await dbContext.IEC104Mappings.AsNoTracking().Join(dbContext.IEC104Groups.AsNoTracking(),
-            f => f.Id,
-            s => s.IEC104MappingId,
-            (f, s) => new IEC104MappingModel()
-            {
-                ServerId = f.ServerId,
-                Group = s.Group,
-                Address = f.Address,
-                AsduType = (byte)f.IEC104TypeId,
-                EquipmentId = f.EquipmentId,
-                ParameterId = f.ParameterId,
-            }).ToArrayAsync(stoppingToken);
+        return _policyReadServersSettings.ExecuteAsync(async (ct) =>
+        {
+            using var scope = _serviceProvider.CreateAsyncScope();
+            using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
+            var result = await dbContext.IEC104Mappings.AsNoTracking().Join(dbContext.IEC104Groups.AsNoTracking(),
+                f => f.Id,
+                s => s.IEC104MappingId,
+                (f, s) => new IEC104MappingModel()
+                {
+                    ServerId = f.ServerId,
+                    Group = s.Group,
+                    Address = f.Address,
+                    AsduType = (byte)f.IEC104TypeId,
+                    EquipmentId = f.EquipmentId,
+                    ParameterId = f.ParameterId,
+                }).ToArrayAsync(ct);
+            return result;
+        }, stoppingToken);
     }
 }
 

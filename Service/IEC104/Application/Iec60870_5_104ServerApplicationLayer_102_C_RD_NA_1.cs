@@ -1,18 +1,17 @@
 using Microsoft.Extensions.Logging;
 
-using PowerUnit.Service.IEC104.Abstract;
 using PowerUnit.Service.IEC104.Types;
 using PowerUnit.Service.IEC104.Types.Asdu;
 
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Application;
 
-public partial class Iec60870_5_104ServerApplicationLayer
+public partial class IEC60870_5_104ServerApplicationLayer
 {
-    internal void Process_C_RD_NA_1(AsduPacketHeader_2_2 header, ushort address, CancellationToken ct)
+    internal void Process_C_RD_NA_1(ASDUPacketHeader_2_2 header, ushort address, CancellationToken ct)
     {
         _ = SendInRentBuffer((buffer) =>
             {
-                (byte Type, BaseValue Value)? result = null;
+                MapValueItem? result = null;
                 var errorTransaction = false;
                 var transactionId = (((int)header.AsduType) << 24) + (address << 8);
 
@@ -20,7 +19,7 @@ public partial class Iec60870_5_104ServerApplicationLayer
                 {
                     if (_readTransactionManager.CreateTransaction(transactionId, out var transactionCt))
                     {
-                        _values.TryGetValue(address, out var result1);
+                        result = _dataProvider.GetValue(address);
                     }
                     else
                     {
@@ -42,29 +41,29 @@ public partial class Iec60870_5_104ServerApplicationLayer
 
                 if (result.HasValue)
                 {
-                    AsduPacketHeader_2_2 headerReq;
-                    switch ((AsduType)result.Value.Type)
+                    ASDUPacketHeader_2_2 headerReq;
+                    switch (result.Value.Type)
                     {
-                        case AsduType.M_SP_TB_1 when result.Value.Value is DiscretValue discretValue1: // Одноэлементная информация с меткой времени СР56Время2а
-                            headerReq = new AsduPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
+                        case ASDUType.M_SP_TB_1 when result.Value.Value is DiscretValue discretValue1: // Одноэлементная информация с меткой времени СР56Время2а
+                            headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
                                 COT.REQUEST_REQUESTED_DATA, pn: PN.Positive, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
                             var M_SP_TB_1 = new M_SP_TB_1_Single(address, discretValue1.Value ? SIQ_Value.On : SIQ_Value.Off, 0, result.Value.Value.ValueDt!.Value, TimeStatus.OK);
                             length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1);
                             break;
-                        case AsduType.M_DP_TB_1 when result.Value.Value is DiscretValue discretValue2: // Двухэлементная информация с меткой времени СР56Время2а
-                            headerReq = new AsduPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
+                        case ASDUType.M_DP_TB_1 when result.Value.Value is DiscretValue discretValue2: // Двухэлементная информация с меткой времени СР56Время2а
+                            headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
                                 COT.REQUEST_REQUESTED_DATA, pn: PN.Positive, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
                             var M_DP_TB_1 = new M_DP_TB_1_Single(address, discretValue2.Value ? DIQ_Value.On : DIQ_Value.Off, 0, result.Value.Value.ValueDt!.Value, TimeStatus.OK);
                             length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1);
                             break;
-                        case AsduType.M_ME_TF_1 when result.Value.Value is AnalogValue analogValue1: // Значение измеряемой величины, короткий формат с плавающей запятой с меткой времени СР56Время2а
-                            headerReq = new AsduPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
+                        case ASDUType.M_ME_TF_1 when result.Value.Value is AnalogValue analogValue1: // Значение измеряемой величины, короткий формат с плавающей запятой с меткой времени СР56Время2а
+                            headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
                                 COT.REQUEST_REQUESTED_DATA, pn: PN.Positive, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
                             var M_ME_TF_1 = new M_ME_TF_1_Single(address, analogValue1.Value, 0, result.Value.Value.ValueDt!.Value, TimeStatus.OK);
                             length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1);
                             break;
                         default:
-                            headerReq = new AsduPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
+                            headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
                                 COT.UNKNOWN_TRANSFER_REASON, pn: PN.Negative, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
                             var C_RD_NA_1 = new C_RD_NA_1(address);
                             length = C_RD_NA_1.Serialize(buffer, in headerReq, in C_RD_NA_1);
@@ -73,7 +72,7 @@ public partial class Iec60870_5_104ServerApplicationLayer
                 }
                 else
                 {
-                    var headerReq = new AsduPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
+                    var headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
                         errorTransaction ? COT.UNKNOWN_TRANSFER_REASON : COT.UNKNOWN_INFORMATION_OBJECT_ADDRESS,
                         pn: PN.Negative,
                         initAddr: header.InitAddr,

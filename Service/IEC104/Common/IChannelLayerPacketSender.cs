@@ -3,8 +3,7 @@ namespace PowerUnit.Service.IEC104.Abstract;
 public enum ChannelLayerPacketPriority
 {
     Low,
-    Normal,
-    High
+    Normal
 }
 
 /// <summary>

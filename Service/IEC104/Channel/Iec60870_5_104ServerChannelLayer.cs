@@ -2,8 +2,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using PowerUnit.Common.StructHelpers;
+using PowerUnit.Common.Subsciption;
 using PowerUnit.Service.IEC104.Abstract;
-using PowerUnit.Service.IEC104.Options.Models;
+using PowerUnit.Service.IEC104.Application;
+using PowerUnit.Service.IEC104.Channel.Events;
 using PowerUnit.Service.IEC104.Types;
 
 using System.Runtime.InteropServices;
@@ -11,62 +13,19 @@ using System.Threading.Channels;
 
 namespace PowerUnit.Service.IEC104.Channel;
 
-#region События канального уровня
-
-/// <summary>
-/// Обобщенный интерфейс события
-/// </summary>
-internal interface IEvent { }
-/// <summary>
-/// Событие установки связи
-/// </summary>
-internal sealed class ConnectEvent : IEvent { }
-/// <summary>
-/// Событие отключения
-/// </summary>
-internal sealed class DisconnectEvent : IEvent { }
-/// <summary>
-/// Событие получения запроса на передачу
-/// </summary>
-internal sealed class TxEvent : IEvent { }
-/// <summary>
-/// Событие приема пакета
-/// </summary>
-internal sealed class RxEvent : IEvent { }
-/// <summary>
-/// Событие срабатывания таймера
-/// </summary>
-internal sealed class TimerEvent : IEvent
-{
-    /// <summary>
-    /// Идентификатор таймера
-    /// </summary>
-    public long TimerId { get; }
-    /// <summary>
-    /// Конструктор
-    /// </summary>
-    /// <param name="timerId"></param>
-    public TimerEvent(long timerId)
-    {
-        TimerId = timerId;
-    }
-}
-
-#endregion
-
 /// <summary>
 /// Канальный уровень
 /// </summary>
-public class Iec60870_5_104ServerChannelLayer :
+public class IEC60870_5_104ServerChannelLayer :
     IPhysicalLayerNotification,     // прием уведомлений от физического канала
     IChannelLayerPacketSender,      // прием запросов на передачу в канал
-    IIec60870_5_104NotifyPacket,    // прием уведомления о собранном кадре
+    IIEC60870_5_104NotifyPacket,    // прием уведомления о собранном кадре
     ITimeoutOwner             // прием уведомления о срабытывании таймера
 {
     /// <summary>
     /// Сборщик пакета
     /// </summary>
-    private readonly IFrameDetector _frameDetector = new Iec60870_5_104FrameDetector();
+    private readonly IFrameDetector _frameDetector = new IEC60870_5_104FrameDetector();
     /// <summary>
     /// Очередь происходящих событий
     /// </summary>
@@ -93,29 +52,11 @@ public class Iec60870_5_104ServerChannelLayer :
     /// </summary>
     private readonly Channel<byte[]> _rxQueue = System.Threading.Channels.Channel.CreateUnbounded<byte[]>();
 
-    //private sealed class PacketComparer : IComparer<(byte[] Packet, ChannelLayerPacketPriority Priority)>
-    //{
-    //    int IComparer<(byte[] Packet, ChannelLayerPacketPriority Priority)>.Compare((byte[] Packet, ChannelLayerPacketPriority Priority) x, (byte[] Packet, ChannelLayerPacketPriority Priority) y)
-    //    {
-    //        if (x.Priority > y.Priority)
-    //            return 1;
-    //        if (x.Priority < y.Priority)
-    //            return -1;
-    //        return 0;
-    //    }
-    //}
-
-    //private static readonly PacketComparer _comparer = new PacketComparer();
-
     /// <summary>
     /// Очередь пакетов на передачу
     /// </summary>
-    private readonly Channel<(byte[] Packet, ChannelLayerPacketPriority Priority)> _txQueue = System.Threading.Channels.Channel.CreateUnbounded<(byte[] Packet, ChannelLayerPacketPriority Priority)>/*Prioritized*/(
-        //new UnboundedPrioritizedChannelOptions<(byte[], ChannelLayerPacketPriority)>()
-        //{
-        //    Comparer = _comparer
-        //}
-    );
+    private readonly Channel<(byte[] Packet, ChannelLayerPacketPriority Priority)> _txQueue =
+        System.Threading.Channels.Channel.CreateUnbounded<(byte[] Packet, ChannelLayerPacketPriority Priority)>();
 
     /// <summary>
     /// Очередь переданных, но не подтвержденных пакетов
@@ -245,21 +186,22 @@ public class Iec60870_5_104ServerChannelLayer :
 
     private readonly TimeProvider _timeProvider;
 
-    private IAsduNotification? _asduNotification;
+    private IASDUNotification? _asduNotification;
 
     private readonly ITimeoutService _timeoutsProcessService;
 
     private readonly IEC104ServerModel _serverOptions;
 
-    private readonly IEnumerable<IEC104MappingModel> _mapping;
+    private readonly IDataSource<MapValueItem> _dataSource;
+    private readonly IDataProvider _dataProvider;
 
     private readonly IPhysicalLayerCommander _physicalLayerController;
 
-    private readonly IecParserGenerator _iecReflection;
+    private readonly IECParserGenerator _iecReflection;
 
     private readonly CancellationToken _ct;
 
-    private readonly ILogger<Iec60870_5_104ServerChannelLayer> _logger;
+    private readonly ILogger<IEC60870_5_104ServerChannelLayer> _logger;
 
     /// <summary>
     /// Подтверждение подключения
@@ -288,7 +230,7 @@ public class Iec60870_5_104ServerChannelLayer :
     /// Статический конструктор. Можно было бы обойтись без него, но хочется что бы константные запросы заполнились
     /// из Packet структур, так удобнее
     /// </summary>
-    static Iec60870_5_104ServerChannelLayer()
+    static IEC60870_5_104ServerChannelLayer()
     {
         new APCI(PacketU.Size, new PacketU(UControl.StartDtCon)).SerializeUnsafe(_startCon, 0);
         new APCI(PacketU.Size, new PacketU(UControl.StopDtCon)).SerializeUnsafe(_stopCon, 0);
@@ -296,13 +238,14 @@ public class Iec60870_5_104ServerChannelLayer :
         new APCI(PacketU.Size, new PacketU(UControl.TestFrCon)).SerializeUnsafe(_testCon, 0);
     }
 
-    private static Iec60870_5_104ServerApplicationLayer GetApplicationLayer(IServiceProvider serviceProvider, IEC104ServerModel serverOptions,
-        IEnumerable<IEC104MappingModel> mapping,
+    private static IEC60870_5_104ServerApplicationLayer GetApplicationLayer(IServiceProvider serviceProvider, IEC104ServerModel serverOptions,
+        IDataSource<MapValueItem> dataSource,
+        IDataProvider dataProvider,
         IChannelLayerPacketSender channelLayerPacketSender, IPhysicalLayerCommander physicalLayerCommander)
     {
         var applicationLayerOption = serverOptions.ApplicationLayerModel;
-        var logger = serviceProvider.GetRequiredService<ILogger<Iec60870_5_104ServerApplicationLayer>>();
-        var serverApplicationLayer = new Iec60870_5_104ServerApplicationLayer(serviceProvider, applicationLayerOption, mapping,
+        var logger = serviceProvider.GetRequiredService<ILogger<IEC60870_5_104ServerApplicationLayer>>();
+        var serverApplicationLayer = new IEC60870_5_104ServerApplicationLayer(serviceProvider, applicationLayerOption, dataSource, dataProvider,
             channelLayerPacketSender, physicalLayerCommander, logger);
 
         return serverApplicationLayer;
@@ -311,10 +254,11 @@ public class Iec60870_5_104ServerChannelLayer :
     /// <summary>
     /// Конструктор
     /// </summary>
-    public Iec60870_5_104ServerChannelLayer(IServiceProvider serviceProvider, IPhysicalLayerCommander physicalLayerController,
+    public IEC60870_5_104ServerChannelLayer(IServiceProvider serviceProvider, IPhysicalLayerCommander physicalLayerController,
         IEC104ServerModel serverOptions,
-        IEnumerable<IEC104MappingModel> mapping,
-        ILogger<Iec60870_5_104ServerChannelLayer> logger,
+        IDataSource<MapValueItem> dataSource,
+        IDataProvider dataProvider,
+        ILogger<IEC60870_5_104ServerChannelLayer> logger,
         CancellationToken ct)
     {
         _serviceProvider = serviceProvider;
@@ -322,8 +266,9 @@ public class Iec60870_5_104ServerChannelLayer :
         _timeoutsProcessService = serviceProvider.GetRequiredService<ITimeoutService>();
         _physicalLayerController = physicalLayerController;
         _serverOptions = serverOptions;
-        _mapping = mapping;
-        _iecReflection = serviceProvider.GetRequiredService<IecParserGenerator>();
+        _dataSource = dataSource;
+        _dataProvider = dataProvider;
+        _iecReflection = serviceProvider.GetRequiredService<IECParserGenerator>();
         _ct = ct;
         _logger = logger;
         // дружим каналку и сборщик пакета
@@ -595,7 +540,7 @@ public class Iec60870_5_104ServerChannelLayer :
             case UControl.StartDtAct:
                 if (!_isEstablishedConnection)
                 {
-                    _asduNotification = GetApplicationLayer(_serviceProvider, _serverOptions, _mapping, this, _physicalLayerController);
+                    _asduNotification = GetApplicationLayer(_serviceProvider, _serverOptions, _dataSource, _dataProvider, this, _physicalLayerController);
 
                     _isEstablishedConnection = true;
                     _timeout0Id = await StopTimerAsync(_timeout0Id, ct);

@@ -4,15 +4,15 @@ using System.Reflection;
 
 namespace PowerUnit.Service.IEC104.Types;
 
-public class IecParserGenerator
+public class IECParserGenerator
 {
-    private readonly FrozenDictionary<Type, AsduTypeInfoAttribute> _types;
+    private readonly FrozenDictionary<Type, ASDUTypeInfoAttribute> _types;
     private readonly FrozenSet<int> _toClientCots;
     private readonly FrozenSet<int> _toServerCots;
 
-    public IecParserGenerator(Assembly[] assemblies)
+    public IECParserGenerator(Assembly[] assemblies)
     {
-        var types = new Dictionary<Type, AsduTypeInfoAttribute>();
+        var types = new Dictionary<Type, ASDUTypeInfoAttribute>();
         var toClientCot = new HashSet<int>();
         var toServerCot = new HashSet<int>();
         var allAssemblies = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies().Concat(assemblies));
@@ -25,7 +25,7 @@ public class IecParserGenerator
             {
                 switch (customAttribute)
                 {
-                    case AsduTypeInfoAttribute asduTypeInfo:
+                    case ASDUTypeInfoAttribute asduTypeInfo:
                         types.Add(type, asduTypeInfo);
                         foreach (var item in asduTypeInfo.ToClientCauseOfTransmits)
                         {
@@ -49,9 +49,9 @@ public class IecParserGenerator
 
     private readonly Lock _parserLock = new Lock();
 
-    private Action<IAsduNotification, byte[], DateTime, bool>? _parser;
+    private Action<IASDUNotification, byte[], DateTime, bool>? _parser;
 
-    private Lazy<Action<IAsduNotification, byte[], DateTime, bool>> Parser => new(
+    private Lazy<Action<IASDUNotification, byte[], DateTime, bool>> Parser => new(
         () =>
         {
             if (_parser == null)
@@ -65,26 +65,26 @@ public class IecParserGenerator
             return _parser;
         });
 
-    private Action<IAsduNotification, byte[], DateTime, bool> GenerateParseMethod()
+    private Action<IASDUNotification, byte[], DateTime, bool> GenerateParseMethod()
     {
-        Expression CreateSwitchBlock(IEnumerable<KeyValuePair<Type, AsduTypeInfoAttribute>> types, ParameterExpression notification, ParameterExpression header, ParameterExpression asdu, ParameterExpression dateTime,
+        Expression CreateSwitchBlock(IEnumerable<KeyValuePair<Type, ASDUTypeInfoAttribute>> types, ParameterExpression notification, ParameterExpression header, ParameterExpression asdu, ParameterExpression dateTime,
             ParameterExpression switchParam, ParameterExpression isServerSideParam)
         {
-            var checkCot = typeof(IecParserGenerator).GetMethod("CheckCOT", BindingFlags.NonPublic | BindingFlags.Instance)!;
-            var asduProperty = typeof(AsduPacketHeader_2_2).GetProperty("AsduType");
-            var cotProperty = typeof(AsduPacketHeader_2_2).GetProperty("CauseOfTransmit");
+            var checkCot = typeof(IECParserGenerator).GetMethod(nameof(CheckCOT), BindingFlags.NonPublic | BindingFlags.Instance)!;
+            var asduProperty = typeof(ASDUPacketHeader_2_2).GetProperty(nameof(ASDUPacketHeader_2_2.AsduType));
+            var cotProperty = typeof(ASDUPacketHeader_2_2).GetProperty(nameof(ASDUPacketHeader_2_2.CauseOfTransmit));
 
-            var notifyCommonAsduAddress = typeof(IAsduNotification).GetMethod("Notify_CommonAsduAddress")!;
-            var defaultCaseUnknownCotMethod = typeof(IAsduNotification).GetMethod("Notify_Unknown_Cot_Raw")!;
-            var defaultCaseUnknownAsduMethod = typeof(IAsduNotification).GetMethod("Notify_Unknown_Asdu_Raw")!;
-            var defaultCaseUnknownException = typeof(IAsduNotification).GetMethod("Notify_Unknown_Exception")!;
+            var notifyCommonAsduAddress = typeof(IASDUNotification).GetMethod(nameof(IASDUNotification.Notify_CommonAsduAddress))!;
+            var defaultCaseUnknownCotMethod = typeof(IASDUNotification).GetMethod(nameof(IASDUNotification.Notify_Unknown_Cot_Raw))!;
+            var defaultCaseUnknownAsduMethod = typeof(IASDUNotification).GetMethod(nameof(IASDUNotification.Notify_Unknown_Asdu_Raw))!;
+            var defaultCaseUnknownException = typeof(IASDUNotification).GetMethod(nameof(IASDUNotification.Notify_Unknown_Exception))!;
             var defaultCase = Expression.Call(notification, defaultCaseUnknownAsduMethod, header, asdu);
 
             var switchCases = types.OrderBy(x => x.Value.AsduType).ThenBy(x => x.Value.SQ).Select(x =>
             {
                 var method = x.Key.GetMethod("Parse",
                     BindingFlags.Static | BindingFlags.Public,
-                    [typeof(Span<byte>), typeof(AsduPacketHeader_2_2).MakeByRefType(), typeof(DateTime), typeof(IAsduNotification)]);
+                    [typeof(Span<byte>), typeof(ASDUPacketHeader_2_2).MakeByRefType(), typeof(DateTime), typeof(IASDUNotification)]);
                 var caseValue = Expression.Constant((int)x.Value.AsduType << 8 | (int)x.Value.SQ);
                 var exceptionParameter = Expression.Parameter(typeof(Exception));
 
@@ -123,7 +123,7 @@ public class IecParserGenerator
             return expression;
         }
 
-        var headerVar = Expression.Variable(typeof(AsduPacketHeader_2_2), "headerVar");
+        var headerVar = Expression.Variable(typeof(ASDUPacketHeader_2_2), "headerVar");
         var asduVar = Expression.Variable(typeof(Span<byte>), "asduVar");
         var dateTimeVar = Expression.Variable(typeof(DateTime), "dateTimeVar");
 
@@ -142,25 +142,25 @@ public class IecParserGenerator
                 return x.Name.Equals("AsSpan", StringComparison.Ordinal) && @params.Length == 2 && @params[0].ParameterType.IsArray && @params[1].ParameterType == typeof(int);
             }).MakeGenericMethod(typeof(byte));
 
-        var delegateType = Expression.GetDelegateType(typeof(Span<byte>), typeof(AsduPacketHeader_2_2).MakeByRefType(), typeof(void));
+        var delegateType = Expression.GetDelegateType(typeof(Span<byte>), typeof(ASDUPacketHeader_2_2).MakeByRefType(), typeof(void));
         var delegateMethod = delegateType.GetMethod("Invoke");
-        var @delegate = Delegate.CreateDelegate(delegateType, null, typeof(IecParsers).GetMethod("ParseHeader")!);
+        var @delegate = Delegate.CreateDelegate(delegateType, null, typeof(IECParsers).GetMethod(nameof(IECParsers.ParseHeader))!);
 
         var switchParam = Expression.Parameter(typeof(int), "caseValue");
 
         // Аргументы метода
         var bufferParam = Expression.Parameter(typeof(byte[]), "bufferParam");
         var dateTimeParam = Expression.Parameter(typeof(DateTime), "dateTimeParam");
-        var notificationParam = Expression.Parameter(typeof(IAsduNotification), "notificationParam");
+        var notificationParam = Expression.Parameter(typeof(IASDUNotification), "notificationParam");
         var isServerSideParam = Expression.Parameter(typeof(bool), "isServerSide");
 
-        var asduCall = Expression.Call(asSpan2Method, bufferParam, Expression.Constant((int)AsduPacketHeader_2_2.Size));
+        var asduCall = Expression.Call(asSpan2Method, bufferParam, Expression.Constant((int)ASDUPacketHeader_2_2.Size));
         var delegateCall = Expression.Call(Expression.Constant(@delegate), delegateMethod!,
-            Expression.Call(asSpan3Method, bufferParam, Expression.Constant(0), Expression.Constant((int)AsduPacketHeader_2_2.Size)), headerVar);
+            Expression.Call(asSpan3Method, bufferParam, Expression.Constant(0), Expression.Constant((int)ASDUPacketHeader_2_2.Size)), headerVar);
 
-        var asduProperty = typeof(AsduPacketHeader_2_2).GetProperty("AsduType");
-        var sqProperty = typeof(AsduPacketHeader_2_2).GetProperty("SQ");
-        var cotProperty = typeof(AsduPacketHeader_2_2).GetProperty("CauseOfTransmit");
+        var asduProperty = typeof(ASDUPacketHeader_2_2).GetProperty(nameof(ASDUPacketHeader_2_2.AsduType));
+        var sqProperty = typeof(ASDUPacketHeader_2_2).GetProperty(nameof(ASDUPacketHeader_2_2.SQ));
+        var cotProperty = typeof(ASDUPacketHeader_2_2).GetProperty(nameof(ASDUPacketHeader_2_2.CauseOfTransmit));
 
         var asduValue = Expression.Convert(Expression.LeftShift(
                                 Expression.Convert(Expression.Property(headerVar, asduProperty!), typeof(int)),
@@ -173,7 +173,7 @@ public class IecParserGenerator
 
         var debugConsoleWriteLine = typeof(Console).GetMethod(nameof(Console.WriteLine), [typeof(string)])!;
 
-        var parser = Expression.Lambda<Action<IAsduNotification, byte[], DateTime, bool>>(
+        var parser = Expression.Lambda<Action<IASDUNotification, byte[], DateTime, bool>>(
             Expression.Block(
                 [headerVar, asduVar, dateTimeVar, switchParam],
                 delegateCall,
@@ -194,13 +194,13 @@ public class IecParserGenerator
         return result;
     }
 
-    private bool CheckCOT(AsduType asduType, COT causeOfTransmit, bool isServerSide)
+    private bool CheckCOT(ASDUType asduType, COT causeOfTransmit, bool isServerSide)
     {
         var id = (int)asduType << 8 | (int)causeOfTransmit;
         return (isServerSide ? _toServerCots : _toClientCots).Contains(id);
     }
 
-    public void Parse(IAsduNotification notification, byte[] buffer, DateTime dateTime, bool isServerSide)
+    public void Parse(IASDUNotification notification, byte[] buffer, DateTime dateTime, bool isServerSide)
     {
         Parser.Value(notification, buffer, dateTime, isServerSide);
     }
@@ -245,7 +245,7 @@ public class IecParserGenerator
                         var param0 = parameters[1];
                         var param1 = parameters[0];
 
-                        if (!param0.ParameterType.IsByRef || param0.ParameterType.GetElementType() != typeof(AsduPacketHeader_2_2))
+                        if (!param0.ParameterType.IsByRef || param0.ParameterType.GetElementType() != typeof(ASDUPacketHeader_2_2))
                         {
                             Console.WriteLine("Check method param 0 - Serialize");
                         }
@@ -265,7 +265,7 @@ public class IecParserGenerator
             }
 
             var parseMethod = type.Key.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public,
-                [typeof(Span<byte>), typeof(AsduPacketHeader_2_2).MakeByRefType(), typeof(DateTime), typeof(IAsduNotification)]);
+                [typeof(Span<byte>), typeof(ASDUPacketHeader_2_2).MakeByRefType(), typeof(DateTime), typeof(IASDUNotification)]);
             if (parseMethod == null)
             {
                 Console.WriteLine("Not Implemented - Parse");
@@ -284,7 +284,7 @@ public class IecParserGenerator
                     var param2 = parameters[2];
                     var param3 = parameters[3];
 
-                    if (!param0.ParameterType.IsByRef || param0.ParameterType.GetElementType() != typeof(AsduPacketHeader_2_2))
+                    if (!param0.ParameterType.IsByRef || param0.ParameterType.GetElementType() != typeof(ASDUPacketHeader_2_2))
                     {
                         Console.WriteLine("Check method param 0 - Parse");
                     }
@@ -299,7 +299,7 @@ public class IecParserGenerator
                         Console.WriteLine("Check method param 2 - Parse");
                     }
 
-                    if (param3.ParameterType != typeof(IAsduNotification))
+                    if (param3.ParameterType != typeof(IASDUNotification))
                     {
                         Console.WriteLine("Check method param 3 - Parse");
                     }

@@ -2,9 +2,9 @@ using PowerUnit.Common.StringHelpers;
 using PowerUnit.Service.IEC104.Types;
 using PowerUnit.Service.IEC104.Types.Asdu;
 
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Application;
 
-public partial class Iec60870_5_104ServerApplicationLayer
+public partial class IEC60870_5_104ServerApplicationLayer
 {
     /// <summary>
     /// Готовность файла F_FR_NA_1 = 120,
@@ -16,9 +16,9 @@ public partial class Iec60870_5_104ServerApplicationLayer
     /// <param name="frq"></param>
     /// <param name="ct"></param>
     /// <exception cref="NotImplementedException"></exception>
-    internal void Process_F_FR_NA_1(AsduPacketHeader_2_2 header, ushort address, ushort nof, uint lof, FRQ frq, CancellationToken ct)
+    internal void Process_F_FR_NA_1(ASDUPacketHeader_2_2 header, ushort address, ushort nof, uint lof, FRQ frq, CancellationToken ct)
     {
-        throw new Iec60870_5_104ApplicationException(header, $"address {address} nof {nof} lof {lof} frq {frq}");
+        throw new IEC60870_5_104ApplicationException(header, $"address {address} nof {nof} lof {lof} frq {frq}");
     }
 
     /// <summary>
@@ -32,9 +32,9 @@ public partial class Iec60870_5_104ServerApplicationLayer
     /// <param name="srq"></param>
     /// <param name="ct"></param>
     /// <exception cref="NotImplementedException"></exception>
-    internal void Process_F_SR_NA_1(AsduPacketHeader_2_2 header, ushort address, ushort nof, byte nos, uint los, SRQ srq, CancellationToken ct)
+    internal void Process_F_SR_NA_1(ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, uint los, SRQ srq, CancellationToken ct)
     {
-        throw new Iec60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} los {los} srq {srq}");
+        throw new IEC60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} los {los} srq {srq}");
     }
 
     /// <summary>
@@ -47,9 +47,9 @@ public partial class Iec60870_5_104ServerApplicationLayer
     /// <param name="scq"></param>
     /// <param name="ct"></param>
     /// <exception cref="NotImplementedException"></exception>
-    internal void Process_F_SC_NA_1(AsduPacketHeader_2_2 header, ushort address, ushort nof, byte nos, SCQ scq, CancellationToken ct)
+    internal void Process_F_SC_NA_1(ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, SCQ scq, CancellationToken ct)
     {
-        throw new Iec60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} scq {scq}");
+        throw new IEC60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} scq {scq}");
     }
 
     /// <summary>
@@ -63,9 +63,9 @@ public partial class Iec60870_5_104ServerApplicationLayer
     /// <param name="chs"></param>
     /// <param name="ct"></param>
     /// <exception cref="NotImplementedException"></exception>
-    internal void Process_F_LS_NA_1(AsduPacketHeader_2_2 header, ushort address, ushort nof, byte nos, LSQ lsq, byte chs, CancellationToken ct)
+    internal void Process_F_LS_NA_1(ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, LSQ lsq, byte chs, CancellationToken ct)
     {
-        throw new Iec60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} lsq {lsq} chs {chs}");
+        throw new IEC60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} lsq {lsq} chs {chs}");
     }
 
     /// <summary>
@@ -78,9 +78,9 @@ public partial class Iec60870_5_104ServerApplicationLayer
     /// <param name="afq"></param>
     /// <param name="ct"></param>
     /// <exception cref="NotImplementedException"></exception>
-    internal void Process_F_AF_NA_1(AsduPacketHeader_2_2 header, ushort address, ushort nof, byte nos, AFQ afq, CancellationToken ct)
+    internal void Process_F_AF_NA_1(ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, AFQ afq, CancellationToken ct)
     {
-        throw new Iec60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} afq {afq}");
+        throw new IEC60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} afq {afq}");
     }
 
     /// <summary>
@@ -92,25 +92,25 @@ public partial class Iec60870_5_104ServerApplicationLayer
     /// <param name="nos"></param>
     /// <param name="segment"></param>
     /// <param name="ct"></param>
-    internal void Process_F_SG_NA_1(AsduPacketHeader_2_2 header, ushort address, ushort nof, byte nos, Span<byte> segment, CancellationToken ct)
+    internal void Process_F_SG_NA_1(ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, Span<byte> segment, CancellationToken ct)
     {
-        throw new Iec60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} segment {segment.ToHex()}");
+        throw new IEC60870_5_104ApplicationException(header, $"address {address} nof {nof} nos {nos} segment {segment.ToHex()}");
     }
 
-    ///// <summary>
-    ///// Директория F_DR_TA_1 = 126
-    ///// </summary>
-    ///// <param name="header"></param>
-    ///// <param name="address"></param>
-    ///// <param name="nodf"></param>
-    ///// <param name="lof"></param>
-    ///// <param name="sof"></param>
-    ///// <param name="dateTime"></param>
-    ///// <param name="timeStatus"></param>
-    ///// <param name="ct"></param>
-    //internal void Process_F_DR_TA_1(AsduPacketHeader_2_2 header, ushort address, ushort nodf, uint lof, SOF sof, DateTime dateTime, TimeStatus timeStatus, CancellationToken ct)
-    //{
-    //    throw new Iec60870_5_104ApplicationException(header, $"address {address} nodf {nodf} lof {lof} sof {sof} dateTime {dateTime} timeStatus {timeStatus}");
-    //}
+    /// <summary>
+    /// Директория F_DR_TA_1 = 126
+    /// </summary>
+    /// <param name="header"></param>
+    /// <param name="address"></param>
+    /// <param name="nodf"></param>
+    /// <param name="lof"></param>
+    /// <param name="sof"></param>
+    /// <param name="dateTime"></param>
+    /// <param name="timeStatus"></param>
+    /// <param name="ct"></param>
+    internal void Process_F_DR_TA_1(ASDUPacketHeader_2_2 header, ushort address, ushort nodf, uint lof, SOF sof, DateTime dateTime, TimeStatus timeStatus, CancellationToken ct)
+    {
+        throw new IEC60870_5_104ApplicationException(header, $"address {address} nodf {nodf} lof {lof} sof {sof} dateTime {dateTime} timeStatus {timeStatus}");
+    }
 }
 

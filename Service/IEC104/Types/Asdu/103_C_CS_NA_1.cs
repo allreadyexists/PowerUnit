@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace PowerUnit.Service.IEC104.Types.Asdu;
 
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
-[AsduTypeInfo(AsduType.C_CS_NA_1, SQ.Single,
+[ASDUTypeInfo(ASDUType.C_CS_NA_1, SQ.Single,
     toServerCauseOfTransmits: [6],
     toClientCauseOfTransmits: [3, 7, 44, 45, 46, 47])]
 public readonly struct C_CS_NA_1
@@ -32,17 +32,17 @@ public readonly struct C_CS_NA_1
 
     public static string Description => Properties.Resources._103_C_CS_NA_1_Desc;
 
-    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in ASDUPacketHeader_2_2 header, DateTime dateTime, IASDUNotification notification)
     {
         var dateTimeFromPacket = MemoryMarshal.AsRef<C_CS_NA_1>(buffer[..Size]);
         notification.Notify_C_CS_NA(in header, dateTimeFromPacket.Address, dateTimeFromPacket.DateTime, dateTimeFromPacket.TimeStatus);
     }
 
-    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, in C_CS_NA_1 C_CS_NA_1)
+    public static int Serialize(byte[] buffer, in ASDUPacketHeader_2_2 header, in C_CS_NA_1 C_CS_NA_1)
     {
         header.SerializeUnsafe(buffer, 0);
-        C_CS_NA_1.SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size);
-        return AsduPacketHeader_2_2.Size + Size;
+        C_CS_NA_1.SerializeUnsafe(buffer, ASDUPacketHeader_2_2.Size);
+        return ASDUPacketHeader_2_2.Size + Size;
     }
 }
 

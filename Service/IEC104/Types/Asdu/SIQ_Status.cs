@@ -1,12 +1,11 @@
-//namespace PowerUnit.Service.IEC104.Types.Asdu;
-
-//[Flags]
-//public enum SIQ_Status : byte
-//{
-//    SPI = 1 << 0,
-//    BL = 1 << 4,
-//    SB = 1 << 5,
-//    NT = 1 << 6,
-//    IV = 1 << 7,
-//}
-
+/// <summary>
+/// Одноэлементная информация статус, определенная в 7.2.6.1
+/// </summary>
+[Flags]
+public enum SIQ_Status : byte
+{
+    BL = 0b00010000,
+    SB = 0b00100000,
+    NT = 0b01000000,
+    IV = 0b10000000
+}

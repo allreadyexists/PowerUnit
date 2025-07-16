@@ -14,6 +14,7 @@ using PowerUnit.Common.EnviromentManager;
 using PowerUnit.Common.Subsciption;
 using PowerUnit.Infrastructure.IEC104ServerDb;
 using PowerUnit.Service.IEC104.Abstract;
+using PowerUnit.Service.IEC104.Export.DataSource;
 using PowerUnit.Service.IEC104.Types;
 
 namespace PowerUnit.Service.IEC104.Export;
@@ -52,19 +53,16 @@ internal sealed class Program
 
                     // внешний
                     services.AddSingleton<IDataSource<BaseValue>, BaseValueTestDataSource>();
-                    //services.AddSingleton<IDataSource<AnalogValue>, AnalogValueTestDataSource>();
-                    //services.AddSingleton<IDataSource<DiscretValue>, DiscretValueTestDataSource>();
                     services.AddSingleton<IConfigProvider, ConfigProvider>();
 
                     // внутренний
                     services.AddSingleton<IEC104ServerFactory>();
-                    //services.AddOptions<IEC104ServersOptions>().Bind(hostBuilderContext.Configuration.GetSection(nameof(IEC104ServersOptions)));
                     services.AddTransient<IEC104Server>();
                     services.AddTimeoutService();
 
                     services.AddSingleton(s =>
                     {
-                        var iecReflection = new IecParserGenerator([]);
+                        var iecReflection = new IECParserGenerator([]);
                         iecReflection.Validate();
                         return iecReflection;
                     });
@@ -99,7 +97,7 @@ internal sealed class Program
                     LogManager.Configuration = new NLogLoggingConfiguration(hostBuilderContext.Configuration.GetSection("NLog"));
                     var fileTargetConfig = LogManager.Configuration.FindTargetByName<AsyncTargetWrapper>("logfile");
                     var enviromentManager = EnviromentManagerDiExtension.GetEnviromentManager(SERVICE_NAME);
-                    if (fileTargetConfig.WrappedTarget is FileTarget fileTarget)
+                    if (fileTargetConfig!.WrappedTarget is FileTarget fileTarget)
                     {
                         fileTarget.FileName = Path.Combine(enviromentManager.GetLogPath(), "current.log");
                         fileTarget.ArchiveFileName = Path.Combine(enviromentManager.GetLogPath(), "{#}.log");

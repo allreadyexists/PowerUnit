@@ -3,7 +3,7 @@ using PowerUnit.Service.IEC104.Types;
 
 namespace PowerUnit.Service.IEC104.Channel;
 
-public class Iec60870_5_104FrameDetector : IFrameDetector
+internal sealed class IEC60870_5_104FrameDetector : IFrameDetector
 {
     private INotifyPacket? _notified;
 

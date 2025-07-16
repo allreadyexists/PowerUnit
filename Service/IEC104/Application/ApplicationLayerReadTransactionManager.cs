@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Application;
 
 /// <summary>
 /// Отслеживание выполняемых запросов на чтение данных

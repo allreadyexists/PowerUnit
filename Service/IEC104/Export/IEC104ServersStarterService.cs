@@ -1,7 +1,6 @@
 using PowerUnit.Service.IEC104.Abstract;
-using PowerUnit.Service.IEC104.Export;
 
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Export;
 
 public sealed class IEC104ServersStarterService : BackgroundService
 {
@@ -62,10 +61,4 @@ public sealed class IEC104ServersStarterService : BackgroundService
 
         base.Dispose();
     }
-}
-
-internal static partial class IEC104ServersStarterServiceLogExtension
-{
-    [LoggerMessage(EventId = 0, Level = LogLevel.Information, Message = "Start IEC104 server \"{ServerName}\" on port: {Port}")]
-    public static partial void LogServerStart(this ILogger logger, string serverName, int port);
 }

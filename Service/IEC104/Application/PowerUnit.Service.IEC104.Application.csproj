@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
+	<!--<PropertyGroup>
 	  <RootNamespace>PowerUnit.Service.IEC104.Application</RootNamespace>
-	</PropertyGroup>
+	</PropertyGroup>-->
 
 	<ItemGroup>
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.7.0-beta.3">
@@ -23,7 +23,7 @@
 		<ProjectReference Include="..\..\..\Common\PowerUnit.Common.Subsciption\PowerUnit.Common.Subsciption.csproj" />
 		<ProjectReference Include="..\..\..\Common\StringHelpers\PowerUnit.Common.StringHelpers.csproj" />
 		<ProjectReference Include="..\Common\PowerUnit.Service.IEC104.Abstract.csproj" />
-		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Options.csproj" />
+		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Models.csproj" />
 		<ProjectReference Include="..\Types\PowerUnit.Service.IEC104.Types.csproj" />
 	</ItemGroup>
 

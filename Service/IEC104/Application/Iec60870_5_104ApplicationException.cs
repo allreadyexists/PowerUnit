@@ -1,12 +1,12 @@
 using PowerUnit.Service.IEC104.Types;
 
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Application;
 
-internal sealed class Iec60870_5_104ApplicationException : RegularException
+internal sealed class IEC60870_5_104ApplicationException : RegularException
 {
-    public AsduPacketHeader_2_2 Header { get; private set; }
+    public ASDUPacketHeader_2_2 Header { get; private set; }
 
-    public Iec60870_5_104ApplicationException(AsduPacketHeader_2_2 header, string? message = null) : base(string.IsNullOrEmpty(message) ? header.ToString() : $"{header} : {message}")
+    public IEC60870_5_104ApplicationException(ASDUPacketHeader_2_2 header, string? message = null) : base(string.IsNullOrEmpty(message) ? header.ToString() : $"{header} : {message}")
     {
         Header = header;
     }

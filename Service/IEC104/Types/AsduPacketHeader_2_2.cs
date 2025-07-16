@@ -7,9 +7,9 @@ namespace PowerUnit.Service.IEC104.Types;
 /// параметры постоянные для МЭК 104
 /// </summary>
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
-public readonly struct AsduPacketHeader_2_2
+public readonly struct ASDUPacketHeader_2_2
 {
-    public static byte Size => (byte)Marshal.SizeOf<AsduPacketHeader_2_2>();
+    public static byte Size => (byte)Marshal.SizeOf<ASDUPacketHeader_2_2>();
 
     /// <summary>
     /// Тип ASDU
@@ -51,7 +51,7 @@ public readonly struct AsduPacketHeader_2_2
     [FieldOffset(4)]
     private readonly ushort _commonAddrAsdu;
 
-    public AsduPacketHeader_2_2(AsduType asduType, SQ sq, byte count, COT causeOfTransmit, PN pn = PN.Positive, TN tn = TN.NotTest, byte initAddr = 0, ushort commonAddrAsdu = 1)
+    public ASDUPacketHeader_2_2(ASDUType asduType, SQ sq, byte count, COT causeOfTransmit, PN pn = PN.Positive, TN tn = TN.NotTest, byte initAddr = 0, ushort commonAddrAsdu = 1)
     {
         if (count > 0x7F)
             throw new ArgumentOutOfRangeException(nameof(count));
@@ -62,7 +62,7 @@ public readonly struct AsduPacketHeader_2_2
         _commonAddrAsdu = commonAddrAsdu;
     }
 
-    public AsduType AsduType => (AsduType)_asduType;
+    public ASDUType AsduType => (ASDUType)_asduType;
 
     public SQ SQ => (_varStructInfo & (byte)SQ.Sequence) != 0 ? SQ.Sequence : SQ.Single;
 

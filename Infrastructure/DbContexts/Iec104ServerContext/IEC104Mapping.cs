@@ -13,7 +13,7 @@ public class IEC104MappingItem : IEntityTypeConfiguration<IEC104MappingItem>
     public long EquipmentId { get; set; }
     public long ParameterId { get; set; }
 
-    public int Address { get; set; }
+    public ushort Address { get; set; }
     public IEC104TypeEnum IEC104TypeId { get; set; }
     public required IEC104TypeItem IEC104Type { get; set; }
 

@@ -23,8 +23,6 @@ public readonly struct PacketI
 
     public PacketI(ushort tx, ushort rx)
     {
-        //if (tx > 0x7FFF || rx > 0x7FFF)
-        //    throw new ArgumentOutOfRangeException();
         _tx = (ushort)(tx << 1);
         _rx = (ushort)(rx << 1);
     }

@@ -1,14 +1,14 @@
 namespace PowerUnit.Service.IEC104.Types;
 
 [AttributeUsage(AttributeTargets.Struct)]
-public class AsduTypeInfoAttribute : Attribute
+public class ASDUTypeInfoAttribute : Attribute
 {
-    public AsduType AsduType { get; }
+    public ASDUType AsduType { get; }
     public SQ SQ { get; }
     public IReadOnlyCollection<COT> ToServerCauseOfTransmits { get; }
     public IReadOnlyCollection<COT> ToClientCauseOfTransmits { get; }
 
-    public AsduTypeInfoAttribute(AsduType asduType, SQ sq, COT[]? toServerCauseOfTransmits = null, COT[]? toClientCauseOfTransmits = null)
+    public ASDUTypeInfoAttribute(ASDUType asduType, SQ sq, COT[]? toServerCauseOfTransmits = null, COT[]? toClientCauseOfTransmits = null)
     {
         AsduType = asduType;
         SQ = sq;
@@ -16,7 +16,7 @@ public class AsduTypeInfoAttribute : Attribute
         ToClientCauseOfTransmits = toClientCauseOfTransmits ?? [];
     }
 
-    public AsduTypeInfoAttribute(AsduType asduType, SQ sq, int[]? toServerCauseOfTransmits = null, int[]? toClientCauseOfTransmits = null)
+    public ASDUTypeInfoAttribute(ASDUType asduType, SQ sq, int[]? toServerCauseOfTransmits = null, int[]? toClientCauseOfTransmits = null)
     {
         AsduType = asduType;
         SQ = sq;

@@ -1,15 +1,15 @@
 using PowerUnit.Service.IEC104.Types;
 using PowerUnit.Service.IEC104.Types.Asdu;
 
-namespace PowerUnit;
+namespace PowerUnit.Service.IEC104.Application;
 
-public partial class Iec60870_5_104ServerApplicationLayer
+public partial class IEC60870_5_104ServerApplicationLayer
 {
-    internal void Process_C_CS_NA_1(AsduPacketHeader_2_2 header, ushort address, DateTime dateTime, TimeStatus timeStatus, CancellationToken ct)
+    internal void Process_C_CS_NA_1(ASDUPacketHeader_2_2 header, ushort address, DateTime dateTime, TimeStatus timeStatus, CancellationToken ct)
     {
         _ = SendInRentBuffer(buffer =>
             {
-                var headerReq = new AsduPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
+                var headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
                     COT.ACTIVATE_CONFIRMATION,
                     initAddr: header.InitAddr,
                     commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);

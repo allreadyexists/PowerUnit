@@ -1,6 +1,6 @@
 namespace PowerUnit.Service.IEC104.Types;
 
-public enum AsduType : byte
+public enum ASDUType : byte
 {
     #region ASDU для информации о процессе в направлении контроля
     // Одноэлементная информация без метки времени

@@ -19,7 +19,7 @@
 		<ProjectReference Include="..\..\..\Common\TimeoutService\PowerUnit.Common.TimeoutService.csproj" />
 		<ProjectReference Include="..\Application\PowerUnit.Service.IEC104.Application.csproj" />
 		<ProjectReference Include="..\Common\PowerUnit.Service.IEC104.Abstract.csproj" />
-		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Options.csproj" />
+		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Models.csproj" />
 		<ProjectReference Include="..\Types\PowerUnit.Service.IEC104.Types.csproj" />
 	</ItemGroup>
 

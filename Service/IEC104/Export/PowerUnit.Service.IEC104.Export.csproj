@@ -51,7 +51,7 @@
 		<ProjectReference Include="..\..\..\Infrastructure\DbContexts\Iec104ServerContext\PowerUnit.Infrastructure.IEC104ServerDb.csproj" />
 		<ProjectReference Include="..\Application\PowerUnit.Service.IEC104.Application.csproj" />
 		<ProjectReference Include="..\Channel\PowerUnit.Service.IEC104.Channel.csproj" />
-		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Options.csproj" />
+		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Models.csproj" />
 		<ProjectReference Include="..\Types\PowerUnit.Service.IEC104.Types.csproj" />
 	</ItemGroup>
 

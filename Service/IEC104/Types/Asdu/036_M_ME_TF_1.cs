@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace PowerUnit.Service.IEC104.Types.Asdu;
 
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
-[AsduTypeInfo(AsduType.M_ME_TF_1, SQ.Single,
+[ASDUTypeInfo(ASDUType.M_ME_TF_1, SQ.Single,
 toClientCauseOfTransmits: [1, 2, 3, 5, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36])]
 public readonly struct M_ME_TF_1_Single
 {
@@ -37,7 +37,7 @@ public readonly struct M_ME_TF_1_Single
 
     public static string Description => Properties.Resources._036_M_ME_TF_1_Desc;
 
-    public static void Parse(Span<byte> buffer, in AsduPacketHeader_2_2 header, DateTime dateTime, IAsduNotification notification)
+    public static void Parse(Span<byte> buffer, in ASDUPacketHeader_2_2 header, DateTime dateTime, IASDUNotification notification)
     {
         for (ushort i = 0; i < header.Count; i++)
         {
@@ -46,37 +46,37 @@ public readonly struct M_ME_TF_1_Single
         }
     }
 
-    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, M_ME_TF_1_Single M_ME_TF_1_Single)
+    public static int Serialize(byte[] buffer, in ASDUPacketHeader_2_2 header, M_ME_TF_1_Single M_ME_TF_1_Single)
     {
         header.SerializeUnsafe(buffer, 0);
-        M_ME_TF_1_Single.SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size);
-        return AsduPacketHeader_2_2.Size + Size;
+        M_ME_TF_1_Single.SerializeUnsafe(buffer, ASDUPacketHeader_2_2.Size);
+        return ASDUPacketHeader_2_2.Size + Size;
     }
 
-    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, M_ME_TF_1_Single[] M_ME_TF_1_Singles)
+    public static int Serialize(byte[] buffer, in ASDUPacketHeader_2_2 header, M_ME_TF_1_Single[] M_ME_TF_1_Singles)
     {
         header.SerializeUnsafe(buffer, 0);
         var size = 0;
         for (byte i = 0; i < M_ME_TF_1_Singles.Length; i++)
         {
-            M_ME_TF_1_Singles[i].SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size + i * Size);
+            M_ME_TF_1_Singles[i].SerializeUnsafe(buffer, ASDUPacketHeader_2_2.Size + i * Size);
             size += Size;
         }
 
-        return AsduPacketHeader_2_2.Size + size;
+        return ASDUPacketHeader_2_2.Size + size;
     }
 
-    public static int Serialize(byte[] buffer, in AsduPacketHeader_2_2 header, M_ME_TF_1_Single[] M_ME_TF_1_Singles, byte length)
+    public static int Serialize(byte[] buffer, in ASDUPacketHeader_2_2 header, M_ME_TF_1_Single[] M_ME_TF_1_Singles, byte length)
     {
         header.SerializeUnsafe(buffer, 0);
         var size = 0;
         for (byte i = 0; i < Math.Min(M_ME_TF_1_Singles.Length, length); i++)
         {
-            M_ME_TF_1_Singles[i].SerializeUnsafe(buffer, AsduPacketHeader_2_2.Size + i * Size);
+            M_ME_TF_1_Singles[i].SerializeUnsafe(buffer, ASDUPacketHeader_2_2.Size + i * Size);
             size += Size;
         }
 
-        return AsduPacketHeader_2_2.Size + size;
+        return ASDUPacketHeader_2_2.Size + size;
     }
 }
 

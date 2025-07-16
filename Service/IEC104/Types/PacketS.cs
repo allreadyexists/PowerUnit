@@ -21,8 +21,6 @@ public readonly struct PacketS
 
     public PacketS(ushort rx)
     {
-        //if (rx > 0x7FFF)
-        //    throw new ArgumentOutOfRangeException();
         _rx = (ushort)(rx << 1);
     }
 
