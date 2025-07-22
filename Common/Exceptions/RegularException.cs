@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Common.Exceptions;
 
 public class RegularException : Exception
 {

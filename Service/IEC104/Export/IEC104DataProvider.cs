@@ -22,7 +22,7 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
     public IEC104DataProvider(IDataSource<BaseValue> source,
         FrozenDictionary<(long EquipmentId, long ParameterId), IEC104MappingModel> mapping,
         FrozenDictionary<byte, FrozenSet<ushort>> groups,
-        ILogger<IEC104ServerDataSource> logger)
+        ILogger<IEC104DataProvider> logger)
     {
         _mapping = mapping;
         _groups = groups;

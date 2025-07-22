@@ -6,7 +6,7 @@ namespace PowerUnit.Service.IEC104.Application;
 /// Отслеживание выполняемых запросов на чтение данных
 /// индивидуален в рамках соединения
 /// </summary>
-public class ApplicationLayerReadTransactionManager : IDisposable
+internal sealed class ApplicationLayerReadTransactionManager : IDisposable
 {
     /// <summary>
     /// Запущенные транзакции в рамках сессии

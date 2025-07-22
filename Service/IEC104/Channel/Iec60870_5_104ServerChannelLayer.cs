@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 
 using PowerUnit.Common.StructHelpers;
 using PowerUnit.Common.Subsciption;
+using PowerUnit.Common.TimeoutService;
 using PowerUnit.Service.IEC104.Abstract;
 using PowerUnit.Service.IEC104.Application;
 using PowerUnit.Service.IEC104.Channel.Events;
@@ -126,7 +127,7 @@ public class IEC60870_5_104ServerChannelLayer :
     private async Task ProcessTimer0Async(CancellationToken ct)
     {
         _timeout0Id = await StopTimerAsync(_timeout0Id, ct);
-        _logger.LogTrace($"Disconnect by timer0");
+        _logger.LogTrace("Disconnect by timer0");
         _physicalLayerController.DisconnectLayer();
     }
 
@@ -137,7 +138,7 @@ public class IEC60870_5_104ServerChannelLayer :
     private async Task ProcessTimer1Async(CancellationToken ct)
     {
         _timeout1Id = await StopTimerAsync(_timeout1Id, ct);
-        _logger.LogTrace($"Disconnect by timer1");
+        _logger.LogTrace("Disconnect by timer1");
         _physicalLayerController.DisconnectLayer();
     }
 
@@ -152,7 +153,7 @@ public class IEC60870_5_104ServerChannelLayer :
         new APCI(PacketS.Size, new PacketS(_rxCounter)).SerializeUnsafe(_buffer, 0);
         _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
 
-        _logger.LogTrace($"TX: S: RX: {_rxCounter}");
+        _logger.LogTrace("TX: S: RX: {@rxCounter}", _rxCounter);
 
         _rxW = 0;
     }
@@ -167,7 +168,7 @@ public class IEC60870_5_104ServerChannelLayer :
 
         // отправка U Test пакета
         _physicalLayerController.SendPacket(_testAct, 0, APCI.Size);
-        _logger.LogTrace($"TX: U: {UControl.TestFrAct}");
+        _logger.LogTrace("TX: U: {@test}", UControl.TestFrAct);
 
         _timeout1Id = await StartTimerAsync(_timeout1Id, TimeSpan.FromSeconds(_serverOptions.ChannelLayerModel.Timeout1Sec), ct);
         _timeout3Id = await StartTimerAsync(_timeout3Id, TimeSpan.FromSeconds(_serverOptions.ChannelLayerModel.Timeout3Sec), ct);
@@ -365,7 +366,7 @@ public class IEC60870_5_104ServerChannelLayer :
         {
             packetToSendCount = Math.Min(packetToSendCount - _txW, _serverOptions.ChannelLayerModel.WindowKSize - _txW);
 
-            _logger.LogTrace($"ProcessTxQueue {packetToSendCount}");
+            _logger.LogTrace("ProcessTxQueue {@packetToSendCount}", packetToSendCount);
 
             if (packetToSendCount > 0)
             {
@@ -390,7 +391,7 @@ public class IEC60870_5_104ServerChannelLayer :
                         _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + txPacket.Length);
                     }
 
-                    _logger.LogTrace($"TX: I: RX: {_rxCounter}, TX: {_txCounter}");
+                    _logger.LogTrace("TX: I: RX: {@_rxCounter}, TX: {@_txCounter}", _rxCounter, _txCounter);
 
                     _rxW = 0; // сброс счетчика несквитированных посылок
                     _txCounter = CounterIncrement(_txCounter); // наращиваем счетчик отправленных
@@ -443,7 +444,7 @@ public class IEC60870_5_104ServerChannelLayer :
         var ackCount = _txW - dountAckPacket;
         _txW -= ackCount; // уменьшаем на количество подтвержденных пакетов
 
-        _logger.LogTrace($"ProcessRecievedAck: dountAckPacket = {dountAckPacket}, ackCount = {ackCount}");
+        _logger.LogTrace("ProcessRecievedAck: dountAckPacket = {@dountAckPacket}, ackCount = {@ackCount}", dountAckPacket, ackCount);
 
         if (ackCount > 0)
         {
@@ -461,7 +462,7 @@ public class IEC60870_5_104ServerChannelLayer :
     /// <returns></returns>
     private async Task ProcessIPacket(ushort rx, ushort tx, byte[] data, CancellationToken ct)
     {
-        _logger.LogTrace($"RX: I: RX {rx}, TX: {tx}");
+        _logger.LogTrace("RX: I: RX {@rx}, TX: {@tx}", rx, tx);
 
         var txDelta = CalcUnAckPacket(rx);
         var counterOk = txDelta >= 0 && txDelta <= _txW && tx == _rxCounter;
@@ -479,7 +480,7 @@ public class IEC60870_5_104ServerChannelLayer :
                 _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
                 _rxW = 0; // несквитированные мною
 
-                _logger.LogTrace($"TX: S: RX:{_rxCounter}");
+                _logger.LogTrace("TX: S: RX:{@rxCounter}", _rxCounter);
                 // остановить таймер 2
                 _timeout2Id = await StopTimerAsync(_timeout2Id, ct);
             }
@@ -495,7 +496,7 @@ public class IEC60870_5_104ServerChannelLayer :
         else
         {
             // нарушение протокола - разрыв соединения по нашей инициативе
-            _logger.LogTrace($"Disconnect by IPacket Rcv corruption");
+            _logger.LogTrace("Disconnect by IPacket Rcv corruption");
             _physicalLayerController.DisconnectLayer();
         }
     }
@@ -508,7 +509,7 @@ public class IEC60870_5_104ServerChannelLayer :
     /// <returns></returns>
     private async Task ProcessSPacket(ushort rx, CancellationToken ct)
     {
-        _logger.LogTrace($"RX: S: RX {rx}");
+        _logger.LogTrace("RX: S: RX {@rx}", rx);
 
         var txDelta = CalcUnAckPacket(rx);
         var counterOk = txDelta >= 0 && txDelta <= _txW;
@@ -520,7 +521,7 @@ public class IEC60870_5_104ServerChannelLayer :
         else
         {
             // нарушение протокола - разрыв соединения по нашей инициативе
-            _logger.LogTrace($"Disconnect by SPacket Rcv corruption");
+            _logger.LogTrace("Disconnect by SPacket Rcv corruption");
             _physicalLayerController.DisconnectLayer();
         }
     }
@@ -533,7 +534,7 @@ public class IEC60870_5_104ServerChannelLayer :
     /// <returns></returns>
     private async Task ProcessUPacket(UControl control, CancellationToken ct)
     {
-        _logger.LogTrace($"RX: U: {control}");
+        _logger.LogTrace("RX: U: {@control}", control);
 
         switch (control)
         {
@@ -547,7 +548,7 @@ public class IEC60870_5_104ServerChannelLayer :
                 }
 
                 _physicalLayerController.SendPacket(_startCon, 0, APCI.Size);
-                _logger.LogTrace($"TX: U: {UControl.StartDtCon}");
+                _logger.LogTrace("TX: U: {@start}", UControl.StartDtCon);
                 break;
             case UControl.StopDtAct:
                 // Подумать - клиент может отключиться, но при этом не разорвать соединение
@@ -566,13 +567,13 @@ public class IEC60870_5_104ServerChannelLayer :
                 }
 
                 _physicalLayerController.SendPacket(_stopCon, 0, APCI.Size);
-                _logger.LogTrace($"TX: U: {UControl.StopDtCon}");
+                _logger.LogTrace("TX: U: {@stop}", UControl.StopDtCon);
                 break;
             case UControl.TestFrAct:
                 if (_isEstablishedConnection)
                 {
                     _physicalLayerController.SendPacket(_testCon, 0, APCI.Size);
-                    _logger.LogTrace($"TX: U: {UControl.TestFrCon}");
+                    _logger.LogTrace("TX: U: {@test}", UControl.TestFrCon);
                 }
 
                 break;
@@ -586,7 +587,7 @@ public class IEC60870_5_104ServerChannelLayer :
                 break;
             default:
                 _physicalLayerController.DisconnectLayer();
-                _logger.LogTrace($"U packet undefuned");
+                _logger.LogTrace("U packet undefuned");
                 break;
         }
     }
@@ -622,7 +623,7 @@ public class IEC60870_5_104ServerChannelLayer :
             }
             else
             {
-                _logger.LogTrace($"Undefined packet rcv");
+                _logger.LogTrace("Undefined packet rcv");
                 _physicalLayerController.DisconnectLayer();
                 return;
             }
@@ -643,9 +644,9 @@ public class IEC60870_5_104ServerChannelLayer :
             await foreach (var @event in _events.Reader.ReadAllAsync(ct))
             {
                 if (@event is TimerEvent timerEvent)
-                    _logger.LogTrace($"{@event} {timerEvent.TimerId:X2}");
+                    _logger.LogTrace("{@event} {@timerEvent:X2}", @event, timerEvent.TimerId);
                 else
-                    _logger.LogTrace($"{@event}");
+                    _logger.LogTrace("{@event}", @event);
 
                 switch (@event)
                 {

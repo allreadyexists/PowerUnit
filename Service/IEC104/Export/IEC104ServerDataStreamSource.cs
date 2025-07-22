@@ -6,13 +6,13 @@ using System.Collections.Frozen;
 
 namespace PowerUnit.Service.IEC104.Export;
 
-public sealed class IEC104ServerDataSource : DataSourceBase<MapValueItem>
+public sealed class IEC104ServerDataStreamSource : DataSourceBase<MapValueItem>
 {
     private readonly Subscriber<BaseValue>? _subscriber;
 
     private readonly FrozenDictionary<(long EquipmentId, long ParameterId), IEC104MappingModel> _mapping;
 
-    public IEC104ServerDataSource(IDataSource<BaseValue> source, bool sporadicSendEnable, FrozenDictionary<(long EquipmentId, long ParameterId), IEC104MappingModel> mapping, ILogger<IEC104ServerDataSource> logger) : base(logger)
+    public IEC104ServerDataStreamSource(IDataSource<BaseValue> source, bool sporadicSendEnable, FrozenDictionary<(long EquipmentId, long ParameterId), IEC104MappingModel> mapping, ILogger<IEC104ServerDataStreamSource> logger) : base(logger)
     {
         _mapping = mapping;
         if (sporadicSendEnable && _mapping.Count != 0)

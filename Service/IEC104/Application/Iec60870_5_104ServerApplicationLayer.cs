@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
+using PowerUnit.Common.Exceptions;
 using PowerUnit.Common.StringHelpers;
 using PowerUnit.Common.StructHelpers;
 using PowerUnit.Common.Subsciption;
@@ -213,8 +214,6 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         _physicalLayerCommander = physicalLayerCommander;
         _cts = new CancellationTokenSource();
 
-        var dataSourceAnalogValue = serviceProvider.GetRequiredService<IDataSource<BaseValue>>();
-
         _logger = logger;
 
         _ = SendInRentBuffer(buffer =>
@@ -249,94 +248,94 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
     void IASDUNotification.Notify_M_SP(in ASDUPacketHeader_2_2 header, ushort address, SIQ_Value value, SIQ_Status siq, DateTime dateTime, TimeStatus status)
     {
-        _logger.LogTrace($"{address} {value} {siq} {dateTime} {status}");
+        _logger.LogTrace("{@address} {@value} {@siq} {@dateTime} {@status}", address, value, siq, dateTime, status);
     }
 
     void IASDUNotification.Notify_M_DP(in ASDUPacketHeader_2_2 header, ushort address, DIQ_Value value, DIQ_Status diq, DateTime dateTime, TimeStatus status)
     {
-        _logger.LogTrace($"{address} {value} {diq} {dateTime} {status}");
+        _logger.LogTrace("{@address} {@value} {@diq} {@dateTime} {@status}", address, value, diq, dateTime, status);
     }
 
     void IASDUNotification.Notify_M_ME(in ASDUPacketHeader_2_2 header, ushort address, float value, QDS_Status qds, DateTime dateTime, TimeStatus status)
     {
-        _logger.LogTrace($"{address} {value} {qds} {dateTime} {status}");
+        _logger.LogTrace("{@address} {@value} {@qds} {@dateTime} {@status}", address, value, qds, dateTime, status);
     }
 
     void IASDUNotification.Notify_C_IC_NA(in ASDUPacketHeader_2_2 header, ushort address, QOI qoi)
     {
-        _logger.LogTrace($"{address} {qoi}");
+        _logger.LogTrace("{@address} {@qoi}", address, qoi);
         Process_C_IC_NA_1(header, address, qoi, _cts.Token);
     }
 
     void IASDUNotification.Notify_C_RD_NA(in ASDUPacketHeader_2_2 header, ushort address)
     {
-        _logger.LogTrace($"{address}");
+        _logger.LogTrace("{@address}", address);
         Process_C_RD_NA_1(header, address, _cts.Token);
     }
 
     void IASDUNotification.Notify_C_CS_NA(in ASDUPacketHeader_2_2 header, ushort address, DateTime dateTime, TimeStatus timeStatus)
     {
-        _logger.LogTrace($"{address} {dateTime} {timeStatus}");
+        _logger.LogTrace("{@address} {@dateTime} {@timeStatus}", address, dateTime, timeStatus);
         Process_C_CS_NA_1(header, address, dateTime, timeStatus, _cts.Token);
     }
 
     void IASDUNotification.Notify_C_CI_NA(in ASDUPacketHeader_2_2 header, ushort address, QCC qcc)
     {
-        _logger.LogTrace($"{address} {qcc}");
+        _logger.LogTrace("{@address} {@qcc}", address, qcc);
         Process_C_CI_NA_1(header, address, qcc, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_FR_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort nof, uint lof, FRQ frq)
     {
-        _logger.LogTrace($"{address} {nof} {lof} {frq}");
+        _logger.LogTrace("{@address} {@nof} {@lof} {@frq}", address, nof, lof, frq);
         Process_F_FR_NA_1(header, address, nof, lof, frq, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_SR_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, uint los, SRQ frq)
     {
-        _logger.LogTrace($"{address} {nof} {nos} {los} {frq}");
+        _logger.LogTrace("{@address} {@nof} {@nos} {@los} {@frq}", address, nof, nos, los, frq);
         Process_F_SR_NA_1(header, address, nof, nos, los, frq, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_SC_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, SCQ scq)
     {
-        _logger.LogTrace($"{address} {nof} {nos} {scq}");
+        _logger.LogTrace("{@address} {@nof} {@nos} {@scq}", address, nof, nos, scq);
         Process_F_SC_NA_1(header, address, nof, nos, scq, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_LS_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, LSQ lsq, byte chs)
     {
-        _logger.LogTrace($"{address} {nof} {nos} {lsq} {chs}");
+        _logger.LogTrace("{@address} {@nof} {@nos} {@lsq} {@chs}", address, nof, nos, lsq, chs);
         Process_F_LS_NA_1(header, address, nof, nos, lsq, chs, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_AF_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, AFQ afq)
     {
-        _logger.LogTrace($"{address} {nof} {nos} {afq}");
+        _logger.LogTrace("{@address} {@nof} {@nos} {@afq}", address, nof, nos, afq);
         Process_F_AF_NA_1(header, address, nof, nos, afq, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_SG_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, Span<byte> segment)
     {
-        _logger.LogTrace($"{address} {nof} {nos} {segment.ToHex()}");
+        _logger.LogTrace("{@address} {@nof} {@nos} {@segment.ToHex()}", address, nof, nos, segment.ToHex());
         Process_F_SG_NA_1(header, address, nof, nos, segment, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_DR_TA(in ASDUPacketHeader_2_2 header, ushort address, ushort nodf, uint lof, SOF sof, DateTime dateTime, TimeStatus timeStatus)
     {
-        _logger.LogTrace($"{address} {nodf} {lof} {sof} {dateTime} {timeStatus}");
+        _logger.LogTrace("{@address} {@nodf} {@lof} {@sof} {@dateTime} {@timeStatus}", address, nodf, lof, sof, dateTime, timeStatus);
         Process_F_DR_TA_1(header, address, nodf, lof, sof, dateTime, timeStatus, _cts.Token);
     }
 
     void IASDUNotification.Notify_C_TS_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort fbp)
     {
-        _logger.LogTrace($"{address} {fbp}");
+        _logger.LogTrace("{@address} {@fbp}", address, fbp);
         Process_C_TS_NA_1(header, address, fbp, _cts.Token);
     }
 
     void IASDUNotification.Notify_C_TS_TA(in ASDUPacketHeader_2_2 header, ushort address, ushort tsc, DateTime dateTime, TimeStatus status)
     {
-        _logger.LogTrace($"{address} {tsc} {dateTime} {status}");
+        _logger.LogTrace("{@address} {@tsc} {@dateTime} {@status}", address, tsc, dateTime, status);
         Process_C_TS_TA_1(header, address, tsc, dateTime, status, _cts.Token);
     }
 
@@ -352,7 +351,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
     void IASDUNotification.Notify_Unknown_Exception(in ASDUPacketHeader_2_2 header, Span<byte> asduInfoRaw, Exception ex)
     {
-        _logger.LogCritical($"{header} {asduInfoRaw.ToHex()} {ex.GetInnerExceptionsString()}");
+        _logger.LogCritical("{@header} {@asduInfoRaw} {@ex}", header, asduInfoRaw.ToHex(), ex.GetInnerExceptionsString());
         Process_Notify_Unknown_Exception(header, asduInfoRaw, _cts.Token);
     }
 
@@ -363,7 +362,6 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
     void IDisposable.Dispose()
     {
-        //_subscriber1.Dispose();
         _subscriber2?.Dispose();
         _cts.Cancel();
         _cts.Dispose();

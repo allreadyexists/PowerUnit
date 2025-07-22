@@ -12,10 +12,13 @@ using OpenTelemetry.Metrics;
 
 using PowerUnit.Common.EnviromentManager;
 using PowerUnit.Common.Subsciption;
+using PowerUnit.Common.TimeoutService;
 using PowerUnit.Infrastructure.IEC104ServerDb;
 using PowerUnit.Service.IEC104.Abstract;
 using PowerUnit.Service.IEC104.Export.DataSource;
 using PowerUnit.Service.IEC104.Types;
+
+using System.Reflection;
 
 namespace PowerUnit.Service.IEC104.Export;
 
@@ -57,12 +60,11 @@ internal sealed class Program
 
                     // внутренний
                     services.AddSingleton<IEC104ServerFactory>();
-                    services.AddTransient<IEC104Server>();
                     services.AddTimeoutService();
 
                     services.AddSingleton(s =>
                     {
-                        var iecReflection = new IECParserGenerator([]);
+                        var iecReflection = ActivatorUtilities.CreateInstance<IECParserGenerator>(s, [Array.Empty<Assembly>()]);
                         iecReflection.Validate();
                         return iecReflection;
                     });

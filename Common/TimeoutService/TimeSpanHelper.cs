@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Common.TimeoutService;
 
 internal static class TimeSpanHelper
 {

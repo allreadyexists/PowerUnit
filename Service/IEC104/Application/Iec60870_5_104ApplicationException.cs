@@ -1,3 +1,4 @@
+using PowerUnit.Common.Exceptions;
 using PowerUnit.Service.IEC104.Types;
 
 namespace PowerUnit.Service.IEC104.Application;

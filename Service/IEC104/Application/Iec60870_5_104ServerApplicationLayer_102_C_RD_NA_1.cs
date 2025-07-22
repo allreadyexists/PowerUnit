@@ -24,13 +24,13 @@ public partial class IEC60870_5_104ServerApplicationLayer
                     else
                     {
                         errorTransaction = true;
-                        _logger.LogError($"Transaction duplicate: {header.AsduType} {address}");
+                        _logger.LogError("Transaction duplicate: {@type} {@address}", header.AsduType, address);
                     }
                 }
                 catch (Exception ex)
                 {
                     errorTransaction = true;
-                    _logger.LogError(ex, $"Transaction error: {header.AsduType} {address}");
+                    _logger.LogError(ex, "Transaction error: {@type} {@address}", header.AsduType, address);
                 }
                 finally
                 {

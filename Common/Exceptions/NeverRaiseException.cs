@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Common.Exceptions;
 
 /// <summary>
 /// Исключение, которое по логике работы программы никогда не должно появиться

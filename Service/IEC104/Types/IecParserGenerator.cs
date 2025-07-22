@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 using System.Collections.Frozen;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -6,16 +8,21 @@ namespace PowerUnit.Service.IEC104.Types;
 
 public class IECParserGenerator
 {
+    private readonly ILogger<IECParserGenerator> _logger;
+
     private readonly FrozenDictionary<Type, ASDUTypeInfoAttribute> _types;
     private readonly FrozenSet<int> _toClientCots;
     private readonly FrozenSet<int> _toServerCots;
 
-    public IECParserGenerator(Assembly[] assemblies)
+    public IECParserGenerator(Assembly[] assemblies, ILogger<IECParserGenerator> logger)
     {
         var types = new Dictionary<Type, ASDUTypeInfoAttribute>();
         var toClientCot = new HashSet<int>();
         var toServerCot = new HashSet<int>();
         var allAssemblies = new HashSet<Assembly>(AppDomain.CurrentDomain.GetAssemblies().Concat(assemblies));
+
+        _logger = logger;
+
         foreach (var type in allAssemblies.SelectMany(x => x.GetTypes())
             .Where(x => x.IsValueType))
         {
@@ -210,20 +217,20 @@ public class IECParserGenerator
         var duplicates = new HashSet<ushort>();
         foreach (var type in _types.OrderBy(x => x.Value.AsduType))
         {
-            Console.WriteLine($"Type - {type.Key} {type.Value.AsduType} {type.Value.SQ}");
+            _logger.LogInformation($"Type - {type.Key} {type.Value.AsduType} {type.Value.SQ}");
 
             var asduType = type.Value;
             var asduCode = (ushort)((ushort)asduType.AsduType << 8 | (ushort)asduType.SQ);
 
             if (!duplicates.Add(asduCode))
             {
-                Console.WriteLine($"ASDU duplicate - {asduType.AsduType} {asduType.SQ}");
+                _logger.LogInformation($"ASDU duplicate - {asduType.AsduType} {asduType.SQ}");
             }
 
             var sizeMethod = type.Key.GetProperty("Size", BindingFlags.Static | BindingFlags.Public);
             if (sizeMethod == null)
             {
-                Console.WriteLine("Not Implemented - Size");
+                _logger.LogInformation("Not Implemented - Size");
             }
 
             var serializeLikeMethods = type.Key.GetMethods(BindingFlags.Static | BindingFlags.Public).Where(x => x.Name.Equals("Serialize"));
@@ -231,14 +238,14 @@ public class IECParserGenerator
             {
                 if (serializeLikeMethod == null)
                 {
-                    Console.WriteLine("Not Implemented - Serialize");
+                    _logger.LogInformation("Not Implemented - Serialize");
                 }
                 else
                 {
                     var parameters = serializeLikeMethod.GetParameters();
                     if (parameters.Length < 2)
                     {
-                        Console.WriteLine("Check method - Serialize");
+                        _logger.LogInformation("Check method - Serialize");
                     }
                     else
                     {
@@ -247,18 +254,18 @@ public class IECParserGenerator
 
                         if (!param0.ParameterType.IsByRef || param0.ParameterType.GetElementType() != typeof(ASDUPacketHeader_2_2))
                         {
-                            Console.WriteLine("Check method param 0 - Serialize");
+                            _logger.LogInformation("Check method param 0 - Serialize");
                         }
 
                         if (param1.ParameterType != typeof(byte[]))
                         {
-                            Console.WriteLine("Check method param 1 - Serialize");
+                            _logger.LogInformation("Check method param 1 - Serialize");
                         }
 
                         var @return = serializeLikeMethod.ReturnParameter;
                         if (@return.ParameterType != typeof(int))
                         {
-                            Console.WriteLine("Check return param type - must be int");
+                            _logger.LogInformation("Check return param type - must be int");
                         }
                     }
                 }
@@ -268,14 +275,14 @@ public class IECParserGenerator
                 [typeof(Span<byte>), typeof(ASDUPacketHeader_2_2).MakeByRefType(), typeof(DateTime), typeof(IASDUNotification)]);
             if (parseMethod == null)
             {
-                Console.WriteLine("Not Implemented - Parse");
+                _logger.LogInformation("Not Implemented - Parse");
             }
             else
             {
                 var parameters = parseMethod.GetParameters();
                 if (parameters.Length != 4)
                 {
-                    Console.WriteLine("Check method - Parse");
+                    _logger.LogInformation("Check method - Parse");
                 }
                 else
                 {
@@ -286,22 +293,22 @@ public class IECParserGenerator
 
                     if (!param0.ParameterType.IsByRef || param0.ParameterType.GetElementType() != typeof(ASDUPacketHeader_2_2))
                     {
-                        Console.WriteLine("Check method param 0 - Parse");
+                        _logger.LogInformation("Check method param 0 - Parse");
                     }
 
                     if (param1.ParameterType != typeof(Span<byte>))
                     {
-                        Console.WriteLine("Check method param 1 - Parse");
+                        _logger.LogInformation("Check method param 1 - Parse");
                     }
 
                     if (param2.ParameterType != typeof(DateTime))
                     {
-                        Console.WriteLine("Check method param 2 - Parse");
+                        _logger.LogInformation("Check method param 2 - Parse");
                     }
 
                     if (param3.ParameterType != typeof(IASDUNotification))
                     {
-                        Console.WriteLine("Check method param 3 - Parse");
+                        _logger.LogInformation("Check method param 3 - Parse");
                     }
                 }
             }
@@ -309,7 +316,7 @@ public class IECParserGenerator
             var descriptionMethod = type.Key.GetProperty("Description", BindingFlags.Static | BindingFlags.Public);
             if (descriptionMethod == null)
             {
-                Console.WriteLine("Not Implemented - Description");
+                _logger.LogInformation("Not Implemented - Description");
             }
         }
     }

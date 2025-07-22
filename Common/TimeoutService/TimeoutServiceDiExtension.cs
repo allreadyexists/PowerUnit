@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace PowerUnit;
+namespace PowerUnit.Common.TimeoutService;
 
 public static class TimeoutServiceDiExtension
 {

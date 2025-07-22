@@ -22,7 +22,7 @@ internal abstract class TestDataSource<T> : DataSourceBase<T>
                 try
                 {
                     Notify(CreateNewValue(now));
-                    await Task.Delay(10, _cancellationTokenSource.Token);
+                    await Task.Delay(1, _cancellationTokenSource.Token);
                 }
                 catch (OperationCanceledException)
                 {

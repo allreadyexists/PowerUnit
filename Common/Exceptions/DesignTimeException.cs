@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Common.Exceptions;
 
 /// <summary>
 /// Исключение, предназначенное для отлова на этапе разработки.

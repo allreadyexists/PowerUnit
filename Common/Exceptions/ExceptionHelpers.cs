@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace PowerUnit;
+namespace PowerUnit.Common.Exceptions;
 
 /// <summary>
 /// Утилиты для работы с исключениями

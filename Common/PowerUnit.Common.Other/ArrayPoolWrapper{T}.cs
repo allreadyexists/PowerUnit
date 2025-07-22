@@ -1,6 +1,6 @@
 using System.Buffers;
 
-namespace PowerUnit;
+namespace PowerUnit.Common.Other;
 
 public readonly ref struct ArrayPoolItemWrapper<T>
 {

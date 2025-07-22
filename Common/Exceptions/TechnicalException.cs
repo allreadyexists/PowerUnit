@@ -1,4 +1,4 @@
-namespace PowerUnit;
+namespace PowerUnit.Common.Exceptions;
 
 /// <summary>
 /// Исключение, используемое для технических нужд разработки. 
