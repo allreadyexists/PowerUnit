@@ -7,11 +7,9 @@ public abstract class Subscriber<T> : SubscriberBase<T>
 {
     protected abstract Channel<T> Channel { get; }
 
-    public Subscriber(IDataSource<T> dataSource,
-        Func<T, Task> onNext,
-        Action<Exception>? onError,
-        Action? onComplite,
-        Predicate<T>? filter) : base(dataSource, onError, onComplite, filter)
+    private readonly Func<T, Task> _onNext;
+
+    protected void Initialize()
     {
         Subscribe = DataSource.Where(x => Filter(x)).Subscribe(
             value => Channel.Writer.TryWrite(value),
@@ -24,15 +22,18 @@ public abstract class Subscriber<T> : SubscriberBase<T>
             {
                 while (!token.IsCancellationRequested)
                 {
-                    await foreach (var value in Channel.Reader.ReadAllAsync(token))
+                    if (Channel != null)
                     {
-                        try
+                        await foreach (var value in Channel.Reader.ReadAllAsync(token))
                         {
-                            await onNext(value);
-                        }
-                        catch (Exception ex)
-                        {
-                            OnError(ex);
+                            try
+                            {
+                                await _onNext(value);
+                            }
+                            catch (Exception ex)
+                            {
+                                OnError(ex);
+                            }
                         }
                     }
                 }
@@ -45,7 +46,15 @@ public abstract class Subscriber<T> : SubscriberBase<T>
             {
                 OnComplite();
             }
-        }
-        , TokenSource.Token);
+        }, TokenSource.Token);
+    }
+
+    public Subscriber(IDataSource<T> dataSource,
+        Func<T, Task> onNext,
+        Action<Exception>? onError,
+        Action? onComplite,
+        Predicate<T>? filter) : base(dataSource, onError, onComplite, filter)
+    {
+        _onNext = onNext;
     }
 }

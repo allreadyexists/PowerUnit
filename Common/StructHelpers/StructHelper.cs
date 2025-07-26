@@ -43,6 +43,12 @@ public static class StructHelper
     public static unsafe void SerializeUnsafe<T>(this T s, byte[] array, int offset)
         where T : unmanaged
     {
+        s.SerializeUnsafe(array.AsSpan(), offset);
+    }
+
+    public static unsafe void SerializeUnsafe<T>(this T s, Span<byte> array, int offset)
+        where T : unmanaged
+    {
         if (offset + Marshal.SizeOf(s) > array.Length)
             throw new ArgumentOutOfRangeException(nameof(array));
         fixed (byte* bufferPtr = array)

@@ -17,7 +17,7 @@ public partial class IEC60870_5_104ServerApplicationLayer
 
                 try
                 {
-                    if (_readTransactionManager.CreateTransaction(transactionId, out var transactionCt))
+                    if (_readTransactionManager.CreateTransaction(transactionId))
                     {
                         result = _dataProvider.GetValue(address);
                     }

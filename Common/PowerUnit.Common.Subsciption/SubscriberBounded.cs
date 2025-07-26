@@ -17,5 +17,7 @@ public sealed class SubscriberBounded<T> : Subscriber<T>
             SingleReader = true,
             SingleWriter = true,
         }, dropped => { });
+
+        Initialize();
     }
 }

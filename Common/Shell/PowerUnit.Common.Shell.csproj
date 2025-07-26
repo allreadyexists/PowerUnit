@@ -5,7 +5,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Collections.Analyzer" Version="0.2.12.1" />
+		<!--<PackageReference Include="Collections.Analyzer" Version="0.2.12.1" />-->
 		<PackageReference Include="editorconfig" Version="$(EditorConfigVersion)">
 		  <TreatAsUsed>true</TreatAsUsed>
 		</PackageReference>

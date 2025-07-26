@@ -6,7 +6,8 @@ public sealed record class IEC104MappingModel
     public byte Group { get; set; }
     public ushort Address { get; set; }
     public byte AsduType { get; set; }
-    public long EquipmentId { get; set; }
-    public long ParameterId { get; set; }
+    public string SourceId { get; set; }
+    public string EquipmentId { get; set; }
+    public string ParameterId { get; set; }
 }
 

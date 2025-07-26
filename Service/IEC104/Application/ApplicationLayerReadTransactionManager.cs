@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace PowerUnit.Service.IEC104.Application;
+namespace PowerUnit;
 
 /// <summary>
 /// Отслеживание выполняемых запросов на чтение данных
@@ -11,7 +11,7 @@ internal sealed class ApplicationLayerReadTransactionManager : IDisposable
     /// <summary>
     /// Запущенные транзакции в рамках сессии
     /// </summary>
-    private readonly ConcurrentDictionary<int, CancellationTokenSource> _transactionIds = new();
+    private readonly ConcurrentDictionary<int, bool> _transactionIds = new();
 
     /// <summary>
     /// Создать транзакцию - идентификатор передает клиент
@@ -19,31 +19,18 @@ internal sealed class ApplicationLayerReadTransactionManager : IDisposable
     /// </summary>
     /// <param name="transactionId"></param>
     /// <returns></returns>
-    public bool CreateTransaction(int transactionId, out CancellationToken ct)
+    public bool CreateTransaction(int transactionId)
     {
-        var cts = new CancellationTokenSource();
-        ct = cts.Token;
-        return _transactionIds.TryAdd(transactionId, cts);
+        return _transactionIds.TryAdd(transactionId, true);
     }
 
     public bool DeleteTransaction(int transactionId)
     {
-        var remove = _transactionIds.TryRemove(transactionId, out var cts);
-        if (remove)
-        {
-            cts?.Cancel();
-            cts?.Dispose();
-        }
-
-        return remove;
+        return _transactionIds.TryRemove(transactionId, out var _);
     }
 
     void IDisposable.Dispose()
     {
-        foreach (var transactionId in _transactionIds)
-        {
-            transactionId.Value.Dispose();
-        }
     }
 }
 

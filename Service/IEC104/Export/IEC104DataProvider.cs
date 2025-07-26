@@ -13,14 +13,14 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
     private static readonly int _bufferizationSize = 100;
     private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromMilliseconds(500);
 
-    private readonly FrozenDictionary<(long EquipmentId, long ParameterId), IEC104MappingModel> _mapping;
+    private readonly FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> _mapping;
     private readonly FrozenDictionary<byte, FrozenSet<ushort>> _groups;
     private readonly SubscriberBase<BaseValue>? _subscriber;
 
     private readonly ConcurrentDictionary<ushort, MapValueItem> _values = new ConcurrentDictionary<ushort, MapValueItem>();
 
     public IEC104DataProvider(IDataSource<BaseValue> source,
-        FrozenDictionary<(long EquipmentId, long ParameterId), IEC104MappingModel> mapping,
+        FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> mapping,
         FrozenDictionary<byte, FrozenSet<ushort>> groups,
         ILogger<IEC104DataProvider> logger)
     {
@@ -54,7 +54,7 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
     {
         foreach (var value in values)
         {
-            if (_mapping.TryGetValue((value.EquipmentId, value.ParameterId), out var v))
+            if (_mapping.TryGetValue((value.SourceId, value.EquipmentId, value.ParameterId), out var v))
                 _values.AddOrUpdate(v.Address,
                     address => new MapValueItem(v.Address, (ASDUType)v.AsduType, value),
                     (address, oldValue) => new MapValueItem(v.Address, (ASDUType)v.AsduType, value));
@@ -63,6 +63,6 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
 
     private bool ValueFilter(BaseValue value)
     {
-        return _mapping.ContainsKey((value.EquipmentId, value.ParameterId));
+        return _mapping.ContainsKey((value.SourceId, value.EquipmentId, value.ParameterId));
     }
 }

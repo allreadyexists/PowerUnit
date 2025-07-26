@@ -16,5 +16,7 @@ public sealed class SubscriberUnbounded<T> : Subscriber<T>
             SingleReader = true,
             SingleWriter = true,
         });
+
+        Initialize();
     }
 }

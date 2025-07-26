@@ -1,4 +1,4 @@
 namespace PowerUnit.Service.IEC104;
 
-public record BaseValue(long EquipmentId, long ParameterId, DateTime? ValueDt, DateTime RegistrationDt);
+public record BaseValue(string SourceId, string EquipmentId, string ParameterId, DateTime? ValueDt, DateTime RegistrationDt);
 

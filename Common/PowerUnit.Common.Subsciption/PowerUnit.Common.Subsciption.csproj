@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Collections.Analyzer" Version="0.2.12.1" />
+    <!--<PackageReference Include="Collections.Analyzer" Version="0.2.12.1" />-->
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.7" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
   </ItemGroup>

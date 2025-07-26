@@ -1,7 +1,7 @@
 using PowerUnit.Common.Exceptions;
 using PowerUnit.Service.IEC104.Types;
 
-namespace PowerUnit.Service.IEC104.Application;
+namespace PowerUnit;
 
 internal sealed class IEC60870_5_104ApplicationException : RegularException
 {

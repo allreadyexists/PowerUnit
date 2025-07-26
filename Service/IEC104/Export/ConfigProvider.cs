@@ -67,7 +67,7 @@ internal sealed class ConfigProvider : IConfigProvider
         {
             using var scope = _serviceProvider.CreateAsyncScope();
             using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
-            var result = await dbContext.IEC104Mappings.AsNoTracking().Join(dbContext.IEC104Groups.AsNoTracking(),
+            var result = await dbContext.IEC104Mappings.Where(x => x.SourceId != "").AsNoTracking().Join(dbContext.IEC104Groups.AsNoTracking(),
                 f => f.Id,
                 s => s.IEC104MappingId,
                 (f, s) => new IEC104MappingModel()
@@ -76,6 +76,7 @@ internal sealed class ConfigProvider : IConfigProvider
                     Group = s.Group,
                     Address = f.Address,
                     AsduType = (byte)f.IEC104TypeId,
+                    SourceId = f.SourceId,
                     EquipmentId = f.EquipmentId,
                     ParameterId = f.ParameterId,
                 }).ToArrayAsync(ct);

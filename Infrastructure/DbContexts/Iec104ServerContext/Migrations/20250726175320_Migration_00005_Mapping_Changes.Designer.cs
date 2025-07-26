@@ -11,8 +11,8 @@ using PowerUnit.Infrastructure.IEC104ServerDb;
 namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
 {
     [DbContext(typeof(PowerUnitIEC104ServerDbContext))]
-    [Migration("20250716165540_Migration_00004")]
-    partial class Migration_00004
+    [Migration("20250726175320_Migration_00005_Mapping_Changes")]
+    partial class Migration_00005_Mapping_Changes
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -20,7 +20,7 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("pu_iec104_server")
-                .HasAnnotation("ProductVersion", "9.0.6")
+                .HasAnnotation("ProductVersion", "9.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -67,21 +67,33 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("address");
 
-                    b.Property<long>("EquipmentId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("EquipmentId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("equipment_id");
 
                     b.Property<int>("IEC104TypeId")
                         .HasColumnType("integer")
                         .HasColumnName("iec104type_id");
 
-                    b.Property<long>("ParameterId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("ParameterId")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
                         .HasColumnName("parameter_id");
 
                     b.Property<int>("ServerId")
                         .HasColumnType("integer")
                         .HasColumnName("server_id");
+
+                    b.Property<string>("SourceId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasDefaultValue("")
+                        .HasColumnName("source_id");
 
                     b.HasKey("Id")
                         .HasName("pk_iec104mappings");
@@ -89,9 +101,9 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                     b.HasIndex("IEC104TypeId")
                         .HasDatabaseName("ix_iec104mappings_iec104type_id");
 
-                    b.HasIndex("ServerId", "EquipmentId", "ParameterId", "Address", "IEC104TypeId")
+                    b.HasIndex("ServerId", "SourceId", "EquipmentId", "ParameterId", "Address", "IEC104TypeId")
                         .IsUnique()
-                        .HasDatabaseName("ix_iec104mappings_server_id_equipment_id_parameter_id_address_");
+                        .HasDatabaseName("ix_iec104mappings_server_id_source_id_equipment_id_parameter_i");
 
                     b.ToTable("iec104mappings", "pu_iec104_server");
                 });
