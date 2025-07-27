@@ -8,11 +8,11 @@ using PowerUnit.Service.IEC104.Abstract;
 
 namespace PowerUnit.Service.IEC104.Export;
 
-internal sealed class ConfigProvider : IConfigProvider
+internal sealed class IEC104ConfigProvider : IConfigProvider
 {
     private static readonly AsyncRetryPolicy _policyReadServersSettings = Policy.Handle<Exception>().WaitAndRetryForeverAsync(_ => TimeSpan.FromSeconds(30));
     private readonly IServiceProvider _serviceProvider;
-    public ConfigProvider(IServiceProvider serviceProvider)
+    public IEC104ConfigProvider(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
     }

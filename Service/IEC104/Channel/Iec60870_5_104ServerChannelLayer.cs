@@ -128,6 +128,7 @@ public class IEC60870_5_104ServerChannelLayer :
     {
         _timeout0Id = await StopTimerAsync(_timeout0Id, ct);
         _logger.LogTrace("Disconnect by timer0");
+        _diagnostic.ProtocolError(_serverOptions.ApplicationLayerModel.ServerId);
         _physicalLayerController.DisconnectLayer();
     }
 
@@ -139,6 +140,7 @@ public class IEC60870_5_104ServerChannelLayer :
     {
         _timeout1Id = await StopTimerAsync(_timeout1Id, ct);
         _logger.LogTrace("Disconnect by timer1");
+        _diagnostic.ProtocolError(_serverOptions.ApplicationLayerModel.ServerId);
         _physicalLayerController.DisconnectLayer();
     }
 
@@ -189,16 +191,17 @@ public class IEC60870_5_104ServerChannelLayer :
 
     private IASDUNotification? _asduNotification;
 
-    private readonly ITimeoutService _timeoutsProcessService;
+    private readonly ITimeoutService _timeoutsService;
 
     private readonly IEC104ServerModel _serverOptions;
 
     private readonly IDataSource<MapValueItem> _dataSource;
     private readonly IDataProvider _dataProvider;
+    private readonly IIEC60870_5_104ChannelLayerDiagnostic _diagnostic;
 
     private readonly IPhysicalLayerCommander _physicalLayerController;
 
-    private readonly IECParserGenerator _iecReflection;
+    private readonly IECParserGenerator _parserGenerator;
 
     private readonly CancellationToken _ct;
 
@@ -259,17 +262,22 @@ public class IEC60870_5_104ServerChannelLayer :
         IEC104ServerModel serverOptions,
         IDataSource<MapValueItem> dataSource,
         IDataProvider dataProvider,
+        IECParserGenerator parserGenerator,
+        IIEC60870_5_104ChannelLayerDiagnostic diagnostic,
         ILogger<IEC60870_5_104ServerChannelLayer> logger,
+        TimeProvider timeProvider,
+        ITimeoutService timeoutService,
         CancellationToken ct)
     {
         _serviceProvider = serviceProvider;
-        _timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
-        _timeoutsProcessService = serviceProvider.GetRequiredService<ITimeoutService>();
+        _timeProvider = timeProvider;
+        _timeoutsService = timeoutService;
         _physicalLayerController = physicalLayerController;
         _serverOptions = serverOptions;
         _dataSource = dataSource;
         _dataProvider = dataProvider;
-        _iecReflection = serviceProvider.GetRequiredService<IECParserGenerator>();
+        _diagnostic = diagnostic;
+        _parserGenerator = parserGenerator;
         _ct = ct;
         _logger = logger;
         // дружим каналку и сборщик пакета
@@ -289,12 +297,12 @@ public class IEC60870_5_104ServerChannelLayer :
     {
         if (timerId.HasValue)
         {
-            await _timeoutsProcessService.RestartTimeoutAsync(this, timerId.Value, timeout, ct);
+            await _timeoutsService.RestartTimeoutAsync(this, timerId.Value, timeout, ct);
             return timerId.Value;
         }
         else
         {
-            return await _timeoutsProcessService.CreateTimeoutAsync(this, timeout, ct);
+            return await _timeoutsService.CreateTimeoutAsync(this, timeout, ct);
         }
     }
 
@@ -308,7 +316,7 @@ public class IEC60870_5_104ServerChannelLayer :
     {
         if (timerId.HasValue)
         {
-            await _timeoutsProcessService.CancelTimeoutAsync(this, timerId.Value, ct);
+            await _timeoutsService.CancelTimeoutAsync(this, timerId.Value, ct);
         }
 
         return null;
@@ -340,16 +348,13 @@ public class IEC60870_5_104ServerChannelLayer :
             txQueueCount--;
             if (Priority == ChannelLayerPacketPriority.Low && _txButNotAckQueue.Count > _serverOptions.ChannelLayerModel.MaxQueueSize)
             {
+                _diagnostic.SendMgsSkip(_serverOptions.ApplicationLayerModel.ServerId, Priority);
                 continue;
             }
             else
             {
-                if (Priority == ChannelLayerPacketPriority.Normal)
-                {
-                    _logger.LogInformation("Normal packet. Queue size: {@size}", _txButNotAckQueue.Count);
-                }
-
                 _txButNotAckQueue.Add(Packet);
+                _diagnostic.SendMgsAddToQueue(_serverOptions.ApplicationLayerModel.ServerId, Priority);
             }
         }
 
@@ -391,6 +396,7 @@ public class IEC60870_5_104ServerChannelLayer :
                         _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + txPacket.Length);
                     }
 
+                    _diagnostic.SendMgs(_serverOptions.ApplicationLayerModel.ServerId);
                     _logger.LogTrace("TX: I: RX: {@_rxCounter}, TX: {@_txCounter}", _rxCounter, _txCounter);
 
                     _rxW = 0; // сброс счетчика несквитированных посылок
@@ -491,12 +497,13 @@ public class IEC60870_5_104ServerChannelLayer :
             }
 
             if (_asduNotification != null)
-                _iecReflection.Parse(_asduNotification, data, _timeProvider.GetUtcNow().DateTime, true);
+                _parserGenerator.Parse(_asduNotification, data, _timeProvider.GetUtcNow().DateTime, true);
         }
         else
         {
             // нарушение протокола - разрыв соединения по нашей инициативе
             _logger.LogTrace("Disconnect by IPacket Rcv corruption");
+            _diagnostic.ProtocolError(_serverOptions.ApplicationLayerModel.ServerId);
             _physicalLayerController.DisconnectLayer();
         }
     }
@@ -522,6 +529,7 @@ public class IEC60870_5_104ServerChannelLayer :
         {
             // нарушение протокола - разрыв соединения по нашей инициативе
             _logger.LogTrace("Disconnect by SPacket Rcv corruption");
+            _diagnostic.ProtocolError(_serverOptions.ApplicationLayerModel.ServerId);
             _physicalLayerController.DisconnectLayer();
         }
     }
@@ -586,6 +594,7 @@ public class IEC60870_5_104ServerChannelLayer :
                 _timeout1Id = await StopTimerAsync(_timeout1Id, ct);
                 break;
             default:
+                _diagnostic.ProtocolError(_serverOptions.ApplicationLayerModel.ServerId);
                 _physicalLayerController.DisconnectLayer();
                 _logger.LogTrace("U packet undefuned");
                 break;
@@ -611,19 +620,23 @@ public class IEC60870_5_104ServerChannelLayer :
 
             if (apci_2.TryGetIPacket(out var iPacket))
             {
+                _diagnostic.RcvIPacket(_serverOptions.ApplicationLayerModel.ServerId);
                 await ProcessIPacket(iPacket.Rx, iPacket.Tx, rxPacket[6..], ct);
             }
             else if (apci_2.TryGetUPacket(out var uPacket))
             {
+                _diagnostic.RcvUPacket(_serverOptions.ApplicationLayerModel.ServerId);
                 await ProcessUPacket(uPacket.UControl, ct);
             }
             else if (apci_2.TryGetSPacket(out var sPacket))
             {
+                _diagnostic.RcvSPacket(_serverOptions.ApplicationLayerModel.ServerId);
                 await ProcessSPacket(sPacket.Rx, ct);
             }
             else
             {
                 _logger.LogTrace("Undefined packet rcv");
+                _diagnostic.ProtocolError(_serverOptions.ApplicationLayerModel.ServerId);
                 _physicalLayerController.DisconnectLayer();
                 return;
             }
@@ -738,6 +751,7 @@ public class IEC60870_5_104ServerChannelLayer :
     /// <returns></returns>
     void IChannelLayerPacketSender.Send(byte[] packet, ChannelLayerPacketPriority priority)
     {
+        _diagnostic.SendMgsTake(_serverOptions.ApplicationLayerModel.ServerId, priority);
         _txQueue.Writer.TryWrite((packet, priority));
         _events.Writer.TryWrite(_txEvent);
     }

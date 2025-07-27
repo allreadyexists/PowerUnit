@@ -15,6 +15,7 @@ using PowerUnit.Common.Subsciption;
 using PowerUnit.Common.TimeoutService;
 using PowerUnit.Infrastructure.IEC104ServerDb;
 using PowerUnit.Service.IEC104.Abstract;
+using PowerUnit.Service.IEC104.Channel;
 using PowerUnit.Service.IEC104.Export.DataSource;
 using PowerUnit.Service.IEC104.Types;
 
@@ -56,11 +57,12 @@ internal sealed class Program
 
                     // внешний
                     services.AddSingleton<IDataSource<BaseValue>, BaseValueTestDataSource>();
-                    services.AddSingleton<IConfigProvider, ConfigProvider>();
+                    services.AddSingleton<IConfigProvider, IEC104ConfigProvider>();
 
                     // внутренний
+                    services.AddSingleton<IIEC60870_5_104ChannelLayerDiagnostic, IEC104ChannelLayerDiagnostic>();
                     services.AddSingleton<IEC104ServerFactory>();
-                    services.AddTimeoutService();
+                    services.AddTimeoutService(ServiceLifetime.Transient);
 
                     services.AddSingleton(s =>
                     {
@@ -77,6 +79,7 @@ internal sealed class Program
                         .AddAspNetCoreInstrumentation()
                         .AddSqlClientInstrumentation()
                         .AddNpgsqlInstrumentation()
+                        .AddMeter(IEC104ChannelLayerDiagnostic.MeterName)
                         .AddEventCountersInstrumentation(c =>
                             c.AddEventSources("System.Net.Sockets"))
                         .AddPrometheusExporter(opt =>
@@ -88,7 +91,8 @@ internal sealed class Program
                             //opt.Endpoint = new Uri("http://host.docker.internal:4317");
                             opt.Endpoint = new Uri("http://localhost:4317");
                             readerOpt.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 5000;
-                        });
+                        })
+                        ;
                     });
 
                     services.AddHostedService<IEC104ServersStarterService>();
