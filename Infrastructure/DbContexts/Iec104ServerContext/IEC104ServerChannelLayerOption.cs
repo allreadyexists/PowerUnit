@@ -41,6 +41,12 @@ public class IEC104ServerChannelLayerOptionItem : IEntityTypeConfiguration<IEC10
     /// </summary>
     public bool UseFragmentSend { get; set; }
 
+    /// <summary>
+    /// Максимальное количество элементов в очереди, после которого низкоприоритетные пакеты
+    /// от прикладного уровня будут выкинуты каналкой
+    /// </summary>
+    public int MaxQueueSize { get; set; }
+
     void IEntityTypeConfiguration<IEC104ServerChannelLayerOptionItem>.Configure(EntityTypeBuilder<IEC104ServerChannelLayerOptionItem> builder)
     {
         builder.Property(p => p.Timeout0Sec).HasDefaultValue(30);
@@ -52,5 +58,7 @@ public class IEC104ServerChannelLayerOptionItem : IEntityTypeConfiguration<IEC10
         builder.Property(p => p.WindowWSize).HasDefaultValue(8);
 
         builder.Property(p => p.UseFragmentSend).HasDefaultValue(false);
+
+        builder.Property(p => p.MaxQueueSize).HasDefaultValue(100);
     }
 }

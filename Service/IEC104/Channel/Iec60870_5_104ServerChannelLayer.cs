@@ -145,7 +145,7 @@ public class IEC60870_5_104ServerChannelLayer :
     }
 
     /// <summary>
-    /// Обработка таймера 
+    /// Обработка таймера
     /// </summary>
     /// <returns></returns>
     private async Task ProcessTimer2Async(CancellationToken ct)
@@ -154,8 +154,8 @@ public class IEC60870_5_104ServerChannelLayer :
         // отправка квитирующего S пакета
         new APCI(PacketS.Size, new PacketS(_rxCounter)).SerializeUnsafe(_buffer, 0);
         _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
-
-        _logger.LogTrace("TX: S: RX: {@rxCounter}", _rxCounter);
+        _diagnostic.SendSPacket(_serverOptions.ApplicationLayerModel.ServerId);
+        _logger.LogTimer2(_rxCounter);
 
         _rxW = 0;
     }
@@ -170,7 +170,8 @@ public class IEC60870_5_104ServerChannelLayer :
 
         // отправка U Test пакета
         _physicalLayerController.SendPacket(_testAct, 0, APCI.Size);
-        _logger.LogTrace("TX: U: {@test}", UControl.TestFrAct);
+        _diagnostic.SendUPacket(_serverOptions.ApplicationLayerModel.ServerId);
+        _logger.LogTimer3(UControl.TestFrAct);
 
         _timeout1Id = await StartTimerAsync(_timeout1Id, TimeSpan.FromSeconds(_serverOptions.ChannelLayerModel.Timeout1Sec), ct);
         _timeout3Id = await StartTimerAsync(_timeout3Id, TimeSpan.FromSeconds(_serverOptions.ChannelLayerModel.Timeout3Sec), ct);
@@ -348,20 +349,19 @@ public class IEC60870_5_104ServerChannelLayer :
             txQueueCount--;
             if (Priority == ChannelLayerPacketPriority.Low && _txButNotAckQueue.Count > _serverOptions.ChannelLayerModel.MaxQueueSize)
             {
-                _diagnostic.SendMgsSkip(_serverOptions.ApplicationLayerModel.ServerId, Priority);
+                _diagnostic.AppMsgSkip(_serverOptions.ApplicationLayerModel.ServerId, Priority);
                 continue;
             }
             else
             {
                 _txButNotAckQueue.Add(Packet);
-                _diagnostic.SendMgsAddToQueue(_serverOptions.ApplicationLayerModel.ServerId, Priority);
+                _diagnostic.AppMsgSend(_serverOptions.ApplicationLayerModel.ServerId, Priority);
             }
         }
 
         // только если позволяет окно
         if (_txW >= _serverOptions.ChannelLayerModel.WindowKSize)
         {
-            _logger.LogTrace("ProcessTxQueue not in window");
             return;
         }
 
@@ -370,8 +370,6 @@ public class IEC60870_5_104ServerChannelLayer :
         if (packetToSendCount > 0)
         {
             packetToSendCount = Math.Min(packetToSendCount - _txW, _serverOptions.ChannelLayerModel.WindowKSize - _txW);
-
-            _logger.LogTrace("ProcessTxQueue {@packetToSendCount}", packetToSendCount);
 
             if (packetToSendCount > 0)
             {
@@ -396,8 +394,8 @@ public class IEC60870_5_104ServerChannelLayer :
                         _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + txPacket.Length);
                     }
 
-                    _diagnostic.SendMgs(_serverOptions.ApplicationLayerModel.ServerId);
-                    _logger.LogTrace("TX: I: RX: {@_rxCounter}, TX: {@_txCounter}", _rxCounter, _txCounter);
+                    _diagnostic.SendIPacket(_serverOptions.ApplicationLayerModel.ServerId);
+                    _logger.LogProcessTxQueue(_rxCounter, _txCounter);
 
                     _rxW = 0; // сброс счетчика несквитированных посылок
                     _txCounter = CounterIncrement(_txCounter); // наращиваем счетчик отправленных
@@ -468,7 +466,7 @@ public class IEC60870_5_104ServerChannelLayer :
     /// <returns></returns>
     private async Task ProcessIPacket(ushort rx, ushort tx, byte[] data, CancellationToken ct)
     {
-        _logger.LogTrace("RX: I: RX {@rx}, TX: {@tx}", rx, tx);
+        _logger.LogTrace(@"RX: I: RX {Rx}, TX: {Tx}", rx, tx);
 
         var txDelta = CalcUnAckPacket(rx);
         var counterOk = txDelta >= 0 && txDelta <= _txW && tx == _rxCounter;
@@ -484,6 +482,7 @@ public class IEC60870_5_104ServerChannelLayer :
             {
                 new APCI(PacketS.Size, new PacketS(_rxCounter)).SerializeUnsafe(_buffer, 0);
                 _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
+                _diagnostic.SendSPacket(_serverOptions.ApplicationLayerModel.ServerId);
                 _rxW = 0; // несквитированные мною
 
                 _logger.LogTrace("TX: S: RX:{@rxCounter}", _rxCounter);
@@ -556,6 +555,7 @@ public class IEC60870_5_104ServerChannelLayer :
                 }
 
                 _physicalLayerController.SendPacket(_startCon, 0, APCI.Size);
+                _diagnostic.SendUPacket(_serverOptions.ApplicationLayerModel.ServerId);
                 _logger.LogTrace("TX: U: {@start}", UControl.StartDtCon);
                 break;
             case UControl.StopDtAct:
@@ -575,6 +575,7 @@ public class IEC60870_5_104ServerChannelLayer :
                 }
 
                 _physicalLayerController.SendPacket(_stopCon, 0, APCI.Size);
+                _diagnostic.SendUPacket(_serverOptions.ApplicationLayerModel.ServerId);
                 _logger.LogTrace("TX: U: {@stop}", UControl.StopDtCon);
                 break;
             case UControl.TestFrAct:
@@ -751,7 +752,7 @@ public class IEC60870_5_104ServerChannelLayer :
     /// <returns></returns>
     void IChannelLayerPacketSender.Send(byte[] packet, ChannelLayerPacketPriority priority)
     {
-        _diagnostic.SendMgsTake(_serverOptions.ApplicationLayerModel.ServerId, priority);
+        _diagnostic.AppMsgTotal(_serverOptions.ApplicationLayerModel.ServerId, priority);
         _txQueue.Writer.TryWrite((packet, priority));
         _events.Writer.TryWrite(_txEvent);
     }
@@ -761,5 +762,17 @@ public class IEC60870_5_104ServerChannelLayer :
         _events.Writer.TryWrite(new TimerEvent(timeout));
         return Task.CompletedTask;
     }
+}
+
+internal static partial class IEC60870_5_104ServerChannelLayerLogExtension
+{
+    [LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "TX: S: RX: {RxCounter}")]
+    public static partial void LogTimer2(this ILogger logger, ushort rxCounter);
+
+    [LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "TX: U: {Test}")]
+    public static partial void LogTimer3(this ILogger logger, UControl test);
+
+    [LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "TX: I: RX: {RxCounter}, TX: {TxCounter}")]
+    public static partial void LogProcessTxQueue(this ILogger logger, ushort rxCounter, ushort txCounter);
 }
 
