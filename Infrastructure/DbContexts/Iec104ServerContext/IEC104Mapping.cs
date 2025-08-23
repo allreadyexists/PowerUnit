@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
+//using System.ComponentModel.DataAnnotations;
+
 namespace PowerUnit.Infrastructure.IEC104ServerDb;
 
 public class IEC104MappingItem : IEntityTypeConfiguration<IEC104MappingItem>
 {
+    //[Key]
     public long Id { get; set; }
 
     public int ServerId { get; set; }
@@ -15,8 +18,8 @@ public class IEC104MappingItem : IEntityTypeConfiguration<IEC104MappingItem>
     public string ParameterId { get; set; } = string.Empty;
 
     public ushort Address { get; set; }
-    public IEC104TypeEnum IEC104TypeId { get; set; }
-    public required IEC104TypeItem IEC104Type { get; set; }
+    public IEC104TypeEnum TypeId { get; set; }
+    public required IEC104TypeItem Type { get; set; }
 
     void IEntityTypeConfiguration<IEC104MappingItem>.Configure(EntityTypeBuilder<IEC104MappingItem> builder)
     {
@@ -26,12 +29,12 @@ public class IEC104MappingItem : IEntityTypeConfiguration<IEC104MappingItem>
         builder.Property(e => e.EquipmentId).IsRequired().HasMaxLength(256);
         builder.Property(e => e.ParameterId).IsRequired().HasMaxLength(512);
 
-        builder.Property(e => e.IEC104TypeId).IsRequired();
+        builder.Property(e => e.TypeId).IsRequired();
         builder.Property(e => e.Address).IsRequired();
 
         builder.HasOne(e => e.Server).WithMany().HasForeignKey(e => e.ServerId);
-        builder.HasOne(e => e.IEC104Type).WithMany().HasForeignKey(e => e.IEC104TypeId);
+        builder.HasOne(e => e.Type).WithMany().HasForeignKey(e => e.TypeId);
 
-        builder.HasIndex(e => new { e.ServerId, e.SourceId, e.EquipmentId, e.ParameterId, e.Address, e.IEC104TypeId }).IsUnique();
+        builder.HasIndex(e => new { e.ServerId, e.SourceId, e.EquipmentId, e.ParameterId, e.Address, e.TypeId }).IsUnique();
     }
 }

@@ -3,15 +3,15 @@ using System.Threading.Channels;
 
 namespace PowerUnit.Common.Subsciption;
 
-public sealed class BatchSubscriber<T> : SubscriberBase<T>
+public sealed class BatchSubscriber<T, TContext> : SubscriberBase<T, TContext>
 {
     private readonly Channel<IEnumerable<T>> _channel;
 
-    public BatchSubscriber(int count, TimeSpan timeSpan, IDataSource<T> dataSource,
-        Func<IEnumerable<T>, Task> onNext,
+    public BatchSubscriber(int count, TimeSpan timeSpan, IDataSource<T> dataSource, TContext context,
+        Func<IEnumerable<T>, TContext, CancellationToken, Task> onNext,
         Action<Exception>? onError = null,
         Action? onComplite = null,
-        Predicate<T>? filter = null) : base(dataSource, onError, onComplite, filter)
+        Func<T, TContext, bool>? filter = null) : base(dataSource, context, onError, onComplite, filter)
     {
         _channel = Channel.CreateUnbounded<IEnumerable<T>>(new UnboundedChannelOptions()
         {
@@ -19,7 +19,7 @@ public sealed class BatchSubscriber<T> : SubscriberBase<T>
             SingleWriter = true,
         });
 
-        Subscribe = DataSource.Where(x => Filter(x)).Buffer(timeSpan, count).Subscribe(
+        Subscribe = DataSource.Where(x => Filter(x, Context)).Buffer(timeSpan, count).Subscribe(
             value => _channel.Writer.TryWrite(value),
             OnError,
             OnComplite);
@@ -34,7 +34,7 @@ public sealed class BatchSubscriber<T> : SubscriberBase<T>
                     {
                         try
                         {
-                            await onNext(value);
+                            await onNext(value, Context, token);
                         }
                         catch (Exception ex)
                         {

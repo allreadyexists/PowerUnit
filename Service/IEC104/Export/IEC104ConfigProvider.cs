@@ -23,7 +23,7 @@ internal sealed class IEC104ConfigProvider : IConfigProvider
         {
             using var scope = _serviceProvider.CreateAsyncScope();
             using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
-            var servers = await dbContext.IEC104Servers.AsNoTracking().Where(x => x.Enable)
+            var servers = await dbContext.Servers.AsNoTracking().Where(x => x.Enable)
                 .Include(x => x.ChannelLayerOption)
                 .Include(x => x.ApplicationLayerOption).OrderBy(x => x.Id)
                 .ToArrayAsync(ct);
@@ -67,15 +67,15 @@ internal sealed class IEC104ConfigProvider : IConfigProvider
         {
             using var scope = _serviceProvider.CreateAsyncScope();
             using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
-            var result = await dbContext.IEC104Mappings.Where(x => x.SourceId != "").AsNoTracking().Join(dbContext.IEC104Groups.AsNoTracking(),
+            var result = await dbContext.Mappings.Where(x => x.SourceId != "").AsNoTracking().Join(dbContext.Groups.AsNoTracking(),
                 f => f.Id,
-                s => s.IEC104MappingId,
+                s => s.MappingId,
                 (f, s) => new IEC104MappingModel()
                 {
                     ServerId = f.ServerId,
                     Group = s.Group,
                     Address = f.Address,
-                    AsduType = (byte)f.IEC104TypeId,
+                    AsduType = (byte)f.TypeId,
                     SourceId = f.SourceId,
                     EquipmentId = f.EquipmentId,
                     ParameterId = f.ParameterId,

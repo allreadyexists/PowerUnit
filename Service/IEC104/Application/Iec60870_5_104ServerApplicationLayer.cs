@@ -227,13 +227,14 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
             if (applicationLayerOption.SporadicSendEnabled)
             {
-                _subscriber2 = new BatchSubscriber<MapValueItem>(_bufferizationSize, _bufferizationTimeout, dataSource, values =>
+                _subscriber2 = new BatchSubscriber<MapValueItem, IEC60870_5_104ServerApplicationLayer>(
+                    _bufferizationSize, _bufferizationTimeout, dataSource, this, static (values, context, token) =>
                 {
                     if (values.TryGetNonEnumeratedCount(out var count) && count > 0)
                     {
-                        return SendInRentBuffer(buffer =>
+                        return context.SendInRentBuffer(buffer =>
                         {
-                            Stream(buffer, values);
+                            context.Stream(buffer, values);
                             return Task.CompletedTask;
                         });
                     }

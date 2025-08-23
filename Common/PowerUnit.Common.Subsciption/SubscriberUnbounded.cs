@@ -2,14 +2,14 @@ using System.Threading.Channels;
 
 namespace PowerUnit.Common.Subsciption;
 
-public sealed class SubscriberUnbounded<T> : Subscriber<T>
+public sealed class SubscriberUnbounded<T, TContext> : Subscriber<T, TContext>
 {
     private readonly Channel<T> _channel;
     protected override Channel<T> Channel => _channel;
 
-    public SubscriberUnbounded(IDataSource<T> dataSource, Func<T, Task> onNext,
+    public SubscriberUnbounded(IDataSource<T> dataSource, TContext context, Func<T, TContext, CancellationToken, Task> onNext,
         Action<Exception>? onError = null,
-        Action? onComplite = null, Predicate<T>? filter = null) : base(dataSource, onNext, onError, onComplite, filter)
+        Action? onComplite = null, Func<T, TContext, bool>? filter = null) : base(dataSource, context, onNext, onError, onComplite, filter)
     {
         _channel = System.Threading.Channels.Channel.CreateUnbounded<T>(new UnboundedChannelOptions()
         {

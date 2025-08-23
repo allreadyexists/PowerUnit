@@ -12,27 +12,27 @@ public class PowerUnitIEC104ServerDbContext : DbContext
     /// <summary>
     /// НСИ МЭК104 группы
     /// </summary>
-    public DbSet<IEC104GroupItem> IEC104Groups { get; set; }
+    public DbSet<IEC104GroupItem> Groups { get; set; }
     /// <summary>
     /// НСИ МЭК104 маппинги
     /// </summary>
-    public DbSet<IEC104MappingItem> IEC104Mappings { get; set; }
+    public DbSet<IEC104MappingItem> Mappings { get; set; }
     /// <summary>
     /// НСИ МЭК104 сервера
     /// </summary>
-    public DbSet<IEC104ServerItem> IEC104Servers { get; set; }
+    public DbSet<IEC104ServerItem> Servers { get; set; }
     /// <summary>
     /// Настройки МЭК104 сервера
     /// </summary>
-    public DbSet<IEC104ServerApplicationLayerOptionItem> IEC104ServerApplicationLayerOptions { get; set; }
+    public DbSet<IEC104ServerApplicationLayerOptionItem> ApplicationLayerOptions { get; set; }
     /// <summary>
     /// Настройки МЭК104 сервера
     /// </summary>
-    public DbSet<IEC104ServerChannelLayerOptionItem> IEC104ServerChannelLayerOptions { get; set; }
+    public DbSet<IEC104ServerChannelLayerOptionItem> ChannelLayerOptions { get; set; }
     /// <summary>
     /// НСИ МЭК104 типы
     /// </summary>
-    public DbSet<IEC104TypeItem> IEC104Types { get; set; }
+    public DbSet<IEC104TypeItem> Types { get; set; }
 
     public PowerUnitIEC104ServerDbContext(DbContextOptions<PowerUnitIEC104ServerDbContext> options)
         : base(options)

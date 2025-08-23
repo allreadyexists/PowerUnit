@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 using Microsoft.Extensions.Configuration;
@@ -30,6 +31,31 @@ public static class PowerUnitIEC104ServerDbContextDiHelper
         });
         services.AddDbContextPool<PowerUnitIEC104ServerDbContext>((p, x) => x
             .UseNpgsql(p.GetRequiredService<DbConnectionStringBuilder>().ConnectionString)
+            .UseSnakeCaseNamingConvention()
+            .EnableSensitiveDataLogging(false)
+            .EnableThreadSafetyChecks()
+            .EnableDetailedErrors()
+        );
+
+        return services;
+    }
+
+    public static IServiceCollection AddPowerUnitIEC104ServerDbContextSqlite(this IServiceCollection services, IConfiguration config)
+    {
+        services.AddOptions<IEC104ServerDbSqliteOptions>().Bind(config.GetSection(nameof(IEC104ServerDbSqliteOptions)));
+        services.AddSingleton<DbConnectionStringBuilder>(p =>
+        {
+            var dbOptions = p.GetRequiredService<IOptions<IEC104ServerDbSqliteOptions>>().Value;
+            var connectionStringBuilder = new SqliteConnectionStringBuilder()
+            {
+                DataSource = dbOptions.DataSource
+            };
+            return connectionStringBuilder;
+        });
+        services.AddDbContextPool<PowerUnitIEC104ServerDbContext>((p, x) => x
+            .UseSqlite(
+                p.GetRequiredService<DbConnectionStringBuilder>().ConnectionString,
+                x => x.MigrationsAssembly("PowerUnit.Infrastructure.IEC104ServerDb.SqliteMigrations"))
             .UseSnakeCaseNamingConvention()
             .EnableSensitiveDataLogging(false)
             .EnableThreadSafetyChecks()

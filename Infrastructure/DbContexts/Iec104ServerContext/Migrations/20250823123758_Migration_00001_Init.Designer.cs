@@ -11,8 +11,8 @@ using PowerUnit.Infrastructure.IEC104ServerDb;
 namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
 {
     [DbContext(typeof(PowerUnitIEC104ServerDbContext))]
-    [Migration("20250712110719_Migration_00003")]
-    partial class Migration_00003
+    [Migration("20250823123758_Migration_00001_Init")]
+    partial class Migration_00001_Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -20,7 +20,7 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("pu_iec104_server")
-                .HasAnnotation("ProductVersion", "9.0.6")
+                .HasAnnotation("ProductVersion", "9.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -67,21 +67,33 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("address");
 
-                    b.Property<long>("EquipmentId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("EquipmentId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
                         .HasColumnName("equipment_id");
 
                     b.Property<int>("IEC104TypeId")
                         .HasColumnType("integer")
                         .HasColumnName("iec104type_id");
 
-                    b.Property<long>("ParameterId")
-                        .HasColumnType("bigint")
+                    b.Property<string>("ParameterId")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
                         .HasColumnName("parameter_id");
 
                     b.Property<int>("ServerId")
                         .HasColumnType("integer")
                         .HasColumnName("server_id");
+
+                    b.Property<string>("SourceId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasDefaultValue("")
+                        .HasColumnName("source_id");
 
                     b.HasKey("Id")
                         .HasName("pk_iec104mappings");
@@ -89,9 +101,9 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                     b.HasIndex("IEC104TypeId")
                         .HasDatabaseName("ix_iec104mappings_iec104type_id");
 
-                    b.HasIndex("ServerId", "EquipmentId", "ParameterId", "Address", "IEC104TypeId")
+                    b.HasIndex("ServerId", "SourceId", "EquipmentId", "ParameterId", "Address", "IEC104TypeId")
                         .IsUnique()
-                        .HasDatabaseName("ix_iec104mappings_server_id_equipment_id_parameter_id_address_");
+                        .HasDatabaseName("ix_iec104mappings_server_id_source_id_equipment_id_parameter_i");
 
                     b.ToTable("iec104mappings", "pu_iec104_server");
                 });
@@ -99,8 +111,11 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
             modelBuilder.Entity("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerApplicationLayerOptionItem", b =>
                 {
                     b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<bool>("CheckCommonASDUAddress")
                         .ValueGeneratedOnAdd()
@@ -123,8 +138,17 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
             modelBuilder.Entity("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerChannelLayerOptionItem", b =>
                 {
                     b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MaxQueueSize")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(100)
+                        .HasColumnName("max_queue_size");
 
                     b.Property<byte>("Timeout0Sec")
                         .ValueGeneratedOnAdd()
@@ -183,6 +207,18 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("ApplicationLayerOptionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("application_layer_option_id");
+
+                    b.Property<int>("ChannelLayerOptionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("channel_layer_option_id");
+
                     b.Property<int>("CommonASDUAddress")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -211,6 +247,12 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_iec104servers");
+
+                    b.HasIndex("ApplicationLayerOptionId")
+                        .HasDatabaseName("ix_iec104servers_application_layer_option_id");
+
+                    b.HasIndex("ChannelLayerOptionId")
+                        .HasDatabaseName("ix_iec104servers_channel_layer_option_id");
 
                     b.ToTable("iec104servers", "pu_iec104_server");
                 });
@@ -268,31 +310,31 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                     b.Navigation("Server");
                 });
 
+            modelBuilder.Entity("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerItem", b =>
+                {
+                    b.HasOne("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerApplicationLayerOptionItem", "ApplicationLayerOption")
+                        .WithMany("IEC104ServerItems")
+                        .HasForeignKey("ApplicationLayerOptionId")
+                        .HasConstraintName("fk_iec104servers_iec104server_application_layer_options_applic");
+
+                    b.HasOne("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerChannelLayerOptionItem", "ChannelLayerOption")
+                        .WithMany("IEC104ServerItems")
+                        .HasForeignKey("ChannelLayerOptionId")
+                        .HasConstraintName("fk_iec104servers_iec104server_channel_layer_options_channel_la");
+
+                    b.Navigation("ApplicationLayerOption");
+
+                    b.Navigation("ChannelLayerOption");
+                });
+
             modelBuilder.Entity("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerApplicationLayerOptionItem", b =>
                 {
-                    b.HasOne("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerItem", null)
-                        .WithOne("ApplicationLayerOption")
-                        .HasForeignKey("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerApplicationLayerOptionItem", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_iec104server_application_layer_options_iec104servers_id");
+                    b.Navigation("IEC104ServerItems");
                 });
 
             modelBuilder.Entity("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerChannelLayerOptionItem", b =>
                 {
-                    b.HasOne("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerItem", null)
-                        .WithOne("ChannelLayerOption")
-                        .HasForeignKey("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerChannelLayerOptionItem", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_iec104server_channel_layer_options_iec104servers_id");
-                });
-
-            modelBuilder.Entity("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerItem", b =>
-                {
-                    b.Navigation("ApplicationLayerOption");
-
-                    b.Navigation("ChannelLayerOption");
+                    b.Navigation("IEC104ServerItems");
                 });
 #pragma warning restore 612, 618
         }

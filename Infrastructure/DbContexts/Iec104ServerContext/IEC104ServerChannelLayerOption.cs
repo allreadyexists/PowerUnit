@@ -1,14 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
 namespace PowerUnit.Infrastructure.IEC104ServerDb;
 
 public class IEC104ServerChannelLayerOptionItem : IEntityTypeConfiguration<IEC104ServerChannelLayerOptionItem>
 {
-    [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
+    [Key]
     public int Id { get; set; }
     /// <summary>
     /// Таймаут при установки соединения
@@ -46,6 +45,7 @@ public class IEC104ServerChannelLayerOptionItem : IEntityTypeConfiguration<IEC10
     /// от прикладного уровня будут выкинуты каналкой
     /// </summary>
     public int MaxQueueSize { get; set; }
+    public ICollection<IEC104ServerItem> ServerItems { get; } = new List<IEC104ServerItem>();
 
     void IEntityTypeConfiguration<IEC104ServerChannelLayerOptionItem>.Configure(EntityTypeBuilder<IEC104ServerChannelLayerOptionItem> builder)
     {
@@ -60,5 +60,7 @@ public class IEC104ServerChannelLayerOptionItem : IEntityTypeConfiguration<IEC10
         builder.Property(p => p.UseFragmentSend).HasDefaultValue(false);
 
         builder.Property(p => p.MaxQueueSize).HasDefaultValue(100);
+
+        builder.HasMany(p => p.ServerItems).WithOne(p => p.ChannelLayerOption).HasForeignKey(p => p.ChannelLayerOptionId).IsRequired(false);
     }
 }

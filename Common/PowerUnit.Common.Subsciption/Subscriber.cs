@@ -3,15 +3,15 @@ using System.Threading.Channels;
 
 namespace PowerUnit.Common.Subsciption;
 
-public abstract class Subscriber<T> : SubscriberBase<T>
+public abstract class Subscriber<T, TContext> : SubscriberBase<T, TContext>
 {
     protected abstract Channel<T> Channel { get; }
 
-    private readonly Func<T, Task> _onNext;
+    private readonly Func<T, TContext, CancellationToken, Task> _onNext;
 
     protected void Initialize()
     {
-        Subscribe = DataSource.Where(x => Filter(x)).Subscribe(
+        Subscribe = DataSource.Where(x => Filter(x, Context)).Subscribe(
             value => Channel.Writer.TryWrite(value),
             OnError,
             OnComplite);
@@ -28,7 +28,7 @@ public abstract class Subscriber<T> : SubscriberBase<T>
                         {
                             try
                             {
-                                await _onNext(value);
+                                await _onNext(value, Context, token);
                             }
                             catch (Exception ex)
                             {
@@ -49,11 +49,11 @@ public abstract class Subscriber<T> : SubscriberBase<T>
         }, TokenSource.Token);
     }
 
-    public Subscriber(IDataSource<T> dataSource,
-        Func<T, Task> onNext,
+    public Subscriber(IDataSource<T> dataSource, TContext context,
+        Func<T, TContext, CancellationToken, Task> onNext,
         Action<Exception>? onError,
         Action? onComplite,
-        Predicate<T>? filter) : base(dataSource, onError, onComplite, filter)
+        Func<T, TContext, bool>? filter) : base(dataSource, context, onError, onComplite, filter)
     {
         _onNext = onNext;
     }

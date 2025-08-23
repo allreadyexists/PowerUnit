@@ -15,7 +15,7 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
 
     private readonly FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> _mapping;
     private readonly FrozenDictionary<byte, FrozenSet<ushort>> _groups;
-    private readonly SubscriberBase<BaseValue>? _subscriber;
+    private readonly SubscriberBase<BaseValue, IEC104DataProvider>? _subscriber;
 
     private readonly ConcurrentDictionary<ushort, MapValueItem> _values = new ConcurrentDictionary<ushort, MapValueItem>();
 
@@ -28,9 +28,9 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
         _groups = groups;
         if (_mapping.Count != 0)
         {
-            _subscriber = new BatchSubscriber<BaseValue>(_bufferizationSize, _bufferizationTimeout, source, values =>
+            _subscriber = new BatchSubscriber<BaseValue, IEC104DataProvider>(_bufferizationSize, _bufferizationTimeout, source, this, static (values, context, token) =>
             {
-                Snapshot(values);
+                context.Snapshot(values);
                 return Task.CompletedTask;
             }, filter: ValueFilter);
         }
@@ -61,8 +61,8 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
         }
     }
 
-    private bool ValueFilter(BaseValue value)
+    private static bool ValueFilter(BaseValue value, IEC104DataProvider context)
     {
-        return _mapping.ContainsKey((value.SourceId, value.EquipmentId, value.ParameterId));
+        return context._mapping.ContainsKey((value.SourceId, value.EquipmentId, value.ParameterId));
     }
 }
