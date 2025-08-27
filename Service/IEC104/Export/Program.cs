@@ -53,8 +53,18 @@ internal sealed class Program
 
                     services.AddEnviromentManager(SERVICE_NAME);
 
-                    services.AddPowerUnitIEC104ServerDbContext(hostBuilderContext.Configuration);
-                    //services.AddPowerUnitIEC104ServerDbContextSqlite(hostBuilderContext.Configuration);
+                    var dbProvider = hostBuilderContext.Configuration.GetValue("DbProvider", "Sqlite");
+                    switch (dbProvider)
+                    {
+                        case "Sqlite":
+                            services.AddPowerUnitIEC104ServerDbContextSqlite(hostBuilderContext.Configuration);
+                            break;
+                        case "PostgreSql":
+                            services.AddPowerUnitIEC104ServerPostgreSqlDbContext(hostBuilderContext.Configuration);
+                            break;
+                        default:
+                            throw new Exception($"Unsupported provider: {dbProvider}");
+                    }
 
                     // внешний
                     services.AddSingleton<IDataSource<BaseValue>, BaseValueTestDataSource>();
@@ -118,7 +128,7 @@ internal sealed class Program
 
                 using (var scope = host.Services.CreateScope())
                 {
-                    var db = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
+                    using var db = scope.ServiceProvider.GetRequiredService<IPowerUnitIEC104ServerDbContext>();
                     await db.Database.MigrateAsync();
                 }
 

@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
+namespace PowerUnit.Migrations
 {
     /// <inheritdoc />
-    public partial class Migration_00004_Append_Content : Migration
+    public partial class Migration_00002_Add_Content : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -88,15 +88,20 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                 INSERT INTO {schema}.channel_layer_options(id, timeout0sec, timeout1sec, timeout2sec, timeout3sec, window_k_size, window_w_size, use_fragment_send, max_queue_size) VALUES
                 (1, 30, 15, 10, 20, 12, 8, 'false', 100)
                 ");
+            migrationBuilder.Sql($@"
+                INSERT INTO {schema}.servers(name, port, common_asdu_address, enable, application_layer_option_id, channel_layer_option_id)
+                VALUES ('Default server', 2404, 1, 'true', 1, 1)
+            ");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             var schema = TargetModel.GetDefaultSchema();
-            migrationBuilder.Sql($@"DELETE FROM {schema}.types");
-            migrationBuilder.Sql($@"DELETE FROM {schema}.application_layer_options");
+            migrationBuilder.Sql($@"DELETE FROM {schema}.servers");
             migrationBuilder.Sql($@"DELETE FROM {schema}.channel_layer_options");
+            migrationBuilder.Sql($@"DELETE FROM {schema}.application_layer_options");
+            migrationBuilder.Sql($@"DELETE FROM {schema}.types");
         }
     }
 }

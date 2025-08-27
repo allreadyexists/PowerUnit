@@ -8,11 +8,11 @@ using PowerUnit.Infrastructure.IEC104ServerDb;
 
 #nullable disable
 
-namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
+namespace PowerUnit.Migrations
 {
-    [DbContext(typeof(PowerUnitIEC104ServerDbContext))]
-    [Migration("20250823124450_Migration_00002_Rename")]
-    partial class Migration_00002_Rename
+    [DbContext(typeof(PowerUnitIEC104ServerPostgreSqlDbContext))]
+    [Migration("20250827111724_Migration_00001_Init")]
+    partial class Migration_00001_Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -38,18 +38,15 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                         .HasColumnType("smallint")
                         .HasColumnName("group");
 
-                    b.Property<long>("IEC104MappingId")
+                    b.Property<long>("MappingId")
                         .HasColumnType("bigint")
-                        .HasColumnName("iec104mapping_id");
+                        .HasColumnName("mapping_id");
 
                     b.HasKey("Id")
                         .HasName("pk_groups");
 
-                    b.HasIndex("Group")
-                        .HasDatabaseName("ix_groups_group");
-
-                    b.HasIndex("IEC104MappingId")
-                        .HasDatabaseName("ix_groups_iec104mapping_id");
+                    b.HasIndex("MappingId")
+                        .HasDatabaseName("ix_groups_mapping_id");
 
                     b.ToTable("groups", "pu_iec104_server");
                 });
@@ -73,10 +70,6 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("equipment_id");
 
-                    b.Property<int>("IEC104TypeId")
-                        .HasColumnType("integer")
-                        .HasColumnName("iec104type_id");
-
                     b.Property<string>("ParameterId")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -95,13 +88,17 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                         .HasDefaultValue("")
                         .HasColumnName("source_id");
 
+                    b.Property<int>("TypeId")
+                        .HasColumnType("integer")
+                        .HasColumnName("type_id");
+
                     b.HasKey("Id")
                         .HasName("pk_mappings");
 
-                    b.HasIndex("IEC104TypeId")
-                        .HasDatabaseName("ix_mappings_iec104type_id");
+                    b.HasIndex("TypeId")
+                        .HasDatabaseName("ix_mappings_type_id");
 
-                    b.HasIndex("ServerId", "SourceId", "EquipmentId", "ParameterId", "Address", "IEC104TypeId")
+                    b.HasIndex(new[] { "ServerId", "SourceId", "EquipmentId", "ParameterId", "Address", "TypeId" }, "IX_IEC104MappingItem")
                         .IsUnique()
                         .HasDatabaseName("ix_mappings_server_id_source_id_equipment_id_parameter_id_addr");
 
@@ -279,25 +276,18 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
 
             modelBuilder.Entity("PowerUnit.Infrastructure.IEC104ServerDb.IEC104GroupItem", b =>
                 {
-                    b.HasOne("PowerUnit.Infrastructure.IEC104ServerDb.IEC104MappingItem", "IEC104Mapping")
+                    b.HasOne("PowerUnit.Infrastructure.IEC104ServerDb.IEC104MappingItem", "Mapping")
                         .WithMany()
-                        .HasForeignKey("IEC104MappingId")
+                        .HasForeignKey("MappingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_groups_mappings_iec104mapping_id");
+                        .HasConstraintName("fk_groups_mappings_mapping_id");
 
-                    b.Navigation("IEC104Mapping");
+                    b.Navigation("Mapping");
                 });
 
             modelBuilder.Entity("PowerUnit.Infrastructure.IEC104ServerDb.IEC104MappingItem", b =>
                 {
-                    b.HasOne("PowerUnit.Infrastructure.IEC104ServerDb.IEC104TypeItem", "IEC104Type")
-                        .WithMany()
-                        .HasForeignKey("IEC104TypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_mappings_types_iec104type_id");
-
                     b.HasOne("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerItem", "Server")
                         .WithMany()
                         .HasForeignKey("ServerId")
@@ -305,9 +295,16 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_mappings_servers_server_id");
 
-                    b.Navigation("IEC104Type");
+                    b.HasOne("PowerUnit.Infrastructure.IEC104ServerDb.IEC104TypeItem", "Type")
+                        .WithMany()
+                        .HasForeignKey("TypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_mappings_types_type_id");
 
                     b.Navigation("Server");
+
+                    b.Navigation("Type");
                 });
 
             modelBuilder.Entity("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerItem", b =>
@@ -318,7 +315,7 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                         .HasConstraintName("fk_servers_application_layer_options_application_layer_option_");
 
                     b.HasOne("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerChannelLayerOptionItem", "ChannelLayerOption")
-                        .WithMany("IEC104ServerItems")
+                        .WithMany("ServerItems")
                         .HasForeignKey("ChannelLayerOptionId")
                         .HasConstraintName("fk_servers_channel_layer_options_channel_layer_option_id");
 
@@ -334,7 +331,7 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
 
             modelBuilder.Entity("PowerUnit.Infrastructure.IEC104ServerDb.IEC104ServerChannelLayerOptionItem", b =>
                 {
-                    b.Navigation("IEC104ServerItems");
+                    b.Navigation("ServerItems");
                 });
 #pragma warning restore 612, 618
         }

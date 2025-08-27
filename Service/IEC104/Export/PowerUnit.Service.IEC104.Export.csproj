@@ -49,6 +49,8 @@
 		<ProjectReference Include="..\..\..\Common\PowerUnit.Common.Subsciption\PowerUnit.Common.Subsciption.csproj" />
 		<ProjectReference Include="..\..\..\Common\StringHelpers\PowerUnit.Common.StringHelpers.csproj" />
 		<ProjectReference Include="..\..\..\Common\TimeoutService\PowerUnit.Common.TimeoutService.csproj" />
+		<ProjectReference Include="..\..\..\Infrastructure\DbContexts\Iec104ServerContext.PostgreSqlMigrations\PowerUnit.Infrastructure.IEC104ServerDb.PostgreSql.csproj" />
+		<ProjectReference Include="..\..\..\Infrastructure\DbContexts\Iec104ServerContext.SqliteMigrations\PowerUnit.Infrastructure.IEC104ServerDb.Sqlite.csproj" />
 		<ProjectReference Include="..\..\..\Infrastructure\DbContexts\Iec104ServerContext\PowerUnit.Infrastructure.IEC104ServerDb.csproj" />
 		<ProjectReference Include="..\Application\PowerUnit.Service.IEC104.Application.csproj" />
 		<ProjectReference Include="..\Channel\PowerUnit.Service.IEC104.Channel.csproj" />

@@ -1,10 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<BaseOutputPath>..\Iec104ServerContext\bin</BaseOutputPath>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<!--<PackageReference Include="Collections.Analyzer" Version="0.2.12.1" />-->
@@ -27,6 +28,10 @@
 		<PackageReference Include="Microsoft.Extensions.Options" Version="9.0.8" />
 		<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.8" />
 		<!--<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(NpgsqlEntityFrameworkCorePostgreSQLVersion)" />-->
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\Iec104ServerContext\PowerUnit.Infrastructure.IEC104ServerDb.csproj" />
 	</ItemGroup>
 
 </Project>

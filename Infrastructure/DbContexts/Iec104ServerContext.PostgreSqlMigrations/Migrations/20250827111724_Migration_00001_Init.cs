@@ -3,7 +3,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
+namespace PowerUnit.Migrations
 {
     /// <inheritdoc />
     public partial class Migration_00001_Init : Migration
@@ -15,7 +15,7 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                 name: "pu_iec104_server");
 
             migrationBuilder.CreateTable(
-                name: "iec104server_application_layer_options",
+                name: "application_layer_options",
                 schema: "pu_iec104_server",
                 columns: table => new
                 {
@@ -26,11 +26,11 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_iec104server_application_layer_options", x => x.id);
+                    table.PrimaryKey("pk_application_layer_options", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "iec104server_channel_layer_options",
+                name: "channel_layer_options",
                 schema: "pu_iec104_server",
                 columns: table => new
                 {
@@ -47,11 +47,11 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_iec104server_channel_layer_options", x => x.id);
+                    table.PrimaryKey("pk_channel_layer_options", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "iec104types",
+                name: "types",
                 schema: "pu_iec104_server",
                 columns: table => new
                 {
@@ -60,11 +60,11 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_iec104types", x => x.id);
+                    table.PrimaryKey("pk_types", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "iec104servers",
+                name: "servers",
                 schema: "pu_iec104_server",
                 columns: table => new
                 {
@@ -79,23 +79,23 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_iec104servers", x => x.id);
+                    table.PrimaryKey("pk_servers", x => x.id);
                     table.ForeignKey(
-                        name: "fk_iec104servers_iec104server_application_layer_options_applic",
+                        name: "fk_servers_application_layer_options_application_layer_option_",
                         column: x => x.application_layer_option_id,
                         principalSchema: "pu_iec104_server",
-                        principalTable: "iec104server_application_layer_options",
+                        principalTable: "application_layer_options",
                         principalColumn: "id");
                     table.ForeignKey(
-                        name: "fk_iec104servers_iec104server_channel_layer_options_channel_la",
+                        name: "fk_servers_channel_layer_options_channel_layer_option_id",
                         column: x => x.channel_layer_option_id,
                         principalSchema: "pu_iec104_server",
-                        principalTable: "iec104server_channel_layer_options",
+                        principalTable: "channel_layer_options",
                         principalColumn: "id");
                 });
 
             migrationBuilder.CreateTable(
-                name: "iec104mappings",
+                name: "mappings",
                 schema: "pu_iec104_server",
                 columns: table => new
                 {
@@ -106,84 +106,78 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                     equipment_id = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     parameter_id = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
                     address = table.Column<int>(type: "integer", nullable: false),
-                    iec104type_id = table.Column<int>(type: "integer", nullable: false)
+                    type_id = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_iec104mappings", x => x.id);
+                    table.PrimaryKey("pk_mappings", x => x.id);
                     table.ForeignKey(
-                        name: "fk_iec104mappings_iec104servers_server_id",
+                        name: "fk_mappings_servers_server_id",
                         column: x => x.server_id,
                         principalSchema: "pu_iec104_server",
-                        principalTable: "iec104servers",
+                        principalTable: "servers",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "fk_iec104mappings_iec104types_iec104type_id",
-                        column: x => x.iec104type_id,
+                        name: "fk_mappings_types_type_id",
+                        column: x => x.type_id,
                         principalSchema: "pu_iec104_server",
-                        principalTable: "iec104types",
+                        principalTable: "types",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "iec104groups",
+                name: "groups",
                 schema: "pu_iec104_server",
                 columns: table => new
                 {
                     id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    iec104mapping_id = table.Column<long>(type: "bigint", nullable: false),
+                    mapping_id = table.Column<long>(type: "bigint", nullable: false),
                     group = table.Column<byte>(type: "smallint", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_iec104groups", x => x.id);
+                    table.PrimaryKey("pk_groups", x => x.id);
                     table.ForeignKey(
-                        name: "fk_iec104groups_iec104mappings_iec104mapping_id",
-                        column: x => x.iec104mapping_id,
+                        name: "fk_groups_mappings_mapping_id",
+                        column: x => x.mapping_id,
                         principalSchema: "pu_iec104_server",
-                        principalTable: "iec104mappings",
+                        principalTable: "mappings",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "ix_iec104groups_group",
+                name: "ix_groups_mapping_id",
                 schema: "pu_iec104_server",
-                table: "iec104groups",
-                column: "group");
+                table: "groups",
+                column: "mapping_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_iec104groups_iec104mapping_id",
+                name: "ix_mappings_server_id_source_id_equipment_id_parameter_id_addr",
                 schema: "pu_iec104_server",
-                table: "iec104groups",
-                column: "iec104mapping_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_iec104mappings_iec104type_id",
-                schema: "pu_iec104_server",
-                table: "iec104mappings",
-                column: "iec104type_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_iec104mappings_server_id_source_id_equipment_id_parameter_i",
-                schema: "pu_iec104_server",
-                table: "iec104mappings",
-                columns: ["server_id", "source_id", "equipment_id", "parameter_id", "address", "iec104type_id"],
+                table: "mappings",
+                columns: ["server_id", "source_id", "equipment_id", "parameter_id", "address", "type_id"],
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "ix_iec104servers_application_layer_option_id",
+                name: "ix_mappings_type_id",
                 schema: "pu_iec104_server",
-                table: "iec104servers",
+                table: "mappings",
+                column: "type_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_servers_application_layer_option_id",
+                schema: "pu_iec104_server",
+                table: "servers",
                 column: "application_layer_option_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_iec104servers_channel_layer_option_id",
+                name: "ix_servers_channel_layer_option_id",
                 schema: "pu_iec104_server",
-                table: "iec104servers",
+                table: "servers",
                 column: "channel_layer_option_id");
         }
 
@@ -191,27 +185,27 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "iec104groups",
+                name: "groups",
                 schema: "pu_iec104_server");
 
             migrationBuilder.DropTable(
-                name: "iec104mappings",
+                name: "mappings",
                 schema: "pu_iec104_server");
 
             migrationBuilder.DropTable(
-                name: "iec104servers",
+                name: "servers",
                 schema: "pu_iec104_server");
 
             migrationBuilder.DropTable(
-                name: "iec104types",
+                name: "types",
                 schema: "pu_iec104_server");
 
             migrationBuilder.DropTable(
-                name: "iec104server_application_layer_options",
+                name: "application_layer_options",
                 schema: "pu_iec104_server");
 
             migrationBuilder.DropTable(
-                name: "iec104server_channel_layer_options",
+                name: "channel_layer_options",
                 schema: "pu_iec104_server");
         }
     }

@@ -22,11 +22,13 @@ internal sealed class IEC104ConfigProvider : IConfigProvider
         return _policyReadServersSettings.ExecuteAsync(async (ct) =>
         {
             using var scope = _serviceProvider.CreateAsyncScope();
-            using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
-            var servers = await dbContext.Servers.AsNoTracking().Where(x => x.Enable)
+            using var dbContext = scope.ServiceProvider.GetRequiredService<IPowerUnitIEC104ServerDbContext>();
+#pragma warning disable IDE0100 // Remove redundant equality
+            var servers = await dbContext.Servers.AsNoTracking().Where(x => x.Enable == true)
                 .Include(x => x.ChannelLayerOption)
                 .Include(x => x.ApplicationLayerOption).OrderBy(x => x.Id)
                 .ToArrayAsync(ct);
+#pragma warning restore IDE0100 // Remove redundant equality
 
             foreach (var server in servers)
             {
@@ -66,7 +68,7 @@ internal sealed class IEC104ConfigProvider : IConfigProvider
         return _policyReadServersSettings.ExecuteAsync(async (ct) =>
         {
             using var scope = _serviceProvider.CreateAsyncScope();
-            using var dbContext = scope.ServiceProvider.GetRequiredService<PowerUnitIEC104ServerDbContext>();
+            using var dbContext = scope.ServiceProvider.GetRequiredService<IPowerUnitIEC104ServerDbContext>();
             var result = await dbContext.Mappings.Where(x => x.SourceId != "").AsNoTracking().Join(dbContext.Groups.AsNoTracking(),
                 f => f.Id,
                 s => s.MappingId,

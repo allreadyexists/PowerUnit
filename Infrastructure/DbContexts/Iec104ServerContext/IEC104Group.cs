@@ -18,6 +18,6 @@ public class IEC104GroupItem : IEntityTypeConfiguration<IEC104GroupItem>
         builder.Property(e => e.MappingId).IsRequired();
         builder.Property(e => e.Group).IsRequired();
         builder.HasOne(e => e.Mapping).WithMany().HasForeignKey(e => e.MappingId);
-        builder.HasIndex(e => e.Group);
+        //builder.HasIndex(e => e.Group);
     }
 }

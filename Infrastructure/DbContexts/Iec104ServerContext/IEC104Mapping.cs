@@ -35,6 +35,6 @@ public class IEC104MappingItem : IEntityTypeConfiguration<IEC104MappingItem>
         builder.HasOne(e => e.Server).WithMany().HasForeignKey(e => e.ServerId);
         builder.HasOne(e => e.Type).WithMany().HasForeignKey(e => e.TypeId);
 
-        builder.HasIndex(e => new { e.ServerId, e.SourceId, e.EquipmentId, e.ParameterId, e.Address, e.TypeId }).IsUnique();
+        builder.HasIndex(e => new { e.ServerId, e.SourceId, e.EquipmentId, e.ParameterId, e.Address, e.TypeId }, "IX_IEC104MappingItem").IsUnique();
     }
 }

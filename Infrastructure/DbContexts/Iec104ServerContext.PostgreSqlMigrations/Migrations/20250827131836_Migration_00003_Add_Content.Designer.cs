@@ -8,11 +8,11 @@ using PowerUnit.Infrastructure.IEC104ServerDb;
 
 #nullable disable
 
-namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
+namespace PowerUnit.Migrations
 {
-    [DbContext(typeof(PowerUnitIEC104ServerDbContext))]
-    [Migration("20250823125027_Migration_00003_Rename")]
-    partial class Migration_00003_Rename
+    [DbContext(typeof(PowerUnitIEC104ServerPostgreSqlDbContext))]
+    [Migration("20250827131836_Migration_00003_Add_Content")]
+    partial class Migration_00003_Add_Content
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -44,9 +44,6 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_groups");
-
-                    b.HasIndex("Group")
-                        .HasDatabaseName("ix_groups_group");
 
                     b.HasIndex("MappingId")
                         .HasDatabaseName("ix_groups_mapping_id");
@@ -101,7 +98,7 @@ namespace PowerUnit.Infrastructure.IEC104ServerDb.Migrations
                     b.HasIndex("TypeId")
                         .HasDatabaseName("ix_mappings_type_id");
 
-                    b.HasIndex("ServerId", "SourceId", "EquipmentId", "ParameterId", "Address", "TypeId")
+                    b.HasIndex(new[] { "ServerId", "SourceId", "EquipmentId", "ParameterId", "Address", "TypeId" }, "IX_IEC104MappingItem")
                         .IsUnique()
                         .HasDatabaseName("ix_mappings_server_id_source_id_equipment_id_parameter_id_addr");
 
