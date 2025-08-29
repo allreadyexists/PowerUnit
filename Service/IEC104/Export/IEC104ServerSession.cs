@@ -4,6 +4,7 @@ using PowerUnit.Common.StringHelpers;
 using PowerUnit.Common.Subsciption;
 using PowerUnit.Service.IEC104.Abstract;
 using PowerUnit.Service.IEC104.Channel;
+using PowerUnit.Service.IEC104.Models;
 
 using System.Net.Sockets;
 

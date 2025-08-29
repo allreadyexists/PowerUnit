@@ -1,9 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-using PowerUnit.Infrastructure.IEC104ServerDb;
-
-namespace PowerUnit;
+namespace PowerUnit.Infrastructure.IEC104ServerDb.Sqlite;
 
 public sealed class PowerUnitIEC104ServerSqliteDbContext : PowerUnitIEC104ServerDbContext
 {

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace PowerUnit;
+namespace PowerUnit.Infrastructure.IEC104ServerDb.Sqlite;
 
 /* PowerShell
 1. cd .\Infrastructure\DbContexts\Iec104ServerContext.SqliteMigrations\

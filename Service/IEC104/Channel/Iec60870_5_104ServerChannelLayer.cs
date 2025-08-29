@@ -7,6 +7,7 @@ using PowerUnit.Common.TimeoutService;
 using PowerUnit.Service.IEC104.Abstract;
 using PowerUnit.Service.IEC104.Application;
 using PowerUnit.Service.IEC104.Channel.Events;
+using PowerUnit.Service.IEC104.Models;
 using PowerUnit.Service.IEC104.Types;
 
 using System.Runtime.InteropServices;

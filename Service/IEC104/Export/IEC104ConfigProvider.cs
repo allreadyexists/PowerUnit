@@ -5,6 +5,7 @@ using Polly.Retry;
 
 using PowerUnit.Infrastructure.IEC104ServerDb;
 using PowerUnit.Service.IEC104.Abstract;
+using PowerUnit.Service.IEC104.Models;
 
 namespace PowerUnit.Service.IEC104.Export;
 

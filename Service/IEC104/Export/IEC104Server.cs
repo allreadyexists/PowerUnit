@@ -2,6 +2,7 @@ using NetCoreServer;
 
 using PowerUnit.Common.Subsciption;
 using PowerUnit.Service.IEC104.Abstract;
+using PowerUnit.Service.IEC104.Models;
 
 using System.Collections.Frozen;
 using System.Net;

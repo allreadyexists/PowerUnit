@@ -1,9 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-	<PropertyGroup>
-	  <RootNamespace>PowerUnit.Common.EnviromentManager</RootNamespace>
-	</PropertyGroup>
-
 	<ItemGroup>
 		<!--<PackageReference Include="Collections.Analyzer" Version="0.2.12.1" />-->
 		<PackageReference Include="editorconfig" Version="$(EditorConfigVersion)" />
@@ -15,8 +10,8 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
-		<PackageReference Include="System.Management" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MicrosoftExtensionsDependencyInjectionVersion)" />
+		<PackageReference Include="System.Management" Version="$(SystemManagementVersion)" />
 	</ItemGroup>
 
 </Project>

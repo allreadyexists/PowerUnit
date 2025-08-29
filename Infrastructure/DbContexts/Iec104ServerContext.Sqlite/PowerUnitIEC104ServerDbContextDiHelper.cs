@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 
 using PowerUnit.Common.EnviromentManager;
 using PowerUnit.Infrastructure.IEC104ServerDb;
+using PowerUnit.Infrastructure.IEC104ServerDb.Sqlite;
 
 using System.Data.Common;
 

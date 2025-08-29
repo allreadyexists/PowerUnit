@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
+using PowerUnit.Infrastructure.IEC104ServerDb.Sqlite;
+
 #nullable disable
 
 namespace PowerUnit.Migrations

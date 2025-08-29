@@ -1,3 +1,5 @@
+using PowerUnit.Service.IEC104.Models;
+
 namespace PowerUnit.Service.IEC104.Export;
 
 public class IEC104ServerFactory
