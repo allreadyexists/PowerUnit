@@ -2,7 +2,7 @@ using PowerUnit.Service.IEC104.Abstract;
 
 using System.Diagnostics.Metrics;
 
-namespace PowerUnit.Service.IEC104.Channel;
+namespace PowerUnit.Service.IEC104.Export;
 
 public class IEC104ChannelLayerDiagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IDisposable
 {

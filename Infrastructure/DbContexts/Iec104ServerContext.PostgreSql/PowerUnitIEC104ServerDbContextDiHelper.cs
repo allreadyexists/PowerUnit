@@ -6,9 +6,11 @@ using Microsoft.Extensions.Options;
 
 using Npgsql;
 
+using PowerUnit.Infrastructure.IEC104ServerDb;
+
 using System.Data.Common;
 
-namespace PowerUnit.Infrastructure.IEC104ServerDb;
+namespace PowerUnit;
 
 public static class PowerUnitIEC104ServerDbContextDiHelper
 {

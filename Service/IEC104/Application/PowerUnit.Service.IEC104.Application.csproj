@@ -20,9 +20,10 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\Common\Exceptions\PowerUnit.Common.Exceptions.csproj" />
+		<ProjectReference Include="..\..\..\Common\Other\PowerUnit.Common.Other.csproj" />
 		<ProjectReference Include="..\..\..\Common\PowerUnit.Common.Other\PowerUnit.Common.Other.csproj" />
-		<ProjectReference Include="..\..\..\Common\PowerUnit.Common.Subsciption\PowerUnit.Common.Subsciption.csproj" />
 		<ProjectReference Include="..\..\..\Common\StringHelpers\PowerUnit.Common.StringHelpers.csproj" />
+		<ProjectReference Include="..\..\..\Common\Subsciption\PowerUnit.Common.Subsciption.csproj" />
 		<ProjectReference Include="..\Common\PowerUnit.Service.IEC104.Abstract.csproj" />
 		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Models.csproj" />
 		<ProjectReference Include="..\Types\PowerUnit.Service.IEC104.Types.csproj" />

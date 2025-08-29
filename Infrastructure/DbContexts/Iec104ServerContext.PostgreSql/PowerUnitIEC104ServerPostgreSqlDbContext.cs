@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace PowerUnit.Infrastructure.IEC104ServerDb;
+using PowerUnit.Infrastructure.IEC104ServerDb;
+
+namespace PowerUnit;
 
 public sealed class PowerUnitIEC104ServerPostgreSqlDbContext : PowerUnitIEC104ServerDbContext
 {
