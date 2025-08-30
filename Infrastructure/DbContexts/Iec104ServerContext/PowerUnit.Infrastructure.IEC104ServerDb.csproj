@@ -7,31 +7,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!--<PackageReference Include="Collections.Analyzer" Version="0.2.12.1" />-->
-		<PackageReference Include="EFCore.NamingConventions" Version="$(EFCoreNamingConventionsVersion)" />
-		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.8.0-beta.1">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="ErrorProne.NET.Structs" Version="0.7.0-beta.3">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.8">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.8" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.8" />
-		<PackageReference Include="Microsoft.Extensions.Options" Version="9.0.8" />
-		<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.8" />
-		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(NpgsqlEntityFrameworkCorePostgreSQLVersion)" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\..\..\Common\EnviromentManager\PowerUnit.Common.EnviromentManager.csproj" />
-	  <ProjectReference Include="..\..\Db\PowerUnit.Infrastructure.Db.csproj" />
+		<ProjectReference Include="..\..\Db\PowerUnit.Infrastructure.Db.csproj" />
 	</ItemGroup>
 
 </Project>

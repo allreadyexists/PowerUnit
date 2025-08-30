@@ -6,12 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using PowerUnit.Common.EnviromentManager;
-using PowerUnit.Infrastructure.IEC104ServerDb;
-using PowerUnit.Infrastructure.IEC104ServerDb.Sqlite;
 
 using System.Data.Common;
 
-namespace PowerUnit;
+namespace PowerUnit.Infrastructure.IEC104ServerDb.Sqlite;
 
 public static class PowerUnitIEC104ServerDbContextDiHelper
 {

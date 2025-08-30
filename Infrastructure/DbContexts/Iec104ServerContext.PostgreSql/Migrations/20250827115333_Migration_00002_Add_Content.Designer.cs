@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
+using PowerUnit.Infrastructure.IEC104ServerDb.PostgreSql;
+
 #nullable disable
 
 namespace PowerUnit.Migrations

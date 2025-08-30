@@ -9,38 +9,15 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!--<PackageReference Include="Collections.Analyzer" Version="0.2.12.1" />-->
-		<PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.8.0-beta.1">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="ErrorProne.NET.Structs" Version="0.7.0-beta.3">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="linq2db.EntityFrameworkCore" Version="$(linq2dbEntityFrameworkCoreVersion)" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.8" />
-		<PackageReference Include="NLog.Extensions.Logging" Version="6.0.3" />
-		<PackageReference Include="NLog.Web.AspNetCore" Version="6.0.3" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="$(NLogWebAspNetCoreVersion)" />
 		<PackageReference Include="NetCoreServer" Version="$(NetCoreServerVersion)" />
-		<PackageReference Include="Npgsql.OpenTelemetry" Version="9.0.3" />
-		<PackageReference Include="OpenTelemetry" Version="1.12.0" />
-		<PackageReference Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.12.0" />
-		<PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
-		<PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
-		<PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.12.0-beta.1" />
-		<!--<PackageReference Include="OpenTelemetry.Exporter.Prometheus.HttpListener" Version="1.12.0-beta.1" />-->
-		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
-		<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
-		<PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.12.0-beta.1" />
-		<PackageReference Include="OpenTelemetry.Instrumentation.EventCounters" Version="1.5.1-alpha.1" />
-		<PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.12.0-beta.1" />
-		<PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="1.12.0-beta.1" />
-		<PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
-		<PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.12.0-beta.1" />
-		<PackageReference Include="Polly" Version="8.6.3" />
-		<PackageReference Include="System.Linq.Async" Version="6.0.3" />
-		<PackageReference Include="System.Reactive" Version="6.0.2" />
+		<PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="$(OpenTelemetryExporterPrometheusAspNetCoreVersion)" />
+		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryExtensionsHostingVersion)" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.EventCounters" Version="$(OpenTelemetryInstrumentationEventCountersVersion)" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="$(OpenTelemetryInstrumentationProcessVersion)" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryInstrumentationRuntimeVersion)" />
+		<PackageReference Include="Polly" Version="$(PollyVersion)" />
+		<PackageReference Include="System.Linq.Async" Version="$(SystemLinqAsyncVersion)" />
 	</ItemGroup>
 
 	<ItemGroup>

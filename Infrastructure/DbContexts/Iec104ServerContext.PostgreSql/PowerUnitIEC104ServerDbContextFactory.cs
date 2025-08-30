@@ -1,9 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-using PowerUnit.Infrastructure.IEC104ServerDb;
-
-namespace PowerUnit;
+namespace PowerUnit.Infrastructure.IEC104ServerDb.PostgreSql;
 
 /* PowerShell
 1. cd .\Infrastructure\DbContexts\Iec104ServerContext.PostgreSqlMigrations\

@@ -1,0 +1,33 @@
+<Solution>
+  <Folder Name="/Common/">
+    <Project Path="Common/DateTimeManager/PowerUnit.Common.DateTimeManager.csproj" />
+    <Project Path="Common/EnviromentManager/PowerUnit.Common.EnviromentManager.csproj" />
+    <Project Path="Common/Exceptions/PowerUnit.Common.Exceptions.csproj" />
+    <Project Path="Common/Options/PowerUnit.Common.Options.csproj" />
+    <Project Path="Common/Other/PowerUnit.Common.Other.csproj" />
+    <Project Path="Common/Shell/PowerUnit.Common.Shell.csproj" />
+    <Project Path="Common/StringHelpers/PowerUnit.Common.StringHelpers.csproj" />
+    <Project Path="Common/StructHelpers/PowerUnit.Common.StructHelpers.csproj" />
+    <Project Path="Common/Subsciption/PowerUnit.Common.Subsciption.csproj" />
+    <Project Path="Common/TimeoutService/PowerUnit.Common.TimeoutService.csproj" />
+  </Folder>
+  <Folder Name="/Infrastructure/">
+    <Project Path="Infrastructure/Db/PowerUnit.Infrastructure.Db.csproj" />
+    <Project Path="Infrastructure/DbContexts/Iec104ServerContext.PostgreSql/PowerUnit.Infrastructure.IEC104ServerDb.PostgreSql.csproj" />
+    <Project Path="Infrastructure/DbContexts/Iec104ServerContext.Sqlite/PowerUnit.Infrastructure.IEC104ServerDb.Sqlite.csproj" />
+    <Project Path="Infrastructure/DbContexts/Iec104ServerContext/PowerUnit.Infrastructure.IEC104ServerDb.csproj" />
+  </Folder>
+  <Folder Name="/Service/" />
+  <Folder Name="/Service/IEC104/">
+    <Project Path="Service/IEC104/Application/PowerUnit.Service.IEC104.Application.csproj" />
+    <Project Path="Service/IEC104/Channel/PowerUnit.Service.IEC104.Channel.csproj" />
+    <Project Path="Service/IEC104/Common/PowerUnit.Service.IEC104.Abstract.csproj" />
+    <Project Path="Service/IEC104/Export/PowerUnit.Service.IEC104.Export.csproj" />
+    <Project Path="Service/IEC104/Options/PowerUnit.Service.IEC104.Models.csproj" />
+    <Project Path="Service/IEC104/Types/PowerUnit.Service.IEC104.Types.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+  </Folder>
+</Solution>
