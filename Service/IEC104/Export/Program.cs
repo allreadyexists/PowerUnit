@@ -86,9 +86,6 @@ internal sealed class Program
                         pb
                         .AddRuntimeInstrumentation()
                         .AddProcessInstrumentation()
-                        //.AddAspNetCoreInstrumentation()
-                        //.AddSqlClientInstrumentation()
-                        //.AddNpgsqlInstrumentation()
                         .AddMeter(IEC104ChannelLayerDiagnostic.MeterName)
                         .AddEventCountersInstrumentation(c =>
                             c.AddEventSources("System.Net.Sockets"))
