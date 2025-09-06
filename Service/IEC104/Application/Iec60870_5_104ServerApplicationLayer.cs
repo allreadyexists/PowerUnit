@@ -32,7 +32,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
     private readonly CancellationTokenSource _cts;
 
-    private static readonly int _bufferizationSize = 100;
+    private static readonly int _bufferizationSize = 10;
     private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromMilliseconds(500);
     private IDisposable? _subscriber2;
 

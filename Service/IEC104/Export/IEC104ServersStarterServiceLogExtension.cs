@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace PowerUnit.Service.IEC104.Export;
 
 internal static partial class IEC104ServersStarterServiceLogExtension

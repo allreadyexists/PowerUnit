@@ -1,4 +1,9 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 using NLog;
 using NLog.Extensions.Logging;
@@ -25,6 +30,7 @@ namespace PowerUnit.Service.IEC104.Export;
 internal sealed class Program
 {
     private const string SERVICE_NAME = "PowerUnitIEC104ExportService";
+    private static readonly string[] _uriPrefixes = ["http://localhost:5000/"];
 
     private static async Task Main(string[] args)
     {
@@ -36,8 +42,8 @@ internal sealed class Program
         {
             try
             {
-                var builder = WebApplication.CreateBuilder(args);
-                builder.Host.UseDefaultServiceProvider((context, options) => { options.ValidateScopes = true; })
+                var builder = Host.CreateDefaultBuilder(args);
+                builder.UseDefaultServiceProvider((context, options) => { options.ValidateScopes = true; })
                     .ConfigureAppConfiguration((hostingContext, config) =>
                     {
                     })
@@ -89,10 +95,13 @@ internal sealed class Program
                         .AddMeter(IEC104ChannelLayerDiagnostic.MeterName)
                         .AddEventCountersInstrumentation(c =>
                             c.AddEventSources("System.Net.Sockets"))
-                        .AddPrometheusExporter(opt =>
-                        {
-                            opt.ScrapeEndpointPath = "/metrics";
-                        });
+                        .AddPrometheusHttpListener(
+                            options =>
+                            {
+                                options.UriPrefixes = hostBuilderContext.Configuration.GetSection("PrometheusOptions:Endpoints").Get<string[]>() ?? _uriPrefixes;
+                                options.ScrapeEndpointPath = "/metrics";
+                                options.DisableTotalNameSuffixForCounters = true;
+                            });
                     });
 
                     services.AddHostedService<IEC104ServersStarterService>();
@@ -113,7 +122,7 @@ internal sealed class Program
 
                 var host = builder.Build();
 
-                host.UseOpenTelemetryPrometheusScrapingEndpoint();
+                //host.UseOpenTelemetryPrometheusScrapingEndpoint();
 
                 using (var scope = host.Services.CreateScope())
                 {
@@ -122,6 +131,10 @@ internal sealed class Program
                 }
 
                 await host.RunAsync();
+                break;
+            }
+            catch (OperationCanceledException)
+            {
                 break;
             }
             catch (Exception ex)

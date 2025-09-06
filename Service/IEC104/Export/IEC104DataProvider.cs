@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 using PowerUnit.Common.Subsciption;
 using PowerUnit.Service.IEC104.Abstract;
 using PowerUnit.Service.IEC104.Types;
