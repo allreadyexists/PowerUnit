@@ -4,7 +4,7 @@ using System.Diagnostics.Metrics;
 
 namespace PowerUnit.Service.IEC104.Export;
 
-public class IEC104ChannelLayerDiagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IDisposable
+public class IEC104Diagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IIEC60870_5_104ApplicationLayerDiagnostic, IDisposable
 {
     public static readonly string MeterName = nameof(IIEC60870_5_104ChannelLayerDiagnostic);
     private readonly Meter _meter;
@@ -18,7 +18,8 @@ public class IEC104ChannelLayerDiagnostic : IIEC60870_5_104ChannelLayerDiagnosti
 
     private readonly Counter<long> _protocolError;
 
-    public IEC104ChannelLayerDiagnostic(IMeterFactory meterFactory)
+    private readonly Gauge<double> _sendMsgPrepareDuration;
+    public IEC104Diagnostic(IMeterFactory meterFactory)
     {
         _meter = meterFactory.Create(new MeterOptions(MeterName));
 
@@ -30,6 +31,8 @@ public class IEC104ChannelLayerDiagnostic : IIEC60870_5_104ChannelLayerDiagnosti
         _appMsgSend = _meter.CreateCounter<long>("app-msg-send");
         _appMsgSkip = _meter.CreateCounter<long>("app-msg-skip");
         _appMsgTotal = _meter.CreateCounter<long>("app-msg-total");
+
+        _sendMsgPrepareDuration = _meter.CreateGauge<double>("app-send-msg-prepare-duration", "ns");
     }
 
     void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSend(int serverId, ChannelLayerPacketPriority priority)
@@ -101,6 +104,11 @@ public class IEC104ChannelLayerDiagnostic : IIEC60870_5_104ChannelLayerDiagnosti
     void IIEC60870_5_104ChannelLayerDiagnostic.ProtocolError(int serverId)
     {
         _protocolError.Add(1, KeyValuePair.Create<string, object?>(nameof(serverId), serverId));
+    }
+
+    void IIEC60870_5_104ApplicationLayerDiagnostic.AppSendMsgPrepareDuration(int serverId, double duration)
+    {
+        _sendMsgPrepareDuration.Record(duration, KeyValuePair.Create<string, object?>(nameof(serverId), serverId));
     }
 
     void IDisposable.Dispose() => _meter.Dispose();

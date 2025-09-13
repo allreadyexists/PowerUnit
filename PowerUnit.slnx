@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Common/">
+    <Project Path="Common/CircularBuffer/PowerUnit.Common.CircularBuffer.csproj" />
     <Project Path="Common/DateTimeManager/PowerUnit.Common.DateTimeManager.csproj" />
     <Project Path="Common/EnviromentManager/PowerUnit.Common.EnviromentManager.csproj" />
     <Project Path="Common/Exceptions/PowerUnit.Common.Exceptions.csproj" />

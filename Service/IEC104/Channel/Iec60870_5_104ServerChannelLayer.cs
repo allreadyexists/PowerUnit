@@ -198,9 +198,10 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         IChannelLayerPacketSender channelLayerPacketSender, IPhysicalLayerCommander physicalLayerCommander)
     {
         var applicationLayerOption = serverOptions.ApplicationLayerModel;
-        var logger = serviceProvider.GetRequiredService<ILogger<IEC60870_5_104ServerApplicationLayer>>();
-        var serverApplicationLayer = new IEC60870_5_104ServerApplicationLayer(serviceProvider, applicationLayerOption, dataSource, dataProvider,
-            channelLayerPacketSender, physicalLayerCommander, logger);
+        //var diagnostic = serviceProvider.GetRequiredService<IIEC60870_5_104ApplicationLayerDiagnostic>();
+        //var logger = serviceProvider.GetRequiredService<ILogger<IEC60870_5_104ServerApplicationLayer>>();
+        var serverApplicationLayer = ActivatorUtilities.CreateInstance<IEC60870_5_104ServerApplicationLayer>(serviceProvider, [applicationLayerOption, dataSource, dataProvider,
+            channelLayerPacketSender, physicalLayerCommander]);
 
         return serverApplicationLayer;
     }
@@ -294,17 +295,17 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         var txQueueCount = TxQueue.Reader.Count;
         while (txQueueCount > 0)
         {
-            var (Packet, Priority) = await TxQueue.Reader.ReadAsync(ct);
+            var sendMsg = await TxQueue.Reader.ReadAsync(ct);
             txQueueCount--;
-            if (Priority == ChannelLayerPacketPriority.Low && TxButNotAckQueue.Count > _serverModel.ChannelLayerModel.MaxQueueSize)
+            if (sendMsg.Priority == ChannelLayerPacketPriority.Low && TxButNotAckQueue.Count > _serverModel.ChannelLayerModel.MaxQueueSize)
             {
-                _diagnostic.AppMsgSkip(_serverModel.ApplicationLayerModel.ServerId, Priority);
+                _diagnostic.AppMsgSkip(_serverModel.ApplicationLayerModel.ServerId, sendMsg.Priority);
                 continue;
             }
             else
             {
-                TxButNotAckQueue.Add(Packet);
-                _diagnostic.AppMsgSend(_serverModel.ApplicationLayerModel.ServerId, Priority);
+                TxButNotAckQueue.Add(sendMsg);
+                _diagnostic.AppMsgSend(_serverModel.ApplicationLayerModel.ServerId, sendMsg.Priority);
             }
         }
 
@@ -329,18 +330,18 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
                     packetToSendCount--;
                     var txPacket = TxButNotAckQueue[index++];
 
-                    new APCI((byte)(PacketI.Size + txPacket.Length), new PacketI(_txCounter, _rxCounter)).SerializeUnsafe(_buffer, 0);
+                    new APCI((byte)(PacketI.Size + txPacket.MsgLength), new PacketI(_txCounter, _rxCounter)).SerializeUnsafe(_buffer, 0);
 
                     // Хорошая задумка, но похоже некоторые клиенты могут ожидать ответ только в одном пакете не получив его, они вполне могут разорвать связь поэтому вынесем в тонкую настройку
                     if (_serverModel.ChannelLayerModel.UseFragmentSend)
                     {
                         _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
-                        _physicalLayerController.SendPacket(txPacket, 0, txPacket.Length);
+                        _physicalLayerController.SendPacket(txPacket.Msg, 0, txPacket.MsgLength);
                     }
                     else
                     {
-                        txPacket.CopyTo(_buffer, APCI.Size);
-                        _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + txPacket.Length);
+                        txPacket.Msg.AsSpan(0, txPacket.MsgLength).CopyTo(_buffer.AsSpan(APCI.Size));
+                        _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + txPacket.MsgLength);
                     }
 
                     _diagnostic.SendIPacket(_serverModel.ApplicationLayerModel.ServerId);
@@ -379,6 +380,8 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
         if (ackCount > 0)
         {
+            for (var i = 0; i < ackCount; i++)
+                TxButNotAckQueue[i].Dispose();
             TxButNotAckQueue.RemoveRange(0, ackCount);
         }
     }
@@ -677,10 +680,11 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
     /// </summary>
     /// <param name="packet"></param>
     /// <returns></returns>
-    void IChannelLayerPacketSender.Send(byte[] packet, ChannelLayerPacketPriority priority)
+    void IChannelLayerPacketSender.Send(ReadOnlySpan<byte> packet, ChannelLayerPacketPriority priority)
     {
         _diagnostic.AppMsgTotal(_serverModel.ApplicationLayerModel.ServerId, priority);
-        TxQueue.Writer.TryWrite((packet, priority));
+
+        TxQueue.Writer.TryWrite(new SendMsg(packet, priority));
         Events.Writer.TryWrite(TxEvent);
     }
 

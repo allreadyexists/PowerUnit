@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using PowerUnit.Common.Exceptions;
@@ -8,9 +7,6 @@ using PowerUnit.Common.Subsciption;
 using PowerUnit.Service.IEC104.Abstract;
 using PowerUnit.Service.IEC104.Types;
 using PowerUnit.Service.IEC104.Types.Asdu;
-
-using System.Buffers;
-using System.Reactive.Linq;
 
 namespace PowerUnit.Service.IEC104.Application;
 
@@ -22,9 +18,12 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
     private readonly IEC104ApplicationLayerModel _applicationLayerOption;
 
+    private readonly IDataSource<MapValueItem> _dataSource;
     private readonly IDataProvider _dataProvider;
 
     private readonly IPhysicalLayerCommander _physicalLayerCommander;
+
+    private readonly IIEC60870_5_104ApplicationLayerDiagnostic _diagnostic;
 
     private readonly ILogger<IEC60870_5_104ServerApplicationLayer> _logger;
 
@@ -36,41 +35,100 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
     private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromMilliseconds(500);
     private IDisposable? _subscriber2;
 
-    internal async Task SendInRentBuffer(Func<byte[], Task> action)
+    [ThreadStatic]
+    private static byte[] _sendBuffer;
+    internal static byte[] SendBuffer
     {
-        var buffer = ArrayPool<byte>.Shared.Rent(256);
+        get
+        {
+            if (_sendBuffer == null)
+            {
+                _sendBuffer = new byte[256];
+                Array.Fill<byte>(_sendBuffer, 0);
+                return _sendBuffer;
+            }
+
+            return _sendBuffer;
+        }
+    }
+
+    internal static void SendInRentBuffer<T>(Action<byte[], IEC60870_5_104ServerApplicationLayer, T> action, IEC60870_5_104ServerApplicationLayer context, T additionInfo)
+    {
         try
         {
-            await action(buffer);
+            action(SendBuffer, context, additionInfo);
         }
         catch (IEC60870_5_104ApplicationException iec104ApplicationException)
         {
-            _logger.LogError(iec104ApplicationException, "IEC60870_5_104ServerApplicationLayer");
+            context._logger.LogError(iec104ApplicationException, "IEC60870_5_104ServerApplicationLayer");
 
             var header = iec104ApplicationException.Header;
             var headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
             COT.UNKNOWN_TRANSFER_REASON,
-            pn: PN.Negative, tn: header.TN, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-            headerReq.SerializeUnsafe(buffer, 0);
-            _packetSender!.Send(buffer[..ASDUPacketHeader_2_2.Size]);
+            pn: PN.Negative, tn: header.TN, initAddr: header.InitAddr, commonAddrAsdu: context._applicationLayerOption.CommonASDUAddress);
+            headerReq.SerializeUnsafe(SendBuffer, 0);
+            context._packetSender!.Send(SendBuffer.AsSpan(0, ASDUPacketHeader_2_2.Size));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Disconnect by exception");
-            _physicalLayerCommander.DisconnectLayer();
+            context._logger.LogError(ex, "Disconnect by exception");
+            context._physicalLayerCommander.DisconnectLayer();
         }
-        finally
+    }
+
+    [ThreadStatic]
+    private static M_SP_TB_1_Single[] _M_SP_TB_1_SingleArray;
+    public static M_SP_TB_1_Single[] M_SP_TB_1_SingleArray
+    {
+        get
         {
-            ArrayPool<byte>.Shared.Return(buffer);
+            if (_M_SP_TB_1_SingleArray == null)
+            {
+                _M_SP_TB_1_SingleArray = new M_SP_TB_1_Single[M_SP_TB_1_Single.MaxItemCount];
+                Array.Fill(_M_SP_TB_1_SingleArray, default);
+                return _M_SP_TB_1_SingleArray;
+            }
+
+            return _M_SP_TB_1_SingleArray;
+        }
+    }
+
+    [ThreadStatic]
+    private static M_DP_TB_1_Single[] _M_DP_TB_1_SingleArray;
+    public static M_DP_TB_1_Single[] M_DP_TB_1_SingleArray
+    {
+        get
+        {
+            if (_M_DP_TB_1_SingleArray == null)
+            {
+                _M_DP_TB_1_SingleArray = new M_DP_TB_1_Single[M_DP_TB_1_Single.MaxItemCount];
+                Array.Fill(_M_DP_TB_1_SingleArray, default);
+                return _M_DP_TB_1_SingleArray;
+            }
+
+            return _M_DP_TB_1_SingleArray;
+        }
+    }
+
+    [ThreadStatic]
+    private static M_ME_TF_1_Single[] _M_ME_TF_1_SingleArray;
+    public static M_ME_TF_1_Single[] M_ME_TF_1_SingleArray
+    {
+        get
+        {
+            if (_M_ME_TF_1_SingleArray == null)
+            {
+                _M_ME_TF_1_SingleArray = new M_ME_TF_1_Single[M_ME_TF_1_Single.MaxItemCount];
+                Array.Fill(_M_ME_TF_1_SingleArray, default);
+                return _M_ME_TF_1_SingleArray;
+            }
+
+            return _M_ME_TF_1_SingleArray;
         }
     }
 
     private void SendValues(byte[] buffer, byte initAddr, COT cot, IEnumerable<MapValueItem> values)
     {
-        var M_SP_TB_1_SingleArray = ArrayPool<M_SP_TB_1_Single>.Shared.Rent(M_SP_TB_1_Single.MaxItemCount);
-        var M_DP_TB_1_SingleArray = ArrayPool<M_DP_TB_1_Single>.Shared.Rent(M_DP_TB_1_Single.MaxItemCount);
-        var M_ME_TF_1_SingleArray = ArrayPool<M_ME_TF_1_Single>.Shared.Rent(M_ME_TF_1_Single.MaxItemCount);
-
         int length = 0;
         byte count = 0;
 
@@ -79,172 +137,173 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
         var isInit = false;
 
-        try
+        TimeSpan duration;
+        var start = _timeProvider.GetTimestamp();
+        foreach (var value in values)
         {
-            foreach (var value in values)
+            if (value.Type == ASDUType.M_SP_TB_1 ||
+                value.Type == ASDUType.M_DP_TB_1 ||
+                value.Type == ASDUType.M_ME_TF_1)
             {
-                if (value.Type == ASDUType.M_SP_TB_1 ||
-                    value.Type == ASDUType.M_DP_TB_1 ||
-                    value.Type == ASDUType.M_ME_TF_1)
+                if (!isInit)
                 {
-                    if (!isInit)
+                    currentType = value.Type;
+                    isInit = true;
+                    if (value.Type == ASDUType.M_SP_TB_1)
                     {
-                        currentType = value.Type;
-                        isInit = true;
-                        if (value.Type == ASDUType.M_SP_TB_1)
+                        currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
+                        M_SP_TB_1_SingleArray[count++] = new M_SP_TB_1_Single(value.Address,
+                            value.Value.ValueAsBool!.Value ? SIQ_Value.On : SIQ_Value.Off, 0,
+                            value.Value.ValueDt!.Value, 0);
+                    }
+                    else if (value.Type == ASDUType.M_DP_TB_1)
+                    {
+                        currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
+                        M_DP_TB_1_SingleArray[count++] = new M_DP_TB_1_Single(value.Address,
+                            value.Value.ValueAsBool!.Value ? DIQ_Value.On : DIQ_Value.Off, 0,
+                            value.Value.ValueDt!.Value, 0);
+                    }
+                    else if (value.Type == ASDUType.M_ME_TF_1)
+                    {
+                        currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
+                        M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(value.Address,
+                            value.Value.ValueAsFloat!.Value, 0,
+                            value.Value.ValueDt!.Value, 0);
+                    }
+                }
+                else
+                {
+                    if (currentType != value.Type || count == currentTypeMaxCount)
+                    {
+                        var headerReq = new ASDUPacketHeader_2_2(currentType, SQ.Single, count, cot, initAddr: initAddr,
+                                        commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+                        if (currentType == ASDUType.M_SP_TB_1)
                         {
+                            length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1_SingleArray, count);
+                        }
+                        else if (currentType == ASDUType.M_DP_TB_1)
+                        {
+                            length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1_SingleArray, count);
+                        }
+                        else if (currentType == ASDUType.M_ME_TF_1)
+                        {
+                            length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
+                        }
+
+                        duration = _timeProvider.GetElapsedTime(start);
+                        _diagnostic.AppSendMsgPrepareDuration(_applicationLayerOption.ServerId, duration.TotalNanoseconds);
+                        _packetSender!.Send(buffer.AsSpan(0, length), cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
+                        start = _timeProvider.GetTimestamp();
+
+                        if (value.Type == ASDUType.M_SP_TB_1)
                             currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
-                            M_SP_TB_1_SingleArray[count++] = new M_SP_TB_1_Single(value.Address,
-                                ((DiscretValue)value.Value).Value ? SIQ_Value.On : SIQ_Value.Off, 0,
-                                ((DiscretValue)value.Value).ValueDt!.Value, 0);
-                        }
-                        else if (value.Type == ASDUType.M_DP_TB_1)
-                        {
+                        if (value.Type == ASDUType.M_DP_TB_1)
                             currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
-                            M_DP_TB_1_SingleArray[count++] = new M_DP_TB_1_Single(value.Address,
-                                ((DiscretValue)value.Value).Value ? DIQ_Value.On : DIQ_Value.Off, 0,
-                                ((DiscretValue)value.Value).ValueDt!.Value, 0);
-                        }
                         else if (value.Type == ASDUType.M_ME_TF_1)
-                        {
                             currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
-                            M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(value.Address,
-                                ((AnalogValue)value.Value).Value, 0,
-                                ((AnalogValue)value.Value).ValueDt!.Value, 0);
-                        }
+
+                        currentType = value.Type;
+                        count = 0;
                     }
-                    else
+
+                    if (value.Type == ASDUType.M_SP_TB_1)
                     {
-                        if (currentType != value.Type || count == currentTypeMaxCount)
-                        {
-                            var headerReq = new ASDUPacketHeader_2_2(currentType, SQ.Single, count, cot, initAddr: initAddr,
-                                            commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                            if (currentType == ASDUType.M_SP_TB_1)
-                            {
-                                length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1_SingleArray, count);
-                            }
-                            else if (currentType == ASDUType.M_DP_TB_1)
-                            {
-                                length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1_SingleArray, count);
-                            }
-                            else if (currentType == ASDUType.M_ME_TF_1)
-                            {
-                                length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
-                            }
-
-                            _packetSender!.Send(buffer[..length], cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
-
-                            if (value.Type == ASDUType.M_SP_TB_1)
-                                currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
-                            if (value.Type == ASDUType.M_DP_TB_1)
-                                currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
-                            else if (value.Type == ASDUType.M_ME_TF_1)
-                                currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
-
-                            currentType = value.Type;
-                            count = 0;
-                        }
-
-                        if (value.Type == ASDUType.M_SP_TB_1)
-                        {
-                            M_SP_TB_1_SingleArray[count++] = new M_SP_TB_1_Single(value.Address,
-                                ((DiscretValue)value.Value).Value ? SIQ_Value.On : SIQ_Value.Off, 0,
-                                ((DiscretValue)value.Value).ValueDt!.Value, 0);
-                        }
-                        else if (value.Type == ASDUType.M_DP_TB_1)
-                        {
-                            M_DP_TB_1_SingleArray[count++] = new M_DP_TB_1_Single(value.Address,
-                                ((DiscretValue)value.Value).Value ? DIQ_Value.On : DIQ_Value.Off, 0,
-                                ((DiscretValue)value.Value).ValueDt!.Value, 0);
-                        }
-                        else if (value.Type == ASDUType.M_ME_TF_1)
-                        {
-                            M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(value.Address,
-                                ((AnalogValue)value.Value).Value, 0,
-                                ((AnalogValue)value.Value).ValueDt!.Value, 0);
-                        }
+                        M_SP_TB_1_SingleArray[count++] = new M_SP_TB_1_Single(value.Address,
+                            value.Value.ValueAsBool!.Value ? SIQ_Value.On : SIQ_Value.Off, 0,
+                            value.Value.ValueDt!.Value, 0);
+                    }
+                    else if (value.Type == ASDUType.M_DP_TB_1)
+                    {
+                        M_DP_TB_1_SingleArray[count++] = new M_DP_TB_1_Single(value.Address,
+                            value.Value.ValueAsBool!.Value ? DIQ_Value.On : DIQ_Value.Off, 0,
+                            value.Value.ValueDt!.Value, 0);
+                    }
+                    else if (value.Type == ASDUType.M_ME_TF_1)
+                    {
+                        M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(value.Address,
+                            value.Value.ValueAsFloat!.Value, 0,
+                            value.Value.ValueDt!.Value, 0);
                     }
                 }
-            }
-
-            if (count > 0)
-            {
-                var headerReq = new ASDUPacketHeader_2_2(currentType, SQ.Single, count, cot, initAddr: initAddr,
-                                            commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                if (currentType == ASDUType.M_SP_TB_1)
-                {
-                    length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1_SingleArray, count);
-                    currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
-                }
-                else if (currentType == ASDUType.M_DP_TB_1)
-                {
-                    length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1_SingleArray, count);
-                    currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
-                }
-                else if (currentType == ASDUType.M_ME_TF_1)
-                {
-                    length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
-                    currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
-                }
-
-                _packetSender!.Send(buffer[..length], cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
             }
         }
-        finally
+
+        if (count > 0)
         {
-            ArrayPool<M_SP_TB_1_Single>.Shared.Return(M_SP_TB_1_SingleArray);
-            ArrayPool<M_DP_TB_1_Single>.Shared.Return(M_DP_TB_1_SingleArray);
-            ArrayPool<M_ME_TF_1_Single>.Shared.Return(M_ME_TF_1_SingleArray);
+            var headerReq = new ASDUPacketHeader_2_2(currentType, SQ.Single, count, cot, initAddr: initAddr,
+                                        commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+            if (currentType == ASDUType.M_SP_TB_1)
+            {
+                length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1_SingleArray, count);
+                currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
+            }
+            else if (currentType == ASDUType.M_DP_TB_1)
+            {
+                length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1_SingleArray, count);
+                currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
+            }
+            else if (currentType == ASDUType.M_ME_TF_1)
+            {
+                length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
+                currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
+            }
+
+            duration = _timeProvider.GetElapsedTime(start);
+            _diagnostic.AppSendMsgPrepareDuration(_applicationLayerOption.ServerId, duration.TotalNanoseconds);
+
+            _packetSender!.Send(buffer.AsSpan(0, length), cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
         }
     }
 
-    public IEC60870_5_104ServerApplicationLayer(IServiceProvider serviceProvider, IEC104ApplicationLayerModel applicationLayerOption,
+    public IEC60870_5_104ServerApplicationLayer(IEC104ApplicationLayerModel applicationLayerOption,
         IDataSource<MapValueItem> dataSource,
         IDataProvider dataProvider,
         IChannelLayerPacketSender packetSender,
         IPhysicalLayerCommander physicalLayerCommander,
+        TimeProvider timeProvider,
+        IIEC60870_5_104ApplicationLayerDiagnostic diagnostic,
         ILogger<IEC60870_5_104ServerApplicationLayer> logger)
     {
-        _timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
+        _timeProvider = timeProvider;
         _readTransactionManager = new ApplicationLayerReadTransactionManager();
         _applicationLayerOption = applicationLayerOption;
 
+        _dataSource = dataSource;
         _dataProvider = dataProvider;
         _packetSender = packetSender;
         _physicalLayerCommander = physicalLayerCommander;
+        _diagnostic = diagnostic;
         _cts = new CancellationTokenSource();
 
         _logger = logger;
 
-        _ = SendInRentBuffer(buffer =>
+        SendInRentBuffer(static (buffer, context, additionInfo) =>
         {
             var headerReq = new ASDUPacketHeader_2_2(ASDUType.M_EI_NA_1, SQ.Single, 1,
             COT.INIT_MESSAGE,
-            initAddr: 0, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+            initAddr: 0, commonAddrAsdu: context._applicationLayerOption.CommonASDUAddress);
             var M_EI_NA_1 = new M_EI_NA_1(COI.Empty);
             var length = M_EI_NA_1.Serialize(buffer, in headerReq, in M_EI_NA_1);
-            _packetSender!.Send(buffer[..length]);
+            context._packetSender!.Send(buffer.AsSpan(0, length));
 
-            if (applicationLayerOption.SporadicSendEnabled)
+            if (context._applicationLayerOption.SporadicSendEnabled)
             {
-                _subscriber2 = new BatchSubscriber<MapValueItem, IEC60870_5_104ServerApplicationLayer>(
-                    _bufferizationSize, _bufferizationTimeout, dataSource, this, static (values, context, token) =>
-                {
-                    if (values.TryGetNonEnumeratedCount(out var count) && count > 0)
+                context._subscriber2 = new BatchSubscriber<MapValueItem, IEC60870_5_104ServerApplicationLayer>(
+                    _bufferizationSize, _bufferizationTimeout, context._dataSource, context,
+                    static (values, context2, token) =>
                     {
-                        return context.SendInRentBuffer(buffer =>
+                        if (values.TryGetNonEnumeratedCount(out var count) && count > 0)
                         {
-                            context.Stream(buffer, values);
-                            return Task.CompletedTask;
-                        });
-                    }
+                            SendInRentBuffer(static (buffer, context3, additionInfo2) =>
+                            {
+                                context3.Stream(buffer, additionInfo2);
+                            }, context2, values);
+                        }
 
-                    return Task.CompletedTask;
-                });
+                        return Task.CompletedTask;
+                    });
             }
-
-            return Task.CompletedTask;
-        });
+        }, this, this);
     }
 
     void IASDUNotification.Notify_M_SP(in ASDUPacketHeader_2_2 header, ushort address, SIQ_Value value, SIQ_Status siq, DateTime dateTime, TimeStatus status)
@@ -265,100 +324,100 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
     void IASDUNotification.Notify_C_IC_NA(in ASDUPacketHeader_2_2 header, ushort address, QOI qoi)
     {
         _logger.LogTrace("{@address} {@qoi}", address, qoi);
-        Process_C_IC_NA_1(header, address, qoi, _cts.Token);
+        Process_C_IC_NA_1(in header, address, qoi, _cts.Token);
     }
 
     void IASDUNotification.Notify_C_RD_NA(in ASDUPacketHeader_2_2 header, ushort address)
     {
         _logger.LogTrace("{@address}", address);
-        Process_C_RD_NA_1(header, address, _cts.Token);
+        Process_C_RD_NA_1(in header, address, _cts.Token);
     }
 
     void IASDUNotification.Notify_C_CS_NA(in ASDUPacketHeader_2_2 header, ushort address, DateTime dateTime, TimeStatus timeStatus)
     {
         _logger.LogTrace("{@address} {@dateTime} {@timeStatus}", address, dateTime, timeStatus);
-        Process_C_CS_NA_1(header, address, dateTime, timeStatus, _cts.Token);
+        Process_C_CS_NA_1(in header, address, dateTime, timeStatus, _cts.Token);
     }
 
     void IASDUNotification.Notify_C_CI_NA(in ASDUPacketHeader_2_2 header, ushort address, QCC qcc)
     {
         _logger.LogTrace("{@address} {@qcc}", address, qcc);
-        Process_C_CI_NA_1(header, address, qcc, _cts.Token);
+        Process_C_CI_NA_1(in header, address, qcc, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_FR_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort nof, uint lof, FRQ frq)
     {
         _logger.LogTrace("{@address} {@nof} {@lof} {@frq}", address, nof, lof, frq);
-        Process_F_FR_NA_1(header, address, nof, lof, frq, _cts.Token);
+        Process_F_FR_NA_1(in header, address, nof, lof, frq, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_SR_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, uint los, SRQ frq)
     {
         _logger.LogTrace("{@address} {@nof} {@nos} {@los} {@frq}", address, nof, nos, los, frq);
-        Process_F_SR_NA_1(header, address, nof, nos, los, frq, _cts.Token);
+        Process_F_SR_NA_1(in header, address, nof, nos, los, frq, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_SC_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, SCQ scq)
     {
         _logger.LogTrace("{@address} {@nof} {@nos} {@scq}", address, nof, nos, scq);
-        Process_F_SC_NA_1(header, address, nof, nos, scq, _cts.Token);
+        Process_F_SC_NA_1(in header, address, nof, nos, scq, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_LS_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, LSQ lsq, byte chs)
     {
         _logger.LogTrace("{@address} {@nof} {@nos} {@lsq} {@chs}", address, nof, nos, lsq, chs);
-        Process_F_LS_NA_1(header, address, nof, nos, lsq, chs, _cts.Token);
+        Process_F_LS_NA_1(in header, address, nof, nos, lsq, chs, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_AF_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, AFQ afq)
     {
         _logger.LogTrace("{@address} {@nof} {@nos} {@afq}", address, nof, nos, afq);
-        Process_F_AF_NA_1(header, address, nof, nos, afq, _cts.Token);
+        Process_F_AF_NA_1(in header, address, nof, nos, afq, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_SG_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort nof, byte nos, Span<byte> segment)
     {
         _logger.LogTrace("{@address} {@nof} {@nos} {@segment.ToHex()}", address, nof, nos, segment.ToHex());
-        Process_F_SG_NA_1(header, address, nof, nos, segment, _cts.Token);
+        Process_F_SG_NA_1(in header, address, nof, nos, segment, _cts.Token);
     }
 
     void IASDUNotification.Notify_F_DR_TA(in ASDUPacketHeader_2_2 header, ushort address, ushort nodf, uint lof, SOF sof, DateTime dateTime, TimeStatus timeStatus)
     {
         _logger.LogTrace("{@address} {@nodf} {@lof} {@sof} {@dateTime} {@timeStatus}", address, nodf, lof, sof, dateTime, timeStatus);
-        Process_F_DR_TA_1(header, address, nodf, lof, sof, dateTime, timeStatus, _cts.Token);
+        Process_F_DR_TA_1(in header, address, nodf, lof, sof, dateTime, timeStatus, _cts.Token);
     }
 
     void IASDUNotification.Notify_C_TS_NA(in ASDUPacketHeader_2_2 header, ushort address, ushort fbp)
     {
         _logger.LogTrace("{@address} {@fbp}", address, fbp);
-        Process_C_TS_NA_1(header, address, fbp, _cts.Token);
+        Process_C_TS_NA_1(in header, address, fbp, _cts.Token);
     }
 
     void IASDUNotification.Notify_C_TS_TA(in ASDUPacketHeader_2_2 header, ushort address, ushort tsc, DateTime dateTime, TimeStatus status)
     {
         _logger.LogTrace("{@address} {@tsc} {@dateTime} {@status}", address, tsc, dateTime, status);
-        Process_C_TS_TA_1(header, address, tsc, dateTime, status, _cts.Token);
+        Process_C_TS_TA_1(in header, address, tsc, dateTime, status, _cts.Token);
     }
 
     void IASDUNotification.Notify_Unknown_Asdu_Raw(in ASDUPacketHeader_2_2 header, Span<byte> asduInfoRaw)
     {
-        Process_Notify_Unknown_Asdu_Raw(header, asduInfoRaw, _cts.Token);
+        Process_Notify_Unknown_Asdu_Raw(in header, asduInfoRaw, _cts.Token);
     }
 
     void IASDUNotification.Notify_Unknown_Cot_Raw(in ASDUPacketHeader_2_2 header, Span<byte> asduInfoRaw)
     {
-        Process_Notify_Unknown_Cot_Raw(header, asduInfoRaw, _cts.Token);
+        Process_Notify_Unknown_Cot_Raw(in header, asduInfoRaw, _cts.Token);
     }
 
     void IASDUNotification.Notify_Unknown_Exception(in ASDUPacketHeader_2_2 header, Span<byte> asduInfoRaw, Exception ex)
     {
         _logger.LogCritical("{@header} {@asduInfoRaw} {@ex}", header, asduInfoRaw.ToHex(), ex.GetInnerExceptionsString());
-        Process_Notify_Unknown_Exception(header, asduInfoRaw, _cts.Token);
+        Process_Notify_Unknown_Exception(in header, asduInfoRaw, _cts.Token);
     }
 
     bool IASDUNotification.Notify_CommonAsduAddress(in ASDUPacketHeader_2_2 header, Span<byte> asduInfoRaw)
     {
-        return Process_Notify_CommonAsduAddress(header, asduInfoRaw, _cts.Token);
+        return Process_Notify_CommonAsduAddress(in header, asduInfoRaw, _cts.Token);
     }
 
     void IDisposable.Dispose()

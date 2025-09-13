@@ -12,13 +12,13 @@ internal sealed class BaseValueTestDataSource : TestDataSource<BaseValue>
     {
         var randomType = Random.Shared.NextDouble();
         var randomValue = Random.Shared.NextDouble();
-        if (randomType < 0.5)
+        if (randomType < 1.5)
         {
-            return new AnalogValue("1", Random.Shared.NextInt64(1, 4).ToString(), Random.Shared.NextInt64(1, 4).ToString(), (float)randomValue, now, now);
+            return new BaseValue("1", Random.Shared.NextInt64(1, 4).ToString(), Random.Shared.NextInt64(1, 4).ToString(), now, now, (float)randomValue, null);
         }
         else
         {
-            return new DiscretValue("1", Random.Shared.NextInt64(1, 4).ToString(), Random.Shared.NextInt64(10, 14).ToString(), randomValue < 0.5, now, now);
+            return new BaseValue("1", Random.Shared.NextInt64(1, 4).ToString(), Random.Shared.NextInt64(10, 14).ToString(), now, now, null, randomValue < 0.5);
         }
     }
 }

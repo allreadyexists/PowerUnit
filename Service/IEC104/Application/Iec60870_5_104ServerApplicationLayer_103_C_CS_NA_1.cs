@@ -5,19 +5,18 @@ namespace PowerUnit.Service.IEC104.Application;
 
 public partial class IEC60870_5_104ServerApplicationLayer
 {
-    internal void Process_C_CS_NA_1(ASDUPacketHeader_2_2 header, ushort address, DateTime dateTime, TimeStatus timeStatus, CancellationToken ct)
+    internal void Process_C_CS_NA_1(in ASDUPacketHeader_2_2 header, ushort address, DateTime dateTime, TimeStatus timeStatus, CancellationToken ct)
     {
-        _ = SendInRentBuffer(buffer =>
+        SendInRentBuffer(static (buffer, context, additionInfo) =>
             {
-                var headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
+                var headerReq = new ASDUPacketHeader_2_2(additionInfo.AsduType, additionInfo.SQ, additionInfo.Count,
                     COT.ACTIVATE_CONFIRMATION,
-                    initAddr: header.InitAddr,
-                    commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                var C_CS_NA_1 = new C_CS_NA_1(_timeProvider.GetUtcNow().DateTime, TimeStatus.OK);
+                    initAddr: additionInfo.InitAddr,
+                    commonAddrAsdu: context._applicationLayerOption.CommonASDUAddress);
+                var C_CS_NA_1 = new C_CS_NA_1(context._timeProvider.GetUtcNow().DateTime, TimeStatus.OK);
                 var length = C_CS_NA_1.Serialize(buffer, in headerReq, in C_CS_NA_1);
-                _packetSender!.Send(buffer[..length]);
-                return Task.CompletedTask;
-            });
+                context._packetSender!.Send(buffer.AsSpan(0, length));
+            }, this, header);
     }
 }
 

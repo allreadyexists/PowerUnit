@@ -5,29 +5,38 @@ namespace PowerUnit.Service.IEC104.Application;
 
 public partial class IEC60870_5_104ServerApplicationLayer
 {
-    private void Activate(ASDUPacketHeader_2_2 header, ushort address, QOI qoi, int transactionId, CancellationToken ct)
+    private struct AdditionInfo_C_IC_NA_1
     {
-        _ = SendInRentBuffer((buffer) =>
-            {
-                var headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count, COT.ACTIVATE_CONFIRMATION, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                var C_IC_NA_1 = new C_IC_NA_1(qoi);
-                var length = C_IC_NA_1.Serialize(buffer, in headerReq, in C_IC_NA_1);
-                _packetSender!.Send(buffer[..length]);
+        public ASDUPacketHeader_2_2 Header { get; set; }
 
-                SendValues(buffer, header.InitAddr, (COT)qoi, _dataProvider.GetGroup((byte)qoi));
-
-                headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count, COT.ACTIVATE_COMPLETION, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress, pn: PN.Positive);
-                C_IC_NA_1 = new C_IC_NA_1(qoi);
-                length = C_IC_NA_1.Serialize(buffer, in headerReq, in C_IC_NA_1);
-                _packetSender!.Send(buffer[..length]);
-
-                _readTransactionManager.DeleteTransaction(transactionId);
-
-                return Task.CompletedTask;
-            });
+        public ushort Address { get; set; }
+        public QOI QOI { get; set; }
+        public int TransactionId { get; set; }
     }
 
-    internal void Process_C_IC_NA_1(ASDUPacketHeader_2_2 header, ushort address, QOI qoi, CancellationToken ct)
+    private void Activate(in ASDUPacketHeader_2_2 header, ushort address, QOI qoi, int transactionId, CancellationToken ct)
+    {
+        SendInRentBuffer(static (buffer, context, additionInfo) =>
+            {
+                var headerReq = new ASDUPacketHeader_2_2(additionInfo.Header.AsduType, additionInfo.Header.SQ, additionInfo.Header.Count, COT.ACTIVATE_CONFIRMATION,
+                    initAddr: additionInfo.Header.InitAddr, commonAddrAsdu: context._applicationLayerOption.CommonASDUAddress);
+                var C_IC_NA_1 = new C_IC_NA_1(additionInfo.QOI);
+                var length = C_IC_NA_1.Serialize(buffer, in headerReq, in C_IC_NA_1);
+                context._packetSender!.Send(buffer.AsSpan(0, length));
+
+                context.SendValues(buffer, additionInfo.Header.InitAddr, (COT)additionInfo.QOI, context._dataProvider.GetGroup((byte)additionInfo.QOI));
+
+                headerReq = new ASDUPacketHeader_2_2(additionInfo.Header.AsduType, additionInfo.Header.SQ, additionInfo.Header.Count, COT.ACTIVATE_COMPLETION,
+                    initAddr: additionInfo.Header.InitAddr, commonAddrAsdu: context._applicationLayerOption.CommonASDUAddress, pn: PN.Positive);
+                C_IC_NA_1 = new C_IC_NA_1(additionInfo.QOI);
+                length = C_IC_NA_1.Serialize(buffer, in headerReq, in C_IC_NA_1);
+                context._packetSender!.Send(buffer.AsSpan(0, length));
+
+                context._readTransactionManager.DeleteTransaction(additionInfo.TransactionId);
+            }, this, new AdditionInfo_C_IC_NA_1() { Header = header, Address = address, QOI = qoi, TransactionId = transactionId });
+    }
+
+    internal void Process_C_IC_NA_1(in ASDUPacketHeader_2_2 header, ushort address, QOI qoi, CancellationToken ct)
     {
         var transactionId = (((int)header.AsduType) << 24) + (address << 8) + (int)qoi;
 
@@ -38,7 +47,7 @@ public partial class IEC60870_5_104ServerApplicationLayer
                 // 1. нет транзакции - запускаем и регистрируем новую
                 if (_readTransactionManager.CreateTransaction(transactionId))
                 {
-                    Activate(header, address, qoi, transactionId, ct);
+                    Activate(in header, address, qoi, transactionId, ct);
                     break;
                 }
                 else

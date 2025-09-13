@@ -76,7 +76,10 @@ internal sealed class Program
                     services.AddSingleton<IConfigProvider, IEC104ConfigProvider>();
 
                     // внутренний
-                    services.AddSingleton<IIEC60870_5_104ChannelLayerDiagnostic, IEC104ChannelLayerDiagnostic>();
+                    services.AddSingleton<IEC104Diagnostic>();
+                    services.AddSingleton<IIEC60870_5_104ChannelLayerDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
+                    services.AddSingleton<IIEC60870_5_104ApplicationLayerDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
+
                     services.AddSingleton<IEC104ServerFactory>();
                     services.AddTimeoutService(ServiceLifetime.Transient);
 
@@ -92,7 +95,7 @@ internal sealed class Program
                         pb
                         .AddRuntimeInstrumentation()
                         .AddProcessInstrumentation()
-                        .AddMeter(IEC104ChannelLayerDiagnostic.MeterName)
+                        .AddMeter(IEC104Diagnostic.MeterName)
                         .AddEventCountersInstrumentation(c =>
                             c.AddEventSources("System.Net.Sockets"))
                         .AddPrometheusHttpListener(

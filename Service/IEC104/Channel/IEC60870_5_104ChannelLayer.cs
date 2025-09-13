@@ -1,6 +1,7 @@
 using PowerUnit.Service.IEC104.Abstract;
 using PowerUnit.Service.IEC104.Channel.Events;
 
+using System.Buffers;
 using System.Threading.Channels;
 
 namespace PowerUnit.Service.IEC104.Channel;
@@ -40,13 +41,13 @@ public abstract class IEC60870_5_104ChannelLayer
     /// <summary>
     /// Очередь пакетов на передачу
     /// </summary>
-    protected Channel<(byte[] Packet, ChannelLayerPacketPriority Priority)> TxQueue { get; } =
-        System.Threading.Channels.Channel.CreateUnbounded<(byte[] Packet, ChannelLayerPacketPriority Priority)>();
+    protected Channel<SendMsg> TxQueue { get; } =
+        System.Threading.Channels.Channel.CreateUnbounded<SendMsg>();
 
     /// <summary>
     /// Очередь переданных, но не подтвержденных пакетов
     /// </summary>
-    protected List<byte[]> TxButNotAckQueue { get; } = [];
+    protected List<SendMsg> TxButNotAckQueue { get; } = [];
 
     /// <summary>
     /// Рабочий цикл
@@ -78,6 +79,25 @@ public abstract class IEC60870_5_104ChannelLayer
     protected static int CalcUnAckPacket(ushort txCounter, ushort packetRx)
     {
         return txCounter >= packetRx ? txCounter - packetRx : (ushort.MaxValue >> 1) - packetRx + txCounter + 1;
+    }
+
+    protected readonly struct SendMsg
+    {
+        public readonly byte[] Msg;
+        public readonly int MsgLength;
+        public readonly ChannelLayerPacketPriority Priority;
+        public SendMsg(ReadOnlySpan<byte> packet, ChannelLayerPacketPriority priority)
+        {
+            MsgLength = packet.Length;
+            Msg = ArrayPool<byte>.Shared.Rent(packet.Length);
+            packet.CopyTo(Msg);
+            Priority = priority;
+        }
+
+        public void Dispose()
+        {
+            ArrayPool<byte>.Shared.Return(Msg);
+        }
     }
 }
 

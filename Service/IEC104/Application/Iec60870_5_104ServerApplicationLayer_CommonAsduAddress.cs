@@ -9,7 +9,30 @@ public partial class IEC60870_5_104ServerApplicationLayer
 {
     private readonly HashSet<ASDUType> _broadcastEnables = [ASDUType.C_IC_NA_1, ASDUType.C_CI_NA_1, ASDUType.C_CS_NA_1, ASDUType.C_RP_NA_1];
 
-    internal bool Process_Notify_CommonAsduAddress(ASDUPacketHeader_2_2 header, Span<byte> asduInfoRaw, CancellationToken ct)
+    private struct AdditionInfo_AsduInfoRawArray
+    {
+        public ASDUPacketHeader_2_2 Header;
+        public ImmutableArray<byte> AsduInfoRawArray;
+        public COT COT;
+    }
+
+    private void SendOnError(in ASDUPacketHeader_2_2 header, Span<byte> asduInfoRaw, COT cot)
+    {
+        SendInRentBuffer(static (buffer, context, additionInfo) =>
+        {
+            var headerReq = new ASDUPacketHeader_2_2(additionInfo.Header.AsduType, additionInfo.Header.SQ, additionInfo.Header.Count,
+                additionInfo.COT,
+                pn: PN.Negative,
+                tn: additionInfo.Header.TN,
+                initAddr: additionInfo.Header.InitAddr,
+                commonAddrAsdu: context._applicationLayerOption.CommonASDUAddress);
+            headerReq.SerializeUnsafe(buffer, 0);
+            additionInfo.AsduInfoRawArray.CopyTo(0, buffer, ASDUPacketHeader_2_2.Size, additionInfo.AsduInfoRawArray.Length);
+            context._packetSender!.Send(buffer.AsSpan(0, ASDUPacketHeader_2_2.Size + additionInfo.AsduInfoRawArray.Length));
+        }, this, new AdditionInfo_AsduInfoRawArray() { Header = header, AsduInfoRawArray = asduInfoRaw.ToImmutableArray(), COT = cot });
+    }
+
+    internal bool Process_Notify_CommonAsduAddress(in ASDUPacketHeader_2_2 header, Span<byte> asduInfoRaw, CancellationToken ct)
     {
         if (header.CommonAddrAsdu == 0xFFFF)
         {
@@ -19,17 +42,7 @@ public partial class IEC60870_5_104ServerApplicationLayer
             // Остальные отбиваем
             else
             {
-                var asduInfoRawArray = asduInfoRaw.ToImmutableArray();
-
-                _ = SendInRentBuffer(buffer =>
-                    {
-                        var headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count, COT.UNKNOWN_COMMON_ASDU_ADDRESS, pn: PN.Negative, tn: header.TN, initAddr: header.InitAddr, commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                        headerReq.SerializeUnsafe(buffer, 0);
-                        asduInfoRawArray.CopyTo(0, buffer, ASDUPacketHeader_2_2.Size, asduInfoRawArray.Length);
-                        _packetSender!.Send(buffer[..(ASDUPacketHeader_2_2.Size + asduInfoRawArray.Length)]);
-                        return Task.CompletedTask;
-                    });
-
+                SendOnError(in header, asduInfoRaw, COT.UNKNOWN_COMMON_ASDU_ADDRESS);
                 return false;
             }
         }

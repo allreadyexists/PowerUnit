@@ -1,4 +1,5 @@
 namespace PowerUnit.Service.IEC104;
 
-public record BaseValue(string SourceId, string EquipmentId, string ParameterId, DateTime? ValueDt, DateTime RegistrationDt);
+public record struct BaseValue(string SourceId, string EquipmentId, string ParameterId, DateTime? ValueDt, DateTime RegistrationDt,
+    float? ValueAsFloat, bool? ValueAsBool);
 
