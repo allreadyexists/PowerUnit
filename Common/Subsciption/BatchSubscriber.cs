@@ -11,7 +11,7 @@ public sealed class BatchSubscriber<T, TContext> : SubscriberBase<T, TContext>
         Func<IEnumerable<T>, TContext, CancellationToken, Task> onNext,
         Action<Exception>? onError = null,
         Action? onComplite = null,
-        Func<T, TContext, bool>? filter = null) : base(dataSource, context, onError, onComplite, filter)
+        Func<T, TContext, bool>? filter = null, ISubscriberDiagnostic? subscriberDiagnostic = null) : base(dataSource, context, onError, onComplite, filter, subscriberDiagnostic)
     {
         _channel = Channel.CreateUnbounded<IEnumerable<T>>(new UnboundedChannelOptions()
         {
@@ -20,7 +20,11 @@ public sealed class BatchSubscriber<T, TContext> : SubscriberBase<T, TContext>
         });
 
         Subscribe = DataSource.Where(x => Filter(x, Context)).Buffer(timeSpan, count).Subscribe(
-            value => _channel.Writer.TryWrite(value),
+            value =>
+            {
+                _channel.Writer.TryWrite(value);
+                SubscriberDiagnostic?.RcvCounter(typeof(TContext).Name, typeof(T).Name);
+            },
             OnError,
             OnComplite);
         _ = Task.Run(async () =>
@@ -30,15 +34,19 @@ public sealed class BatchSubscriber<T, TContext> : SubscriberBase<T, TContext>
             {
                 while (!token.IsCancellationRequested)
                 {
-                    await foreach (var value in _channel.Reader.ReadAllAsync(token))
+                    while (await _channel.Reader.WaitToReadAsync(token))
                     {
-                        try
+                        if (_channel.Reader.TryRead(out var value))
                         {
-                            await onNext(value, Context, token);
-                        }
-                        catch (Exception ex)
-                        {
-                            OnError(ex);
+                            try
+                            {
+                                await onNext(value, Context, token);
+                                SubscriberDiagnostic?.ProcessCounter(typeof(TContext).Name, typeof(T).Name);
+                            }
+                            catch (Exception ex)
+                            {
+                                OnError(ex);
+                            }
                         }
                     }
                 }

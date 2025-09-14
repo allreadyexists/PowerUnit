@@ -12,8 +12,10 @@ public abstract class SubscriberBase<T, TContext> : IDisposable
     protected Action<Exception> OnError { get; set; }
     protected Action OnComplite { get; set; }
     protected Func<T, TContext, bool> Filter { get; set; }
+    protected ISubscriberDiagnostic? SubscriberDiagnostic { get; }
 
-    public SubscriberBase(IDataSource<T> dataSource, TContext context, Action<Exception>? onError, Action? onComplite, Func<T, TContext, bool>? filter)
+    public SubscriberBase(IDataSource<T> dataSource, TContext context, Action<Exception>? onError, Action? onComplite, Func<T, TContext, bool>? filter,
+        ISubscriberDiagnostic? subscriberDiagnostic)
     {
         Id = Guid.NewGuid();
 
@@ -22,6 +24,7 @@ public abstract class SubscriberBase<T, TContext> : IDisposable
         OnError = onError ?? DelegateHelper.Empty<Exception>();
         OnComplite = onComplite ?? DelegateHelper.Empty();
         Filter = filter ?? (static (value, context) => true);
+        SubscriberDiagnostic = subscriberDiagnostic;
 
         TokenSource = new CancellationTokenSource();
     }

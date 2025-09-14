@@ -688,6 +688,14 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         Events.Writer.TryWrite(TxEvent);
     }
 
+    void IChannelLayerPacketSender.Send(byte[] packet, ChannelLayerPacketPriority priority)
+    {
+        _diagnostic.AppMsgTotal(_serverModel.ApplicationLayerModel.ServerId, priority);
+
+        TxQueue.Writer.TryWrite(new SendMsg(packet, priority));
+        Events.Writer.TryWrite(TxEvent);
+    }
+
     Task ITimeoutOwner.NotifyTimeoutReadyAsync(long timeout, CancellationToken cancellationToken)
     {
         Events.Writer.TryWrite(new TimerEvent(timeout));

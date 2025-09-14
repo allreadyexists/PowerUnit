@@ -12,7 +12,11 @@ public abstract class Subscriber<T, TContext> : SubscriberBase<T, TContext>
     protected void Initialize()
     {
         Subscribe = DataSource.Where(x => Filter(x, Context)).Subscribe(
-            value => Channel.Writer.TryWrite(value),
+            value =>
+            {
+                Channel.Writer.TryWrite(value);
+                SubscriberDiagnostic?.RcvCounter(typeof(TContext).Name, typeof(T).Name);
+            },
             OnError,
             OnComplite);
         _ = Task.Run(async () =>
@@ -24,15 +28,19 @@ public abstract class Subscriber<T, TContext> : SubscriberBase<T, TContext>
                 {
                     if (Channel != null)
                     {
-                        await foreach (var value in Channel.Reader.ReadAllAsync(token))
+                        while (await Channel.Reader.WaitToReadAsync(token))
                         {
-                            try
+                            if (Channel.Reader.TryRead(out var value))
                             {
-                                await _onNext(value, Context, token);
-                            }
-                            catch (Exception ex)
-                            {
-                                OnError(ex);
+                                try
+                                {
+                                    await _onNext(value, Context, token);
+                                    SubscriberDiagnostic?.ProcessCounter(typeof(TContext).Name, typeof(T).Name);
+                                }
+                                catch (Exception ex)
+                                {
+                                    OnError(ex);
+                                }
                             }
                         }
                     }
@@ -53,7 +61,7 @@ public abstract class Subscriber<T, TContext> : SubscriberBase<T, TContext>
         Func<T, TContext, CancellationToken, Task> onNext,
         Action<Exception>? onError,
         Action? onComplite,
-        Func<T, TContext, bool>? filter) : base(dataSource, context, onError, onComplite, filter)
+        Func<T, TContext, bool>? filter, ISubscriberDiagnostic? subscriberDiagnostic) : base(dataSource, context, onError, onComplite, filter, subscriberDiagnostic)
     {
         _onNext = onNext;
     }

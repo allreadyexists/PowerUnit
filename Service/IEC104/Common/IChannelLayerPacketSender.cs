@@ -12,5 +12,6 @@ public enum ChannelLayerPacketPriority
 public interface IChannelLayerPacketSender
 {
     void Send(ReadOnlySpan<byte> packet, ChannelLayerPacketPriority priority = ChannelLayerPacketPriority.Normal);
+    void Send(byte[] packet, ChannelLayerPacketPriority priority = ChannelLayerPacketPriority.Normal);
 }
 

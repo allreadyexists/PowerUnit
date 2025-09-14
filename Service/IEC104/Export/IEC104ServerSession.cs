@@ -39,13 +39,15 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
 
     protected override void OnConnecting()
     {
-        _logger.LogTrace("{@id} connect", Id);
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace("{@id} connect", Id);
         ((IPhysicalLayerNotification)_channelLayer).Connect();
     }
 
     protected override void OnDisconnecting()
     {
-        _logger.LogTrace("{@id} disconnect", Id);
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace("{@id} disconnect", Id);
         (_channelLayer as IPhysicalLayerNotification)?.Disconnect();
         _cancellationTokenSource.Cancel();
     }
@@ -53,20 +55,23 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
     protected override void OnReceived(byte[] buffer, long offset, long size)
     {
         var bufferPart = buffer[(int)offset..(int)(offset + size)];
-        _logger.LogTrace("{@id} Rx: {@rx}", Id, new Span<byte>(bufferPart, (int)offset, (int)size).ToHex());
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace("{@id} Rx: {@rx}", Id, new Span<byte>(bufferPart, (int)offset, (int)size).ToHex());
         ((IPhysicalLayerNotification)_channelLayer).Recieve(bufferPart);
     }
 
     public sealed override long Send(byte[] buffer, long offset, long size)
     {
         var result = base.Send(buffer, offset, size);
-        _logger.LogTrace("{@id} Tx: {@tx}", Id, new Span<byte>(buffer, (int)offset, (int)size).ToHex());
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogTrace("{@id} Tx: {@tx}", Id, new Span<byte>(buffer, (int)offset, (int)size).ToHex());
         return result;
     }
 
     protected override void OnError(SocketError error)
     {
-        _logger.LogError("{@id} {@error}", Id, error);
+        if (_logger.IsEnabled(LogLevel.Trace))
+            _logger.LogError("{@id} {@error}", Id, error);
     }
 
     long IPhysicalLayerCommander.SendPacket(byte[] buffer, long offset, long size)

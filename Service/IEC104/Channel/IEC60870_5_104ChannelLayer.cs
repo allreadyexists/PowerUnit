@@ -86,17 +86,27 @@ public abstract class IEC60870_5_104ChannelLayer
         public readonly byte[] Msg;
         public readonly int MsgLength;
         public readonly ChannelLayerPacketPriority Priority;
+        private readonly bool _usePool;
         public SendMsg(ReadOnlySpan<byte> packet, ChannelLayerPacketPriority priority)
         {
             MsgLength = packet.Length;
             Msg = ArrayPool<byte>.Shared.Rent(packet.Length);
             packet.CopyTo(Msg);
             Priority = priority;
+            _usePool = true;
+        }
+
+        public SendMsg(byte[] packet, ChannelLayerPacketPriority priority)
+        {
+            MsgLength = packet.Length;
+            Msg = packet;
+            Priority = priority;
         }
 
         public void Dispose()
         {
-            ArrayPool<byte>.Shared.Return(Msg);
+            if (_usePool)
+                ArrayPool<byte>.Shared.Return(Msg);
         }
     }
 }

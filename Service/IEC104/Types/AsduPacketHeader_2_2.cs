@@ -2,6 +2,12 @@ using System.Runtime.InteropServices;
 
 namespace PowerUnit.Service.IEC104.Types;
 
+[System.Runtime.CompilerServices.InlineArray(10)]
+public struct ByteBuffer10
+{
+    private byte _element0;
+}
+
 /// <summary>
 /// Заголовок пакета - причина передачи 2 байта, общий адрес ASDU 2 байта
 /// параметры постоянные для МЭК 104
@@ -10,6 +16,9 @@ namespace PowerUnit.Service.IEC104.Types;
 public readonly struct ASDUPacketHeader_2_2
 {
     public static byte Size => (byte)Marshal.SizeOf<ASDUPacketHeader_2_2>();
+
+    //[FieldOffset(0)]
+    //public readonly ByteBuffer10 AsArray;
 
     /// <summary>
     /// Тип ASDU
@@ -60,6 +69,7 @@ public readonly struct ASDUPacketHeader_2_2
         _causeOfTransmit = (byte)((byte)pn | (byte)tn | (byte)causeOfTransmit);
         _initAddr = initAddr;
         _commonAddrAsdu = commonAddrAsdu;
+
     }
 
     public ASDUType AsduType => (ASDUType)_asduType;

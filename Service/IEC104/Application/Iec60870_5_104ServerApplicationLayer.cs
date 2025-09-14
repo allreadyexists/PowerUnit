@@ -8,6 +8,10 @@ using PowerUnit.Service.IEC104.Abstract;
 using PowerUnit.Service.IEC104.Types;
 using PowerUnit.Service.IEC104.Types.Asdu;
 
+using System.Runtime.CompilerServices;
+
+using static PowerUnit.Common.StructHelpers.StructHelper;
+
 namespace PowerUnit.Service.IEC104.Application;
 
 public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotification
@@ -127,7 +131,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         }
     }
 
-    private void SendValues(byte[] buffer, byte initAddr, COT cot, IEnumerable<MapValueItem> values)
+    private void SendValuesBase(byte[] buffer, byte initAddr, COT cot, IEnumerable<MapValueItem> values, Action<IEC60870_5_104ServerApplicationLayer, byte[], int, COT> send)
     {
         int length = 0;
         byte count = 0;
@@ -192,7 +196,9 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
                         duration = _timeProvider.GetElapsedTime(start);
                         _diagnostic.AppSendMsgPrepareDuration(_applicationLayerOption.ServerId, duration.TotalNanoseconds);
-                        _packetSender!.Send(buffer.AsSpan(0, length), cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
+
+                        send(this, buffer, length, cot);
+
                         start = _timeProvider.GetTimestamp();
 
                         if (value.Type == ASDUType.M_SP_TB_1)
@@ -251,9 +257,176 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
             duration = _timeProvider.GetElapsedTime(start);
             _diagnostic.AppSendMsgPrepareDuration(_applicationLayerOption.ServerId, duration.TotalNanoseconds);
 
-            _packetSender!.Send(buffer.AsSpan(0, length), cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
+            send(this, buffer, length, cot);
         }
     }
+
+#pragma warning disable IDE0051 // Remove unused private members
+    private void SendValuesBase2(byte[] buffer, byte initAddr, COT cot, IEnumerable<MapValueItem> values, Action<IEC60870_5_104ServerApplicationLayer, byte[], int, COT> send)
+#pragma warning restore IDE0051 // Remove unused private members
+    {
+        int length = 0;
+        byte count = 0;
+
+        ASDUType currentType = 0;
+        var currentTypeMaxCount = 0;
+
+        var isInit = false;
+
+        TimeSpan duration;
+        var start = _timeProvider.GetTimestamp();
+        foreach (var value in values)
+        {
+            if (value.Type == ASDUType.M_SP_TB_1 ||
+                value.Type == ASDUType.M_DP_TB_1 ||
+                value.Type == ASDUType.M_ME_TF_1)
+            {
+                if (!isInit)
+                {
+                    currentType = value.Type;
+                    isInit = true;
+                    if (value.Type == ASDUType.M_SP_TB_1)
+                    {
+                        currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
+                        M_SP_TB_1_SingleArray[count++] = new M_SP_TB_1_Single(value.Address,
+                            value.Value.ValueAsBool!.Value ? SIQ_Value.On : SIQ_Value.Off, 0,
+                            value.Value.ValueDt!.Value, 0);
+                    }
+                    else if (value.Type == ASDUType.M_DP_TB_1)
+                    {
+                        currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
+                        M_DP_TB_1_SingleArray[count++] = new M_DP_TB_1_Single(value.Address,
+                            value.Value.ValueAsBool!.Value ? DIQ_Value.On : DIQ_Value.Off, 0,
+                            value.Value.ValueDt!.Value, 0);
+                    }
+                    else if (value.Type == ASDUType.M_ME_TF_1)
+                    {
+                        currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
+                        M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(value.Address,
+                            value.Value.ValueAsFloat!.Value, 0,
+                            value.Value.ValueDt!.Value, 0);
+                    }
+                }
+                else
+                {
+                    if (currentType != value.Type || count == currentTypeMaxCount)
+                    {
+                        var headerReq = new ASDUPacketHeader_2_2(currentType, SQ.Single, count, cot, initAddr: initAddr,
+                                        commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+                        if (currentType == ASDUType.M_SP_TB_1)
+                        {
+                            length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1_SingleArray, count);
+                        }
+                        else if (currentType == ASDUType.M_DP_TB_1)
+                        {
+                            length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1_SingleArray, count);
+                        }
+                        else if (currentType == ASDUType.M_ME_TF_1)
+                        {
+                            length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
+                        }
+
+                        duration = _timeProvider.GetElapsedTime(start);
+                        _diagnostic.AppSendMsgPrepareDuration(_applicationLayerOption.ServerId, duration.TotalNanoseconds);
+
+                        send(this, buffer, length, cot);
+
+                        start = _timeProvider.GetTimestamp();
+
+                        if (value.Type == ASDUType.M_SP_TB_1)
+                            currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
+                        if (value.Type == ASDUType.M_DP_TB_1)
+                            currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
+                        else if (value.Type == ASDUType.M_ME_TF_1)
+                            currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
+
+                        currentType = value.Type;
+                        count = 0;
+                    }
+
+                    if (value.Type == ASDUType.M_SP_TB_1)
+                    {
+                        M_SP_TB_1_SingleArray[count++] = new M_SP_TB_1_Single(value.Address,
+                            value.Value.ValueAsBool!.Value ? SIQ_Value.On : SIQ_Value.Off, 0,
+                            value.Value.ValueDt!.Value, 0);
+                    }
+                    else if (value.Type == ASDUType.M_DP_TB_1)
+                    {
+                        M_DP_TB_1_SingleArray[count++] = new M_DP_TB_1_Single(value.Address,
+                            value.Value.ValueAsBool!.Value ? DIQ_Value.On : DIQ_Value.Off, 0,
+                            value.Value.ValueDt!.Value, 0);
+                    }
+                    else if (value.Type == ASDUType.M_ME_TF_1)
+                    {
+                        M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(value.Address,
+                            value.Value.ValueAsFloat!.Value, 0,
+                            value.Value.ValueDt!.Value, 0);
+                    }
+                }
+            }
+        }
+
+        if (count > 0)
+        {
+            var headerReq = new ASDUPacketHeader_2_2(currentType, SQ.Single, count, cot, initAddr: initAddr,
+                                        commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+            if (currentType == ASDUType.M_SP_TB_1)
+            {
+                length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1_SingleArray, count);
+                currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
+            }
+            else if (currentType == ASDUType.M_DP_TB_1)
+            {
+                length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1_SingleArray, count);
+                currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
+            }
+            else if (currentType == ASDUType.M_ME_TF_1)
+            {
+                length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
+                currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
+            }
+
+            duration = _timeProvider.GetElapsedTime(start);
+            _diagnostic.AppSendMsgPrepareDuration(_applicationLayerOption.ServerId, duration.TotalNanoseconds);
+
+            send(this, buffer, length, cot);
+        }
+    }
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#pragma warning disable IDE0051 // Remove unused private members
+    private void SendValues(byte[] buffer, byte initAddr, COT cot, IEnumerable<MapValueItem> values)
+#pragma warning restore IDE0051 // Remove unused private members
+    {
+        SendValuesBase(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
+        {
+            ctx._packetSender!.Send(buf.AsSpan(0, len), cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
+        });
+    }
+
+#pragma warning disable IDE0051 // Remove unused private members
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void SendValues2(byte[] buffer, byte initAddr, COT cot, IEnumerable<MapValueItem> values)
+#pragma warning restore IDE0051 // Remove unused private members
+    {
+        SendValuesBase(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
+        {
+            ctx._packetSender!.Send(buf[..len], cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
+        });
+    }
+
+    //private unsafe ObjectToStructConverter<MapValueItem, M_SP_TB_1_Single> _mapValueItemToM_SP_TB_1_SingleConverter = static (@object, @struct) =>
+    //{
+    //};
+
+    //private unsafe ObjectToStructConverter<MapValueItem, M_DP_TB_1_Single> _mapValueItemToM_DP_TB_1_SingleConverter = static (@object, @struct) =>
+    //{
+    //};
+
+    //private unsafe ObjectToStructConverter<MapValueItem, M_ME_TF_1_Single> _mapValueItemToM_ME_TF_1_SingleConverter = static (@object, @struct) =>
+    //{
+    //};
 
     public IEC60870_5_104ServerApplicationLayer(IEC104ApplicationLayerModel applicationLayerOption,
         IDataSource<MapValueItem> dataSource,

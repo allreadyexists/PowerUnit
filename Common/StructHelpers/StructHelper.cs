@@ -1,10 +1,48 @@
+using PowerUnit.Common.StructHelpers;
+
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
+using static PowerUnit.Common.StructHelpers.StructHelper;
 
 namespace PowerUnit.Common.StructHelpers;
 
 public static class StructHelper
 {
+    public unsafe delegate void ObjectToStructConverter<T, TStruct>(T @object, TStruct* @struct) where TStruct : struct;
+
+    public readonly ref struct MemoryBlockWrapper<T> where T : struct
+    {
+        public readonly GCHandle Values;
+        public readonly int Size;
+
+        public MemoryBlockWrapper(T[] values)
+        {
+            Values = GCHandle.Alloc(values, GCHandleType.Pinned);
+            Size = FastStructure.SizeOf<T>() * values.Length;
+        }
+
+        public void Dispose() => Values.Free();
+    }
+
+    public static void ZeroCopySerialize<T, TStruct>(T obj, MemoryBlockWrapper<byte> memory, int offset, ObjectToStructConverter<T, TStruct> converter) where TStruct : struct
+    {
+        unsafe
+        {
+            TStruct* structAddress = (TStruct*)(void*)(memory.Values.AddrOfPinnedObject() + offset * sizeof(byte));
+            converter(obj, structAddress);
+        }
+    }
+
+    public static unsafe void ZeroCopySerialize<T, TStruct>(T obj, byte* memory, int offset, ObjectToStructConverter<T, TStruct> converter) where TStruct : struct
+    {
+        unsafe
+        {
+            TStruct* structAddress = (TStruct*)(void*)(memory + offset * sizeof(byte));
+            converter(obj, structAddress);
+        }
+    }
+
     public static void Serialize<T>(this ref T s, byte[] array, int offset)
         where T : struct
     {
