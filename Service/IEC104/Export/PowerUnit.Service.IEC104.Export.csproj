@@ -9,6 +9,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="FastEnum" Version="$(FastEnumVersion)" />
 		<PackageReference Include="NLog.Web.AspNetCore" Version="$(NLogWebAspNetCoreVersion)" />
 		<PackageReference Include="NetCoreServer" Version="$(NetCoreServerVersion)" />
 		<PackageReference Include="OpenTelemetry.Exporter.Prometheus.HttpListener" Version="1.12.0-beta.1" />

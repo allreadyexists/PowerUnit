@@ -27,7 +27,7 @@ internal sealed class BaseValueTestDataSource : TestDataSource<BaseValue>
             {
                 SourceId = "1",
                 EquipmentId = Random.Shared.NextInt64(1, 4).ToString(),
-                ParameterId = Random.Shared.NextInt64(1, 4).ToString(),
+                ParameterId = Random.Shared.NextInt64(11, 14).ToString(),
                 ValueAsBool = randomValue < 0.5
             };
         }
@@ -39,7 +39,7 @@ internal sealed class BaseValueTestDataSource : TestDataSource<BaseValue>
         var randomType = Random.Shared.NextDouble();
         var randomValue = Random.Shared.Next(0, COUNT);
 
-        if (randomType < 1.5)
+        if (randomType < 0.5)
         {
             value = _testDataAnalog[randomValue];
         }

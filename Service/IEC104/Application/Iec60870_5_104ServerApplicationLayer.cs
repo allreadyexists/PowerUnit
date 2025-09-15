@@ -35,8 +35,8 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
     private readonly CancellationTokenSource _cts;
 
-    private static readonly int _bufferizationSize = 10;
-    private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromMilliseconds(500);
+    private static readonly int _bufferizationSize = 100;
+    private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromSeconds(1);
     private IDisposable? _subscriber2;
 
     [ThreadStatic]
@@ -131,7 +131,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         }
     }
 
-    private void SendValuesBase(byte[] buffer, byte initAddr, COT cot, IEnumerable<MapValueItem> values, Action<IEC60870_5_104ServerApplicationLayer, byte[], int, COT> send)
+    private void SendValuesBase2(byte[] buffer, byte initAddr, COT cot, IEnumerable<MapValueItem> values, Action<IEC60870_5_104ServerApplicationLayer, byte[], int, COT> send)
     {
         int length = 0;
         byte count = 0;
@@ -262,7 +262,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
     }
 
 #pragma warning disable IDE0051 // Remove unused private members
-    private void SendValuesBase2(byte[] buffer, byte initAddr, COT cot, IEnumerable<MapValueItem> values, Action<IEC60870_5_104ServerApplicationLayer, byte[], int, COT> send)
+    private void SendValuesBase(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values, Action<IEC60870_5_104ServerApplicationLayer, byte[], int, COT> send)
 #pragma warning restore IDE0051 // Remove unused private members
     {
         int length = 0;
@@ -275,8 +275,10 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
         TimeSpan duration;
         var start = _timeProvider.GetTimestamp();
-        foreach (var value in values)
+        var memoryBlock = new MemoryBlockWrapper<byte>(buffer);
+        for (var i = 0; i < values.Count; i++)
         {
+            var value = values[i];
             if (value.Type == ASDUType.M_SP_TB_1 ||
                 value.Type == ASDUType.M_DP_TB_1 ||
                 value.Type == ASDUType.M_ME_TF_1)
@@ -287,24 +289,30 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
                     isInit = true;
                     if (value.Type == ASDUType.M_SP_TB_1)
                     {
-                        currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
-                        M_SP_TB_1_SingleArray[count++] = new M_SP_TB_1_Single(value.Address,
-                            value.Value.ValueAsBool!.Value ? SIQ_Value.On : SIQ_Value.Off, 0,
-                            value.Value.ValueDt!.Value, 0);
+                        currentTypeMaxCount = M_SP_TB_1_SingleTemplate.MaxItemCount;
+                        //M_SP_TB_1_SingleArray[count++] = new M_SP_TB_1_Single(value.Address,
+                        //    value.Value.ValueAsBool!.Value ? SIQ_Value.On : SIQ_Value.Off, 0,
+                        //    value.Value.ValueDt!.Value, 0);
+                        ZeroCopySerialize(value, memoryBlock, ASDUPacketHeader_2_2.Size + M_SP_TB_1_SingleTemplate.Size * count, _mapValueItemToM_SP_TB_1_SingleConverter);
+                        count++;
                     }
                     else if (value.Type == ASDUType.M_DP_TB_1)
                     {
-                        currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
-                        M_DP_TB_1_SingleArray[count++] = new M_DP_TB_1_Single(value.Address,
-                            value.Value.ValueAsBool!.Value ? DIQ_Value.On : DIQ_Value.Off, 0,
-                            value.Value.ValueDt!.Value, 0);
+                        currentTypeMaxCount = M_DP_TB_1_SingleTemplate.MaxItemCount;
+                        //M_DP_TB_1_SingleArray[count++] = new M_DP_TB_1_Single(value.Address,
+                        //    value.Value.ValueAsBool!.Value ? DIQ_Value.On : DIQ_Value.Off, 0,
+                        //    value.Value.ValueDt!.Value, 0);
+                        ZeroCopySerialize(value, memoryBlock, ASDUPacketHeader_2_2.Size + M_DP_TB_1_SingleTemplate.Size * count, _mapValueItemToM_DP_TB_1_SingleConverter);
+                        count++;
                     }
                     else if (value.Type == ASDUType.M_ME_TF_1)
                     {
-                        currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
-                        M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(value.Address,
-                            value.Value.ValueAsFloat!.Value, 0,
-                            value.Value.ValueDt!.Value, 0);
+                        currentTypeMaxCount = M_ME_TF_1_SingleTemplate.MaxItemCount;
+                        //M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(value.Address,
+                        //    value.Value.ValueAsFloat!.Value, 0,
+                        //    value.Value.ValueDt!.Value, 0);
+                        ZeroCopySerialize(value, memoryBlock, ASDUPacketHeader_2_2.Size + M_ME_TF_1_SingleTemplate.Size * count, _mapValueItemToM_ME_TF_1_SingleConverter);
+                        count++;
                     }
                 }
                 else
@@ -313,32 +321,38 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
                     {
                         var headerReq = new ASDUPacketHeader_2_2(currentType, SQ.Single, count, cot, initAddr: initAddr,
                                         commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+                        headerReq.SerializeUnsafe(buffer, 0);
                         if (currentType == ASDUType.M_SP_TB_1)
                         {
-                            length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1_SingleArray, count);
+                            //length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1_SingleArray, count);
+                            length = ASDUPacketHeader_2_2.Size + M_SP_TB_1_SingleTemplate.Size * count;
                         }
                         else if (currentType == ASDUType.M_DP_TB_1)
                         {
-                            length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1_SingleArray, count);
+                            //length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1_SingleArray, count);
+                            length = ASDUPacketHeader_2_2.Size + M_DP_TB_1_SingleTemplate.Size * count;
                         }
                         else if (currentType == ASDUType.M_ME_TF_1)
                         {
-                            length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
+                            //length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
+                            length = ASDUPacketHeader_2_2.Size + M_ME_TF_1_SingleTemplate.Size * count;
                         }
 
                         duration = _timeProvider.GetElapsedTime(start);
+                        memoryBlock.Dispose();
                         _diagnostic.AppSendMsgPrepareDuration(_applicationLayerOption.ServerId, duration.TotalNanoseconds);
 
                         send(this, buffer, length, cot);
 
                         start = _timeProvider.GetTimestamp();
+                        memoryBlock = new MemoryBlockWrapper<byte>(buffer);
 
                         if (value.Type == ASDUType.M_SP_TB_1)
-                            currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
+                            currentTypeMaxCount = M_SP_TB_1_SingleTemplate.MaxItemCount;
                         if (value.Type == ASDUType.M_DP_TB_1)
-                            currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
+                            currentTypeMaxCount = M_DP_TB_1_SingleTemplate.MaxItemCount;
                         else if (value.Type == ASDUType.M_ME_TF_1)
-                            currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
+                            currentTypeMaxCount = M_ME_TF_1_SingleTemplate.MaxItemCount;
 
                         currentType = value.Type;
                         count = 0;
@@ -346,21 +360,27 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
                     if (value.Type == ASDUType.M_SP_TB_1)
                     {
-                        M_SP_TB_1_SingleArray[count++] = new M_SP_TB_1_Single(value.Address,
-                            value.Value.ValueAsBool!.Value ? SIQ_Value.On : SIQ_Value.Off, 0,
-                            value.Value.ValueDt!.Value, 0);
+                        //M_SP_TB_1_SingleArray[count++] = new M_SP_TB_1_Single(value.Address,
+                        //    value.Value.ValueAsBool!.Value ? SIQ_Value.On : SIQ_Value.Off, 0,
+                        //    value.Value.ValueDt!.Value, 0);
+                        ZeroCopySerialize(value, memoryBlock, ASDUPacketHeader_2_2.Size + M_SP_TB_1_SingleTemplate.Size * count, _mapValueItemToM_SP_TB_1_SingleConverter);
+                        count++;
                     }
                     else if (value.Type == ASDUType.M_DP_TB_1)
                     {
-                        M_DP_TB_1_SingleArray[count++] = new M_DP_TB_1_Single(value.Address,
-                            value.Value.ValueAsBool!.Value ? DIQ_Value.On : DIQ_Value.Off, 0,
-                            value.Value.ValueDt!.Value, 0);
+                        //M_DP_TB_1_SingleArray[count++] = new M_DP_TB_1_Single(value.Address,
+                        //    value.Value.ValueAsBool!.Value ? DIQ_Value.On : DIQ_Value.Off, 0,
+                        //    value.Value.ValueDt!.Value, 0);
+                        ZeroCopySerialize(value, memoryBlock, ASDUPacketHeader_2_2.Size + M_DP_TB_1_SingleTemplate.Size * count, _mapValueItemToM_DP_TB_1_SingleConverter);
+                        count++;
                     }
                     else if (value.Type == ASDUType.M_ME_TF_1)
                     {
-                        M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(value.Address,
-                            value.Value.ValueAsFloat!.Value, 0,
-                            value.Value.ValueDt!.Value, 0);
+                        //M_ME_TF_1_SingleArray[count++] = new M_ME_TF_1_Single(value.Address,
+                        //    value.Value.ValueAsFloat!.Value, 0,
+                        //    value.Value.ValueDt!.Value, 0);
+                        ZeroCopySerialize(value, memoryBlock, ASDUPacketHeader_2_2.Size + M_ME_TF_1_SingleTemplate.Size * count, _mapValueItemToM_ME_TF_1_SingleConverter);
+                        count++;
                     }
                 }
             }
@@ -370,22 +390,27 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         {
             var headerReq = new ASDUPacketHeader_2_2(currentType, SQ.Single, count, cot, initAddr: initAddr,
                                         commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
+            headerReq.SerializeUnsafe(buffer, 0);
             if (currentType == ASDUType.M_SP_TB_1)
             {
-                length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1_SingleArray, count);
+                length = ASDUPacketHeader_2_2.Size + M_SP_TB_1_SingleTemplate.Size * count;
+                //M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1_SingleArray, count);
                 currentTypeMaxCount = M_SP_TB_1_Single.MaxItemCount;
             }
             else if (currentType == ASDUType.M_DP_TB_1)
             {
-                length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1_SingleArray, count);
+                length = ASDUPacketHeader_2_2.Size + M_DP_TB_1_SingleTemplate.Size * count;
+                //M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1_SingleArray, count);
                 currentTypeMaxCount = M_DP_TB_1_Single.MaxItemCount;
             }
             else if (currentType == ASDUType.M_ME_TF_1)
             {
-                length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
+                length = ASDUPacketHeader_2_2.Size + M_ME_TF_1_SingleTemplate.Size * count;
+                //M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1_SingleArray, count);
                 currentTypeMaxCount = M_ME_TF_1_Single.MaxItemCount;
             }
 
+            memoryBlock.Dispose();
             duration = _timeProvider.GetElapsedTime(start);
             _diagnostic.AppSendMsgPrepareDuration(_applicationLayerOption.ServerId, duration.TotalNanoseconds);
 
@@ -396,7 +421,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #pragma warning disable IDE0051 // Remove unused private members
-    private void SendValues(byte[] buffer, byte initAddr, COT cot, IEnumerable<MapValueItem> values)
+    private void SendValues(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values)
 #pragma warning restore IDE0051 // Remove unused private members
     {
         SendValuesBase(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
@@ -407,7 +432,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
 #pragma warning disable IDE0051 // Remove unused private members
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void SendValues2(byte[] buffer, byte initAddr, COT cot, IEnumerable<MapValueItem> values)
+    private void SendValues2(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values)
 #pragma warning restore IDE0051 // Remove unused private members
     {
         SendValuesBase(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
@@ -416,17 +441,27 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         });
     }
 
-    //private unsafe ObjectToStructConverter<MapValueItem, M_SP_TB_1_Single> _mapValueItemToM_SP_TB_1_SingleConverter = static (@object, @struct) =>
-    //{
-    //};
+    private readonly unsafe ObjectToStructConverter<MapValueItem, M_SP_TB_1_SingleTemplate> _mapValueItemToM_SP_TB_1_SingleConverter = static (@object, @struct) =>
+    {
+        @struct->Address = new Address3(@object.Address);
+        @struct->DateTime = new CP56Time2a(@object.Value.ValueDt!.Value, 0);
+        @struct->SIQ = (byte)(@object.Value.ValueAsBool!.Value ? SIQ_Value.On : SIQ_Value.Off);
+    };
 
-    //private unsafe ObjectToStructConverter<MapValueItem, M_DP_TB_1_Single> _mapValueItemToM_DP_TB_1_SingleConverter = static (@object, @struct) =>
-    //{
-    //};
+    private readonly unsafe ObjectToStructConverter<MapValueItem, M_DP_TB_1_SingleTemplate> _mapValueItemToM_DP_TB_1_SingleConverter = static (@object, @struct) =>
+    {
+        @struct->Address = new Address3(@object.Address);
+        @struct->DateTime = new CP56Time2a(@object.Value.ValueDt!.Value, 0);
+        @struct->DIQ = (byte)(@object.Value.ValueAsBool!.Value ? DIQ_Value.On : DIQ_Value.Off);
+    };
 
-    //private unsafe ObjectToStructConverter<MapValueItem, M_ME_TF_1_Single> _mapValueItemToM_ME_TF_1_SingleConverter = static (@object, @struct) =>
-    //{
-    //};
+    private readonly unsafe ObjectToStructConverter<MapValueItem, M_ME_TF_1_SingleTemplate> _mapValueItemToM_ME_TF_1_SingleConverter = static (@object, @struct) =>
+    {
+        @struct->Address = new Address3(@object.Address);
+        @struct->DateTime = new CP56Time2a(@object.Value.ValueDt!.Value, 0);
+        @struct->QDS = 0;
+        @struct->Value = @object.Value.ValueAsFloat!.Value;
+    };
 
     public IEC60870_5_104ServerApplicationLayer(IEC104ApplicationLayerModel applicationLayerOption,
         IDataSource<MapValueItem> dataSource,

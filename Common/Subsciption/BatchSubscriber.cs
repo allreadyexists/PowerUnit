@@ -5,15 +5,15 @@ namespace PowerUnit.Common.Subsciption;
 
 public sealed class BatchSubscriber<T, TContext> : SubscriberBase<T, TContext>
 {
-    private readonly Channel<IEnumerable<T>> _channel;
+    private readonly Channel<IList<T>> _channel;
 
     public BatchSubscriber(int count, TimeSpan timeSpan, IDataSource<T> dataSource, TContext context,
-        Func<IEnumerable<T>, TContext, CancellationToken, Task> onNext,
+        Func<IList<T>, TContext, CancellationToken, Task> onNext,
         Action<Exception>? onError = null,
         Action? onComplite = null,
         Func<T, TContext, bool>? filter = null, ISubscriberDiagnostic? subscriberDiagnostic = null) : base(dataSource, context, onError, onComplite, filter, subscriberDiagnostic)
     {
-        _channel = Channel.CreateUnbounded<IEnumerable<T>>(new UnboundedChannelOptions()
+        _channel = Channel.CreateUnbounded<IList<T>>(new UnboundedChannelOptions()
         {
             SingleReader = true,
             SingleWriter = true,

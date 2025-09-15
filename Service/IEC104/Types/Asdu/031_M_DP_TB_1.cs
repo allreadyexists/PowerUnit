@@ -5,8 +5,29 @@ using System.Runtime.InteropServices;
 namespace PowerUnit.Service.IEC104.Types.Asdu;
 
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
+public struct M_DP_TB_1_SingleTemplate
+{
+    public static byte Size => (byte)Marshal.SizeOf<M_DP_TB_1_SingleTemplate>();
+    public static byte MaxItemCount => (byte)(LengthHelper.PACKET_CONST_PART / Size);
+
+    [FieldOffset(0)]
+    public /*readonly */Address3 Address;
+    [FieldOffset(3)]
+    public /*readonly */byte DIQ;
+    [FieldOffset(4)]
+    public /*readonly */CP56Time2a DateTime;
+
+    //public M_DP_TB_1_SingleTemplate(ushort address, DIQ_Value value, DIQ_Status diq, DateTime dateTime, TimeStatus timeStatus)
+    //{
+    //    _address = new Address3(address);
+    //    _diq = (byte)((byte)diq | (byte)value);
+    //    _dateTime = new CP56Time2a(dateTime, timeStatus);
+    //}
+}
+
+[StructLayout(LayoutKind.Explicit, Pack = 1)]
 [ASDUTypeInfo(ASDUType.M_DP_TB_1, SQ.Single,
-    toClientCauseOfTransmits: [3, 5, 11, 12])]
+toClientCauseOfTransmits: [3, 5, 11, 12])]
 public readonly struct M_DP_TB_1_Single
 {
     public static byte Size => (byte)Marshal.SizeOf<M_DP_TB_1_Single>();

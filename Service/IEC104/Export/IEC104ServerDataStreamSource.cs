@@ -22,7 +22,10 @@ public sealed class IEC104ServerDataStreamSource : DataSourceBase<MapValueItem>
                 static (x, context, token) =>
                 {
                     var map = context._mapping[(x.SourceId, x.EquipmentId, x.ParameterId)];
-                    context.Notify(new MapValueItem(map.Address, (ASDUType)map.AsduType, x));
+                    context.Notify(new MapValueItem(map.Address, (ASDUType)map.AsduType)
+                    {
+                        Value = x
+                    });
                     return Task.CompletedTask;
                 }, filter: ValueFilter);
         }

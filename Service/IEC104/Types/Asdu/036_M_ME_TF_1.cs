@@ -5,6 +5,30 @@ using System.Runtime.InteropServices;
 namespace PowerUnit.Service.IEC104.Types.Asdu;
 
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
+public struct M_ME_TF_1_SingleTemplate
+{
+    public static byte Size => (byte)Marshal.SizeOf<M_ME_TF_1_SingleTemplate>();
+    public static byte MaxItemCount => (byte)(LengthHelper.PACKET_CONST_PART / Size);
+
+    [FieldOffset(0)]
+    public /*private readonly */Address3 Address;
+    [FieldOffset(3)]
+    public /*private readonly */float Value;
+    [FieldOffset(7)]
+    public /*private readonly */QDS_Status QDS;
+    [FieldOffset(8)]
+    public /*private readonly */CP56Time2a DateTime;
+
+    //public M_ME_TF_1_Single(ushort address, float value, QDS_Status qds, DateTime dateTime, TimeStatus timeStatus)
+    //{
+    //    _address = new Address3(address);
+    //    _value = value;
+    //    _qds = qds;
+    //    _dateTime = new CP56Time2a(dateTime, timeStatus);
+    //}
+}
+
+[StructLayout(LayoutKind.Explicit, Pack = 1)]
 [ASDUTypeInfo(ASDUType.M_ME_TF_1, SQ.Single,
 toClientCauseOfTransmits: [1, 2, 3, 5, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36])]
 public readonly struct M_ME_TF_1_Single
