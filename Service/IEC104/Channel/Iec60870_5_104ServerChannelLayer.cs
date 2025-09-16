@@ -376,7 +376,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         var ackCount = _txW - dountAckPacket;
         _txW -= ackCount; // уменьшаем на количество подтвержденных пакетов
 
-        _logger.LogTrace("ProcessRecievedAck: dountAckPacket = {@dountAckPacket}, ackCount = {@ackCount}", dountAckPacket, ackCount);
+        _logger.LogProcessRecievedAck(dountAckPacket, ackCount);
 
         if (ackCount > 0)
         {
@@ -396,7 +396,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
     /// <returns></returns>
     private async Task ProcessIPacket(ushort rx, ushort tx, byte[] data, CancellationToken ct)
     {
-        _logger.LogTrace(@"RX: I: RX {Rx}, TX: {Tx}", rx, tx);
+        _logger.LogProcessIPacket(rx, tx);
 
         var txDelta = CalcUnAckPacket(_txCounter, rx);
         var counterOk = txDelta >= 0 && txDelta <= _txW && tx == _rxCounter;
@@ -415,7 +415,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
                 _diagnostic.SendSPacket(_serverModel.ApplicationLayerModel.ServerId);
                 _rxW = 0; // несквитированные мною
 
-                _logger.LogTrace("TX: S: RX:{@rxCounter}", _rxCounter);
+                _logger.LogProcessIPacket2(_rxCounter);
                 // остановить таймер 2
                 _timeout2Id = await StopTimerAsync(_timeout2Id, ct);
             }
@@ -445,7 +445,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
     /// <returns></returns>
     private async Task ProcessSPacket(ushort rx, CancellationToken ct)
     {
-        _logger.LogTrace("RX: S: RX {@rx}", rx);
+        _logger.LogProcessSPacket(rx);
 
         var txDelta = CalcUnAckPacket(_txCounter, rx);
         var counterOk = txDelta >= 0 && txDelta <= _txW;
@@ -471,7 +471,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
     /// <returns></returns>
     private async Task ProcessUPacket(UControl control, CancellationToken ct)
     {
-        _logger.LogTrace("RX: U: {@control}", control);
+        _logger.LogProcessUPacket(control);
 
         switch (control)
         {
@@ -486,7 +486,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
                 _physicalLayerController.SendPacket(_startCon, 0, APCI.Size);
                 _diagnostic.SendUPacket(_serverModel.ApplicationLayerModel.ServerId);
-                _logger.LogTrace("TX: U: {@start}", UControl.StartDtCon);
+                //_logger.LogTrace("TX: U: {@start}", UControl.StartDtCon);
                 break;
             case UControl.StopDtAct:
                 // Подумать - клиент может отключиться, но при этом не разорвать соединение
@@ -506,13 +506,13 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
                 _physicalLayerController.SendPacket(_stopCon, 0, APCI.Size);
                 _diagnostic.SendUPacket(_serverModel.ApplicationLayerModel.ServerId);
-                _logger.LogTrace("TX: U: {@stop}", UControl.StopDtCon);
+                //_logger.LogTrace("TX: U: {@stop}", UControl.StopDtCon);
                 break;
             case UControl.TestFrAct:
                 if (_isEstablishedConnection)
                 {
                     _physicalLayerController.SendPacket(_testCon, 0, APCI.Size);
-                    _logger.LogTrace("TX: U: {@test}", UControl.TestFrCon);
+                    //_logger.LogTrace("TX: U: {@test}", UControl.TestFrCon);
                 }
 
                 break;
@@ -588,9 +588,9 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
             await foreach (var @event in Events.Reader.ReadAllAsync(ct))
             {
                 if (@event is TimerEvent timerEvent)
-                    _logger.LogTrace("{@event} {@timerEvent:X2}", @event, timerEvent.TimerId);
+                    _logger.LogTimerEvent(@event, timerEvent.TimerId);
                 else
-                    _logger.LogTrace("{@event}", @event);
+                    _logger.LogEvent(@event);
 
                 switch (@event)
                 {
