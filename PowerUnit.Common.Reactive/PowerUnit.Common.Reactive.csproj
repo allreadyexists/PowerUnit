@@ -7,12 +7,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsLoggingAbstractionsVersion)" />
 		<PackageReference Include="System.Reactive" Version="$(SystemReactiveVersion)" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\..\PowerUnit.Common.Reactive\PowerUnit.Common.Reactive.csproj" />
+		<PackageReference Include="System.Reactive.Core" Version="6.0.2" />
+		<PackageReference Include="System.Reactive.Linq" Version="6.0.2" />
 	</ItemGroup>
 
 </Project>

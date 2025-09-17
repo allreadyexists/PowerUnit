@@ -39,7 +39,7 @@ internal sealed class BaseValueTestDataSource : TestDataSource<BaseValue>
         var randomType = Random.Shared.NextDouble();
         var randomValue = Random.Shared.Next(0, COUNT);
 
-        if (randomType < 0.5)
+        if (randomType < 1.5)
         {
             value = _testDataAnalog[randomValue];
         }

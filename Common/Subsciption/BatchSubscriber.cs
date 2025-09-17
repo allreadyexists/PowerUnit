@@ -1,3 +1,5 @@
+using PowerUnit.Common.Reactive;
+
 using System.Reactive.Linq;
 using System.Threading.Channels;
 
@@ -19,7 +21,7 @@ public sealed class BatchSubscriber<T, TContext> : SubscriberBase<T, TContext>
             SingleWriter = true,
         });
 
-        Subscribe = DataSource.Where(x => Filter(x, Context)).Buffer(timeSpan, count).Subscribe(
+        Subscribe = DataSource.Where(x => Filter(x, Context)).Buffer2(timeSpan, count).Subscribe(
             value =>
             {
                 _channel.Writer.TryWrite(value);

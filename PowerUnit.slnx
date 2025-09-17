@@ -11,6 +11,7 @@
     <Project Path="Common/StructHelpers/PowerUnit.Common.StructHelpers.csproj" />
     <Project Path="Common/Subsciption/PowerUnit.Common.Subsciption.csproj" />
     <Project Path="Common/TimeoutService/PowerUnit.Common.TimeoutService.csproj" />
+    <Project Path="PowerUnit.Common.Reactive/PowerUnit.Common.Reactive.csproj" Id="2f195498-02c6-472c-aeda-390f58c9b03a" />
     <Project Path="PowerUnit.Common.StructHelper.Benchmark/PowerUnit.Common.StructHelper.Benchmark.csproj" Id="41a0b2b8-b264-4101-82f6-24bfb87e3a9d" />
   </Folder>
   <Folder Name="/Infrastructure/">
