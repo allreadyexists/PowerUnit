@@ -25,8 +25,8 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
         IDataProvider dataProvider,
         TcpServer server, ILogger<IEC104ServerSession> logger) : base(server)
     {
-        OptionSendBufferSize = 256 * 3 / 2;
-        OptionReceiveBufferSize = 256 * 3 / 2;
+        //OptionSendBufferSize = 256 * 3 / 2;
+        //OptionReceiveBufferSize = 256 * 3 / 2;
 
         _options = options;
 
@@ -60,11 +60,14 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
         ((IPhysicalLayerNotification)_channelLayer).Recieve(bufferPart);
     }
 
-    public sealed override long Send(byte[] buffer, long offset, long size)
+    public bool SendInternal(byte[] buffer, long offset, long size)
     {
-        var result = base.Send(buffer, offset, size);
-        if (_logger.IsEnabled(LogLevel.Trace))
+        var result = base.SendAsync(buffer, offset, size);
+        if (result && _logger.IsEnabled(LogLevel.Trace))
+        {
             _logger.LogTrace("{@id} Tx: {@tx}", Id, new Span<byte>(buffer, (int)offset, (int)size).ToHex());
+        }
+
         return result;
     }
 
@@ -74,9 +77,9 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
             _logger.LogError("{@id} {@error}", Id, error);
     }
 
-    long IPhysicalLayerCommander.SendPacket(byte[] buffer, long offset, long size)
+    bool IPhysicalLayerCommander.SendPacket(byte[] buffer, long offset, long size)
     {
-        return Send(buffer, offset, size);
+        return SendInternal(buffer, offset, size);
     }
 
     bool IPhysicalLayerCommander.DisconnectLayer()

@@ -198,8 +198,6 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         IChannelLayerPacketSender channelLayerPacketSender, IPhysicalLayerCommander physicalLayerCommander)
     {
         var applicationLayerOption = serverOptions.ApplicationLayerModel;
-        //var diagnostic = serviceProvider.GetRequiredService<IIEC60870_5_104ApplicationLayerDiagnostic>();
-        //var logger = serviceProvider.GetRequiredService<ILogger<IEC60870_5_104ServerApplicationLayer>>();
         var serverApplicationLayer = ActivatorUtilities.CreateInstance<IEC60870_5_104ServerApplicationLayer>(serviceProvider, [applicationLayerOption, dataSource, dataProvider,
             channelLayerPacketSender, physicalLayerCommander]);
 
@@ -312,6 +310,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         // только если позволяет окно
         if (_txW >= _serverModel.ChannelLayerModel.WindowKSize)
         {
+            //_logger.LogInformation(@"Wait because _txW {TxW} greate {WinKSize}", _txW, _serverModel.ChannelLayerModel.WindowKSize);
             return;
         }
 
@@ -319,44 +318,60 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
         if (packetToSendCount > 0)
         {
-            packetToSendCount = Math.Min(packetToSendCount - _txW, _serverModel.ChannelLayerModel.WindowKSize - _txW);
+            var lastPacketToSendCount = packetToSendCount;
+            packetToSendCount = Math.Min(packetToSendCount/* - _txW*/, _serverModel.ChannelLayerModel.WindowKSize - _txW);
 
-            if (packetToSendCount > 0)
+            //_logger.LogInformation(@"Debug lastPacketToSendCount {LastPacketToSendCount} packetToSendCount {PacketToSendCount} _txW {TxW}", lastPacketToSendCount, packetToSendCount, _txW);
+
+            //if (packetToSendCount > 0 && _txW < packetToSendCount)
+            //{
+            //var index = _txW;
+
+            while (packetToSendCount > 0 && _txW < TxButNotAckQueue.Count)
             {
-                var index = _txW;
+                //_logger.LogInformation(@"Debug2 packetToSendCount {PacketToSendCount} _txW {TxW}", packetToSendCount, _txW);
+                var txPacket = TxButNotAckQueue[_txW];
 
-                while (packetToSendCount != 0)
+                new APCI((byte)(PacketI.Size + txPacket.MsgLength), new PacketI(_txCounter, _rxCounter)).SerializeUnsafe(_buffer, 0);
+
+                // Хорошая задумка, но похоже некоторые клиенты могут ожидать ответ только в одном пакете не получив его, они вполне могут разорвать связь поэтому вынесем в тонкую настройку
+                if (_serverModel.ChannelLayerModel.UseFragmentSend)
                 {
-                    packetToSendCount--;
-                    var txPacket = TxButNotAckQueue[index++];
-
-                    new APCI((byte)(PacketI.Size + txPacket.MsgLength), new PacketI(_txCounter, _rxCounter)).SerializeUnsafe(_buffer, 0);
-
-                    // Хорошая задумка, но похоже некоторые клиенты могут ожидать ответ только в одном пакете не получив его, они вполне могут разорвать связь поэтому вынесем в тонкую настройку
-                    if (_serverModel.ChannelLayerModel.UseFragmentSend)
-                    {
-                        _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
-                        _physicalLayerController.SendPacket(txPacket.Msg, 0, txPacket.MsgLength);
-                    }
-                    else
-                    {
-                        txPacket.Msg.AsSpan(0, txPacket.MsgLength).CopyTo(_buffer.AsSpan(APCI.Size));
-                        _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + txPacket.MsgLength);
-                    }
-
-                    _diagnostic.SendIPacket(_serverModel.ApplicationLayerModel.ServerId);
-                    _logger.LogProcessTxQueue(_rxCounter, _txCounter);
-
-                    _rxW = 0; // сброс счетчика несквитированных посылок
-                    _txCounter = CounterIncrement(_txCounter); // наращиваем счетчик отправленных
-                    _txW++; // наращиваем счетчик не квитированных
+                    _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
+                    _physicalLayerController.SendPacket(txPacket.Msg, 0, txPacket.MsgLength);
+                }
+                else
+                {
+                    txPacket.Msg.AsSpan(0, txPacket.MsgLength).CopyTo(_buffer.AsSpan(APCI.Size));
+                    _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + txPacket.MsgLength);
                 }
 
-                // остановить таймер 2
-                _timeout2Id = await StopTimerAsync(_timeout2Id, ct);
-                // перезапуск таймера 1
-                _timeout1Id = await StartTimerAsync(_timeout1Id, TimeSpan.FromSeconds(_serverModel.ChannelLayerModel.Timeout1Sec), ct);
+                _diagnostic.SendIPacket(_serverModel.ApplicationLayerModel.ServerId);
+                _logger.LogProcessTxQueue(_rxCounter, _txCounter);
+
+                _rxW = 0; // сброс счетчика несквитированных посылок
+                _txCounter = CounterIncrement(_txCounter); // наращиваем счетчик отправленных
+                _txW++; // наращиваем счетчик не квитированных
+                packetToSendCount--;
+                //index++;
+
+                //_logger.LogInformation(@"Debug3 packetToSendCount {PacketToSendCount} _txW {TxW}", packetToSendCount, _txW);
             }
+
+            // остановить таймер 2
+            _timeout2Id = await StopTimerAsync(_timeout2Id, ct);
+            // перезапуск таймера 1
+            _timeout1Id = await StartTimerAsync(_timeout1Id, TimeSpan.FromSeconds(_serverModel.ChannelLayerModel.Timeout1Sec), ct);
+            //}
+            //else
+            //{
+            //    _logger.LogInformation(@"Wait because packetToSendCount {PacketToSendCount} < 0: [{LastPacketToSendCount}, {TxW}, {WindowKSize}]",
+            //        packetToSendCount,
+            //        lastPacketToSendCount,
+            //        _txW,
+            //        _serverModel.ChannelLayerModel.WindowKSize
+            //        );
+            //}
         }
     }
 

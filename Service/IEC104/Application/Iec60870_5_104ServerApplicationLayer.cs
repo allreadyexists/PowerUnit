@@ -131,7 +131,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         }
     }
 
-    private void SendValuesBase(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values, Action<IEC60870_5_104ServerApplicationLayer, byte[], int, COT> send)
+    private void SendValuesBase3(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values, Action<IEC60870_5_104ServerApplicationLayer, byte[], int, COT> send)
 #pragma warning restore IDE0051 // Remove unused private members
     {
         int length = 0;
@@ -393,7 +393,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         }
     }
 
-    private unsafe void SendValuesBase3(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values, Action<IEC60870_5_104ServerApplicationLayer, byte[], int, COT> send)
+    private unsafe void SendValuesBase(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values, Action<IEC60870_5_104ServerApplicationLayer, byte[], int, COT> send)
 #pragma warning restore IDE0051 // Remove unused private members
     {
         if (values.Count > 0)
@@ -464,7 +464,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
     private void SendValues2(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values)
 #pragma warning restore IDE0051 // Remove unused private members
     {
-        SendValuesBase3(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
+        SendValuesBase(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
         {
             ctx._packetSender!.Send(buf.AsSpan(0, len), cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
         });
@@ -475,7 +475,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
     private void SendValues(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values)
 #pragma warning restore IDE0051 // Remove unused private members
     {
-        SendValuesBase3(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
+        SendValuesBase(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
         {
             ctx._packetSender!.Send(buf[..len], cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
         });

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 using Polly;
 using Polly.Retry;
@@ -14,9 +15,11 @@ internal sealed class IEC104ConfigProvider : IConfigProvider
 {
     private static readonly AsyncRetryPolicy _policyReadServersSettings = Policy.Handle<Exception>().WaitAndRetryForeverAsync(_ => TimeSpan.FromSeconds(30));
     private readonly IServiceProvider _serviceProvider;
-    public IEC104ConfigProvider(IServiceProvider serviceProvider)
+    private readonly ILogger<IEC104ConfigProvider> _logger;
+    public IEC104ConfigProvider(IServiceProvider serviceProvider, ILogger<IEC104ConfigProvider> logger)
     {
         _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     Task<IEC104ServerModel[]> IConfigProvider.GetServersAsync(CancellationToken stoppingToken)
@@ -40,27 +43,37 @@ internal sealed class IEC104ConfigProvider : IConfigProvider
                     server.ApplicationLayerOption = new IEC104ServerApplicationLayerOptionItem();
             }
 
-            return servers.Select(x => new IEC104ServerModel()
+            return servers.Select(x =>
             {
-                ServerName = x.Name,
-                Port = x.Port,
-                ApplicationLayerModel = new IEC104ApplicationLayerModel()
+                if (x.ChannelLayerOption!.WindowWSize > 2.0 * x.ChannelLayerOption!.WindowKSize / 3)
+                    _logger.LogWarning(@"Check server {Id} settings: {WindowWSize} greate than 2/3 {WindowKSize}", x.Id, x.ChannelLayerOption!.WindowWSize, x.ChannelLayerOption!.WindowKSize);
+
+                if (x.ChannelLayerOption!.MaxQueueSize < x.ChannelLayerOption!.WindowKSize)
+                    _logger.LogWarning(@"Check server {Id} settings: {MaxQueueSize} less than {WindowKSize}", x.Id, x.ChannelLayerOption!.MaxQueueSize, x.ChannelLayerOption!.WindowKSize);
+
+                return new IEC104ServerModel()
                 {
-                    ServerId = x.Id,
-                    CommonASDUAddress = x.CommonASDUAddress,
-                    CheckCommonASDUAddress = x.ApplicationLayerOption!.CheckCommonASDUAddress,
-                    SporadicSendEnabled = x.ApplicationLayerOption!.SporadicSendEnabled
-                },
-                ChannelLayerModel = new IEC104ChannelLayerModel()
-                {
-                    Timeout0Sec = x.ChannelLayerOption!.Timeout0Sec,
-                    Timeout1Sec = x.ChannelLayerOption!.Timeout1Sec,
-                    Timeout2Sec = x.ChannelLayerOption!.Timeout2Sec,
-                    Timeout3Sec = x.ChannelLayerOption!.Timeout3Sec,
-                    WindowKSize = x.ChannelLayerOption!.WindowKSize,
-                    WindowWSize = x.ChannelLayerOption!.WindowWSize,
-                    UseFragmentSend = x.ChannelLayerOption!.UseFragmentSend
-                }
+                    ServerName = x.Name,
+                    Port = x.Port,
+                    ApplicationLayerModel = new IEC104ApplicationLayerModel()
+                    {
+                        ServerId = x.Id,
+                        CommonASDUAddress = x.CommonASDUAddress,
+                        CheckCommonASDUAddress = x.ApplicationLayerOption!.CheckCommonASDUAddress,
+                        SporadicSendEnabled = x.ApplicationLayerOption!.SporadicSendEnabled
+                    },
+                    ChannelLayerModel = new IEC104ChannelLayerModel()
+                    {
+                        Timeout0Sec = x.ChannelLayerOption!.Timeout0Sec,
+                        Timeout1Sec = x.ChannelLayerOption!.Timeout1Sec,
+                        Timeout2Sec = x.ChannelLayerOption!.Timeout2Sec,
+                        Timeout3Sec = x.ChannelLayerOption!.Timeout3Sec,
+                        WindowKSize = x.ChannelLayerOption!.WindowKSize,
+                        WindowWSize = x.ChannelLayerOption!.WindowWSize,
+                        UseFragmentSend = x.ChannelLayerOption!.UseFragmentSend,
+                        MaxQueueSize = x.ChannelLayerOption!.MaxQueueSize
+                    }
+                };
             }).ToArray();
         }, stoppingToken);
     }

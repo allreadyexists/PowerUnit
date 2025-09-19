@@ -7,6 +7,7 @@ internal sealed class BaseValueTestDataSource : TestDataSource<BaseValue>
     private const int COUNT = 1024;
     private readonly BaseValue[] _testDataAnalog;
     private readonly BaseValue[] _testDataDiscret;
+    private bool _toggler;
 
     public BaseValueTestDataSource(TimeProvider timeProvider, ILogger<BaseValueTestDataSource> logger) : base(timeProvider, logger)
     {
@@ -39,7 +40,7 @@ internal sealed class BaseValueTestDataSource : TestDataSource<BaseValue>
         var randomType = Random.Shared.NextDouble();
         var randomValue = Random.Shared.Next(0, COUNT);
 
-        if (randomType < 1.5)
+        if (_toggler/*randomType < 0.5*/)
         {
             value = _testDataAnalog[randomValue];
         }
@@ -50,6 +51,8 @@ internal sealed class BaseValueTestDataSource : TestDataSource<BaseValue>
 
         value.ValueDt = now;
         value.RegistrationDt = now;
+
+        _toggler = !_toggler;
 
         return value;
     }

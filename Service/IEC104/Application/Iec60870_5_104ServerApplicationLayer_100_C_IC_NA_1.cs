@@ -24,7 +24,7 @@ public partial class IEC60870_5_104ServerApplicationLayer
                 var length = C_IC_NA_1.Serialize(buffer, in headerReq, in C_IC_NA_1);
                 context._packetSender!.Send(buffer.AsSpan(0, length));
 
-                context.SendValues2(buffer, additionInfo.Header.InitAddr, (COT)additionInfo.QOI, [.. context._dataProvider.GetGroup((byte)additionInfo.QOI)]);
+                context.SendValues(buffer, additionInfo.Header.InitAddr, (COT)additionInfo.QOI, [.. context._dataProvider.GetGroup((byte)additionInfo.QOI)]);
 
                 headerReq = new ASDUPacketHeader_2_2(additionInfo.Header.AsduType, additionInfo.Header.SQ, additionInfo.Header.Count, COT.ACTIVATE_COMPLETION,
                     initAddr: additionInfo.Header.InitAddr, commonAddrAsdu: context._applicationLayerOption.CommonASDUAddress, pn: PN.Positive);
