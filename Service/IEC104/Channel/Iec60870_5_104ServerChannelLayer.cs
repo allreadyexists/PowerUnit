@@ -302,7 +302,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
             }
             else
             {
-                TxButNotAckQueue.Add(sendMsg);
+                TxButNotAckQueue.AddLast(sendMsg);
                 _diagnostic.AppMsgSend(_serverModel.ApplicationLayerModel.ServerId, sendMsg.Priority);
             }
         }
@@ -325,25 +325,30 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
             //if (packetToSendCount > 0 && _txW < packetToSendCount)
             //{
-            //var index = _txW;
+            var skip = _txW;
+            var txPacket = TxButNotAckQueue.First;
+            while (skip > 0)
+            {
+                txPacket = txPacket!.Next;
+                skip--;
+            }
 
             while (packetToSendCount > 0 && _txW < TxButNotAckQueue.Count)
             {
                 //_logger.LogInformation(@"Debug2 packetToSendCount {PacketToSendCount} _txW {TxW}", packetToSendCount, _txW);
-                var txPacket = TxButNotAckQueue[_txW];
-
-                new APCI((byte)(PacketI.Size + txPacket.MsgLength), new PacketI(_txCounter, _rxCounter)).SerializeUnsafe(_buffer, 0);
+                var msg = txPacket!.ValueRef;
+                new APCI((byte)(PacketI.Size + msg.MsgLength), new PacketI(_txCounter, _rxCounter)).SerializeUnsafe(_buffer, 0);
 
                 // Хорошая задумка, но похоже некоторые клиенты могут ожидать ответ только в одном пакете не получив его, они вполне могут разорвать связь поэтому вынесем в тонкую настройку
                 if (_serverModel.ChannelLayerModel.UseFragmentSend)
                 {
                     _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
-                    _physicalLayerController.SendPacket(txPacket.Msg, 0, txPacket.MsgLength);
+                    _physicalLayerController.SendPacket(msg.Msg, 0, msg.MsgLength);
                 }
                 else
                 {
-                    txPacket.Msg.AsSpan(0, txPacket.MsgLength).CopyTo(_buffer.AsSpan(APCI.Size));
-                    _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + txPacket.MsgLength);
+                    msg.Msg.AsSpan(0, msg.MsgLength).CopyTo(_buffer.AsSpan(APCI.Size));
+                    _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + msg.MsgLength);
                 }
 
                 _diagnostic.SendIPacket(_serverModel.ApplicationLayerModel.ServerId);
@@ -353,6 +358,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
                 _txCounter = CounterIncrement(_txCounter); // наращиваем счетчик отправленных
                 _txW++; // наращиваем счетчик не квитированных
                 packetToSendCount--;
+                txPacket = txPacket.Next;
                 //index++;
 
                 //_logger.LogInformation(@"Debug3 packetToSendCount {PacketToSendCount} _txW {TxW}", packetToSendCount, _txW);
@@ -393,11 +399,11 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
         _logger.LogProcessRecievedAck(dountAckPacket, ackCount);
 
-        if (ackCount > 0)
+        while (ackCount > 0)
         {
-            for (var i = 0; i < ackCount; i++)
-                TxButNotAckQueue[i].Dispose();
-            TxButNotAckQueue.RemoveRange(0, ackCount);
+            TxButNotAckQueue.First().Dispose();
+            TxButNotAckQueue.RemoveFirst();
+            ackCount--;
         }
     }
 

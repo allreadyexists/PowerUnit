@@ -23,7 +23,11 @@ internal abstract class TestDataSource<T> : DataSourceBase<T>
                 var now = _timeProvider.GetUtcNow().DateTime;
                 try
                 {
-                    Notify(CreateNewValue(now));
+                    Notify(static ctx =>
+                    {
+                        var curCtx = (TestDataSource<T>)ctx;
+                        return curCtx.CreateNewValue(curCtx._timeProvider.GetUtcNow().DateTime);
+                    });
                     await Task.Delay(1, _cancellationTokenSource.Token);
                 }
                 catch (OperationCanceledException)

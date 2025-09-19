@@ -47,7 +47,7 @@ public abstract class IEC60870_5_104ChannelLayer
     /// <summary>
     /// Очередь переданных, но не подтвержденных пакетов
     /// </summary>
-    protected List<SendMsg> TxButNotAckQueue { get; } = [];
+    protected LinkedList<SendMsg> TxButNotAckQueue { get; } = [];
 
     /// <summary>
     /// Рабочий цикл
