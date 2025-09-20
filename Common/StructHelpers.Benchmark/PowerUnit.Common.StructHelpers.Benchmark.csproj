@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Common\StructHelpers\PowerUnit.Common.StructHelpers.csproj" />
+    <ProjectReference Include="..\StructHelpers\PowerUnit.Common.StructHelpers.csproj" />
   </ItemGroup>
 
 </Project>

@@ -12,7 +12,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\PowerUnit.Common.Reactive\PowerUnit.Common.Reactive.csproj" />
+	  <ProjectReference Include="..\Reactive\PowerUnit.Common.Reactive.csproj" />
 	</ItemGroup>
 
 </Project>
