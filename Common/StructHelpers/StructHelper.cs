@@ -43,6 +43,15 @@ public static class StructHelper
         }
     }
 
+    public static unsafe void ZeroCopySerialize<T, TStruct>(T obj, byte* memory, int offset, delegate*<T, TStruct*, void> converter) where TStruct : struct
+    {
+        unsafe
+        {
+            TStruct* structAddress = (TStruct*)(void*)(memory + offset * sizeof(byte));
+            converter(obj, structAddress);
+        }
+    }
+
     public static void Serialize<T>(this ref T s, byte[] array, int offset)
         where T : struct
     {

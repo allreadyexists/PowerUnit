@@ -310,7 +310,6 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         // только если позволяет окно
         if (_txW >= _serverModel.ChannelLayerModel.WindowKSize)
         {
-            //_logger.LogInformation(@"Wait because _txW {TxW} greate {WinKSize}", _txW, _serverModel.ChannelLayerModel.WindowKSize);
             return;
         }
 
@@ -319,12 +318,8 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         if (packetToSendCount > 0)
         {
             var lastPacketToSendCount = packetToSendCount;
-            packetToSendCount = Math.Min(packetToSendCount/* - _txW*/, _serverModel.ChannelLayerModel.WindowKSize - _txW);
+            packetToSendCount = Math.Min(packetToSendCount, _serverModel.ChannelLayerModel.WindowKSize - _txW);
 
-            //_logger.LogInformation(@"Debug lastPacketToSendCount {LastPacketToSendCount} packetToSendCount {PacketToSendCount} _txW {TxW}", lastPacketToSendCount, packetToSendCount, _txW);
-
-            //if (packetToSendCount > 0 && _txW < packetToSendCount)
-            //{
             var skip = _txW;
             var txPacket = TxButNotAckQueue.First;
             while (skip > 0)
@@ -335,7 +330,6 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
             while (packetToSendCount > 0 && _txW < TxButNotAckQueue.Count)
             {
-                //_logger.LogInformation(@"Debug2 packetToSendCount {PacketToSendCount} _txW {TxW}", packetToSendCount, _txW);
                 var msg = txPacket!.ValueRef;
                 new APCI((byte)(PacketI.Size + msg.MsgLength), new PacketI(_txCounter, _rxCounter)).SerializeUnsafe(_buffer, 0);
 
@@ -359,25 +353,12 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
                 _txW++; // наращиваем счетчик не квитированных
                 packetToSendCount--;
                 txPacket = txPacket.Next;
-                //index++;
-
-                //_logger.LogInformation(@"Debug3 packetToSendCount {PacketToSendCount} _txW {TxW}", packetToSendCount, _txW);
             }
 
             // остановить таймер 2
             _timeout2Id = await StopTimerAsync(_timeout2Id, ct);
             // перезапуск таймера 1
             _timeout1Id = await StartTimerAsync(_timeout1Id, TimeSpan.FromSeconds(_serverModel.ChannelLayerModel.Timeout1Sec), ct);
-            //}
-            //else
-            //{
-            //    _logger.LogInformation(@"Wait because packetToSendCount {PacketToSendCount} < 0: [{LastPacketToSendCount}, {TxW}, {WindowKSize}]",
-            //        packetToSendCount,
-            //        lastPacketToSendCount,
-            //        _txW,
-            //        _serverModel.ChannelLayerModel.WindowKSize
-            //        );
-            //}
         }
     }
 
@@ -507,7 +488,6 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
                 _physicalLayerController.SendPacket(_startCon, 0, APCI.Size);
                 _diagnostic.SendUPacket(_serverModel.ApplicationLayerModel.ServerId);
-                //_logger.LogTrace("TX: U: {@start}", UControl.StartDtCon);
                 break;
             case UControl.StopDtAct:
                 // Подумать - клиент может отключиться, но при этом не разорвать соединение
@@ -527,13 +507,11 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
                 _physicalLayerController.SendPacket(_stopCon, 0, APCI.Size);
                 _diagnostic.SendUPacket(_serverModel.ApplicationLayerModel.ServerId);
-                //_logger.LogTrace("TX: U: {@stop}", UControl.StopDtCon);
                 break;
             case UControl.TestFrAct:
                 if (_isEstablishedConnection)
                 {
                     _physicalLayerController.SendPacket(_testCon, 0, APCI.Size);
-                    //_logger.LogTrace("TX: U: {@test}", UControl.TestFrCon);
                 }
 
                 break;
