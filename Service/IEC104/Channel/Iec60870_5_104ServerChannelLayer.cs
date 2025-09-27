@@ -77,7 +77,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
     {
         _timeout0Id = await StopTimerAsync(_timeout0Id, ct);
         _logger.LogTrace("Disconnect by timer0");
-        _diagnostic.ProtocolError(_serverModel.ApplicationLayerModel.ServerId);
+        _diagnostic.ProtocolError(_serverModel.ServerName);
         _physicalLayerController.DisconnectLayer();
     }
 
@@ -89,7 +89,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
     {
         _timeout1Id = await StopTimerAsync(_timeout1Id, ct);
         _logger.LogTrace("Disconnect by timer1");
-        _diagnostic.ProtocolError(_serverModel.ApplicationLayerModel.ServerId);
+        _diagnostic.ProtocolError(_serverModel.ServerName);
         _physicalLayerController.DisconnectLayer();
     }
 
@@ -103,7 +103,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         // отправка квитирующего S пакета
         new APCI(PacketS.Size, new PacketS(_rxCounter)).SerializeUnsafe(_buffer, 0);
         _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
-        _diagnostic.SendSPacket(_serverModel.ApplicationLayerModel.ServerId);
+        _diagnostic.SendSPacket(_serverModel.ServerName);
         _logger.LogTimer2(_rxCounter);
 
         _rxW = 0;
@@ -119,7 +119,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
         // отправка U Test пакета
         _physicalLayerController.SendPacket(_testAct, 0, APCI.Size);
-        _diagnostic.SendUPacket(_serverModel.ApplicationLayerModel.ServerId);
+        _diagnostic.SendUPacket(_serverModel.ServerName);
         _logger.LogTimer3(UControl.TestFrAct);
 
         _timeout1Id = await StartTimerAsync(_timeout1Id, TimeSpan.FromSeconds(_serverModel.ChannelLayerModel.Timeout1Sec), ct);
@@ -197,8 +197,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         IDataProvider dataProvider,
         IChannelLayerPacketSender channelLayerPacketSender, IPhysicalLayerCommander physicalLayerCommander)
     {
-        var applicationLayerOption = serverOptions.ApplicationLayerModel;
-        var serverApplicationLayer = ActivatorUtilities.CreateInstance<IEC60870_5_104ServerApplicationLayer>(serviceProvider, [applicationLayerOption, dataSource, dataProvider,
+        var serverApplicationLayer = ActivatorUtilities.CreateInstance<IEC60870_5_104ServerApplicationLayer>(serviceProvider, [serverOptions, dataSource, dataProvider,
             channelLayerPacketSender, physicalLayerCommander]);
 
         return serverApplicationLayer;
@@ -297,13 +296,13 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
             txQueueCount--;
             if (sendMsg.Priority == ChannelLayerPacketPriority.Low && TxButNotAckQueue.Count > _serverModel.ChannelLayerModel.MaxQueueSize)
             {
-                _diagnostic.AppMsgSkip(_serverModel.ApplicationLayerModel.ServerId, sendMsg.Priority);
+                _diagnostic.AppMsgSkip(_serverModel.ServerName, sendMsg.Priority);
                 continue;
             }
             else
             {
                 TxButNotAckQueue.AddLast(sendMsg);
-                _diagnostic.AppMsgSend(_serverModel.ApplicationLayerModel.ServerId, sendMsg.Priority);
+                _diagnostic.AppMsgSend(_serverModel.ServerName, sendMsg.Priority);
             }
         }
 
@@ -345,7 +344,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
                     _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + msg.MsgLength);
                 }
 
-                _diagnostic.SendIPacket(_serverModel.ApplicationLayerModel.ServerId);
+                _diagnostic.SendIPacket(_serverModel.ServerName);
                 _logger.LogProcessTxQueue(_rxCounter, _txCounter);
 
                 _rxW = 0; // сброс счетчика несквитированных посылок
@@ -414,7 +413,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
             {
                 new APCI(PacketS.Size, new PacketS(_rxCounter)).SerializeUnsafe(_buffer, 0);
                 _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
-                _diagnostic.SendSPacket(_serverModel.ApplicationLayerModel.ServerId);
+                _diagnostic.SendSPacket(_serverModel.ServerName);
                 _rxW = 0; // несквитированные мною
 
                 _logger.LogProcessIPacket2(_rxCounter);
@@ -434,7 +433,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         {
             // нарушение протокола - разрыв соединения по нашей инициативе
             _logger.LogTrace("Disconnect by IPacket Rcv corruption");
-            _diagnostic.ProtocolError(_serverModel.ApplicationLayerModel.ServerId);
+            _diagnostic.ProtocolError(_serverModel.ServerName);
             _physicalLayerController.DisconnectLayer();
         }
     }
@@ -460,7 +459,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         {
             // нарушение протокола - разрыв соединения по нашей инициативе
             _logger.LogTrace("Disconnect by SPacket Rcv corruption");
-            _diagnostic.ProtocolError(_serverModel.ApplicationLayerModel.ServerId);
+            _diagnostic.ProtocolError(_serverModel.ServerName);
             _physicalLayerController.DisconnectLayer();
         }
     }
@@ -487,7 +486,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
                 }
 
                 _physicalLayerController.SendPacket(_startCon, 0, APCI.Size);
-                _diagnostic.SendUPacket(_serverModel.ApplicationLayerModel.ServerId);
+                _diagnostic.SendUPacket(_serverModel.ServerName);
                 break;
             case UControl.StopDtAct:
                 // Подумать - клиент может отключиться, но при этом не разорвать соединение
@@ -506,7 +505,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
                 }
 
                 _physicalLayerController.SendPacket(_stopCon, 0, APCI.Size);
-                _diagnostic.SendUPacket(_serverModel.ApplicationLayerModel.ServerId);
+                _diagnostic.SendUPacket(_serverModel.ServerName);
                 break;
             case UControl.TestFrAct:
                 if (_isEstablishedConnection)
@@ -524,7 +523,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
                 _timeout1Id = await StopTimerAsync(_timeout1Id, ct);
                 break;
             default:
-                _diagnostic.ProtocolError(_serverModel.ApplicationLayerModel.ServerId);
+                _diagnostic.ProtocolError(_serverModel.ServerName);
                 _physicalLayerController.DisconnectLayer();
                 _logger.LogTrace("U packet undefuned");
                 break;
@@ -550,23 +549,23 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
             if (apci_2.TryGetIPacket(out var iPacket))
             {
-                _diagnostic.RcvIPacket(_serverModel.ApplicationLayerModel.ServerId);
+                _diagnostic.RcvIPacket(_serverModel.ServerName);
                 await ProcessIPacket(iPacket.Rx, iPacket.Tx, rxPacket[6..], ct);
             }
             else if (apci_2.TryGetUPacket(out var uPacket))
             {
-                _diagnostic.RcvUPacket(_serverModel.ApplicationLayerModel.ServerId);
+                _diagnostic.RcvUPacket(_serverModel.ServerName);
                 await ProcessUPacket(uPacket.UControl, ct);
             }
             else if (apci_2.TryGetSPacket(out var sPacket))
             {
-                _diagnostic.RcvSPacket(_serverModel.ApplicationLayerModel.ServerId);
+                _diagnostic.RcvSPacket(_serverModel.ServerName);
                 await ProcessSPacket(sPacket.Rx, ct);
             }
             else
             {
                 _logger.LogTrace("Undefined packet rcv");
-                _diagnostic.ProtocolError(_serverModel.ApplicationLayerModel.ServerId);
+                _diagnostic.ProtocolError(_serverModel.ServerName);
                 _physicalLayerController.DisconnectLayer();
                 return;
             }
@@ -681,7 +680,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
     /// <returns></returns>
     void IChannelLayerPacketSender.Send(ReadOnlySpan<byte> packet, ChannelLayerPacketPriority priority)
     {
-        _diagnostic.AppMsgTotal(_serverModel.ApplicationLayerModel.ServerId, priority);
+        _diagnostic.AppMsgTotal(_serverModel.ServerName, priority);
 
         TxQueue.Writer.TryWrite(new SendMsg(packet, priority));
         Events.Writer.TryWrite(TxEvent);
@@ -689,7 +688,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
     void IChannelLayerPacketSender.Send(byte[] packet, ChannelLayerPacketPriority priority)
     {
-        _diagnostic.AppMsgTotal(_serverModel.ApplicationLayerModel.ServerId, priority);
+        _diagnostic.AppMsgTotal(_serverModel.ServerName, priority);
 
         TxQueue.Writer.TryWrite(new SendMsg(packet, priority));
         Events.Writer.TryWrite(TxEvent);

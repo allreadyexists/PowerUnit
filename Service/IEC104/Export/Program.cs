@@ -12,6 +12,7 @@ using NLog.Targets.Wrappers;
 using NLog.Web;
 
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 
 using PowerUnit.Common.EnviromentManager;
 using PowerUnit.Common.Subsciption;
@@ -29,7 +30,6 @@ namespace PowerUnit.Service.IEC104.Export;
 
 internal sealed class Program
 {
-    private const string SERVICE_NAME = "PowerUnitIEC104ExportService";
     private static readonly string[] _uriPrefixes = ["http://localhost:5000/"];
 
     private static async Task Main(string[] args)
@@ -54,9 +54,11 @@ internal sealed class Program
                         hostOptions.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.StopHost;
                     });
 
+                    var serviceName = hostBuilderContext.Configuration.GetValue("ServiceName", "IEC104Export");
+
                     services.AddSingleton(TimeProvider.System);
 
-                    services.AddEnviromentManager(SERVICE_NAME);
+                    services.AddEnviromentManager(serviceName);
 
                     var dbProvider = hostBuilderContext.Configuration.GetValue("DbProvider", "Sqlite");
                     switch (dbProvider)
@@ -68,7 +70,7 @@ internal sealed class Program
                             services.AddPowerUnitIEC104ServerPostgreSqlDbContext(hostBuilderContext.Configuration);
                             break;
                         default:
-                            throw new Exception($"Unsupported provider: {dbProvider}");
+                            throw new Exception($"Unsupported db provider: {dbProvider}");
                     }
 
                     // внешний
@@ -90,9 +92,12 @@ internal sealed class Program
                         return iecReflection;
                     });
 
+                    var uriPrefixes = hostBuilderContext.Configuration.GetSection("PrometheusOptions:Endpoints").Get<string[]>() ?? _uriPrefixes;
+
                     services.AddOpenTelemetry().WithMetrics(pb =>
                     {
                         pb
+                        .ConfigureResource(r => r.AddService(serviceName: serviceName))
                         .AddRuntimeInstrumentation()
                         .AddProcessInstrumentation()
                         .AddMeter(IEC104Diagnostic.MeterName)
@@ -101,7 +106,7 @@ internal sealed class Program
                         .AddPrometheusHttpListener(
                             options =>
                             {
-                                options.UriPrefixes = hostBuilderContext.Configuration.GetSection("PrometheusOptions:Endpoints").Get<string[]>() ?? _uriPrefixes;
+                                options.UriPrefixes = uriPrefixes;
                                 options.ScrapeEndpointPath = "/metrics";
                                 options.DisableTotalNameSuffixForCounters = true;
                             });
@@ -112,9 +117,10 @@ internal sealed class Program
                 .ConfigureLogging((hostBuilderContext, logging) =>
                 {
                     logging.ClearProviders();
+                    var serviceName = hostBuilderContext.Configuration.GetValue("ServiceName", "IEC104Export");
                     LogManager.Configuration = new NLogLoggingConfiguration(hostBuilderContext.Configuration.GetSection("NLog"));
                     var fileTargetConfig = LogManager.Configuration.FindTargetByName<AsyncTargetWrapper>("logfile");
-                    var enviromentManager = EnviromentManagerDiExtension.GetEnviromentManager(SERVICE_NAME);
+                    var enviromentManager = EnviromentManagerDiExtension.GetEnviromentManager(serviceName);
                     if (fileTargetConfig!.WrappedTarget is FileTarget fileTarget)
                     {
                         fileTarget.FileName = Path.Combine(enviromentManager.GetLogPath(), "current.log");
@@ -124,8 +130,6 @@ internal sealed class Program
                 .UseNLog();
 
                 var host = builder.Build();
-
-                //host.UseOpenTelemetryPrometheusScrapingEndpoint();
 
                 using (var scope = host.Services.CreateScope())
                 {

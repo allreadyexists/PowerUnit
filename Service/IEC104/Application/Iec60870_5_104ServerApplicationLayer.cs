@@ -5,6 +5,7 @@ using PowerUnit.Common.StringHelpers;
 using PowerUnit.Common.StructHelpers;
 using PowerUnit.Common.Subsciption;
 using PowerUnit.Service.IEC104.Abstract;
+using PowerUnit.Service.IEC104.Models;
 using PowerUnit.Service.IEC104.Types;
 using PowerUnit.Service.IEC104.Types.Asdu;
 
@@ -19,7 +20,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
     private readonly TimeProvider _timeProvider;
 
     private readonly ApplicationLayerReadTransactionManager _readTransactionManager;
-
+    private readonly string _serverName;
     private readonly IEC104ApplicationLayerModel _applicationLayerOption;
 
     private readonly IDataSource<MapValueItem> _dataSource;
@@ -140,7 +141,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
                 }
 
                 duration = _timeProvider.GetElapsedTime(start);
-                _diagnostic.AppSendMsgPrepareDuration(_applicationLayerOption.ServerId, duration.TotalNanoseconds);
+                _diagnostic.AppSendMsgPrepareDuration(_serverName, duration.TotalNanoseconds);
 
                 send(this, buffer, ASDUPacketHeader_2_2.Size + packetItemCount * size, cot);
             }
@@ -219,7 +220,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         @struct->Value = @object.Value.ValueAsFloat!.Value;
     };
 
-    public IEC60870_5_104ServerApplicationLayer(IEC104ApplicationLayerModel applicationLayerOption,
+    public IEC60870_5_104ServerApplicationLayer(IEC104ServerModel serverModel,
         IDataSource<MapValueItem> dataSource,
         IDataProvider dataProvider,
         IChannelLayerPacketSender packetSender,
@@ -230,7 +231,8 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
     {
         _timeProvider = timeProvider;
         _readTransactionManager = new ApplicationLayerReadTransactionManager();
-        _applicationLayerOption = applicationLayerOption;
+        _serverName = serverModel.ServerName;
+        _applicationLayerOption = serverModel.ApplicationLayerModel;
 
         _dataSource = dataSource;
         _dataProvider = dataProvider;

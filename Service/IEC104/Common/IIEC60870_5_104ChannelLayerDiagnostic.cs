@@ -2,18 +2,18 @@ namespace PowerUnit.Service.IEC104.Abstract;
 
 public interface IIEC60870_5_104ChannelLayerDiagnostic
 {
-    void AppMsgTotal(int serverId, ChannelLayerPacketPriority priority);
-    void AppMsgSkip(int serverId, ChannelLayerPacketPriority priority);
-    void AppMsgSend(int serverId, ChannelLayerPacketPriority priority);
+    void AppMsgTotal(string serverId, ChannelLayerPacketPriority priority);
+    void AppMsgSkip(string serverId, ChannelLayerPacketPriority priority);
+    void AppMsgSend(string serverId, ChannelLayerPacketPriority priority);
 
-    void SendIPacket(int serverId);
-    void SendUPacket(int serverId);
-    void SendSPacket(int serverId);
+    void SendIPacket(string serverId);
+    void SendUPacket(string serverId);
+    void SendSPacket(string serverId);
 
-    void RcvIPacket(int serverId);
-    void RcvUPacket(int serverId);
-    void RcvSPacket(int serverId);
+    void RcvIPacket(string serverId);
+    void RcvUPacket(string serverId);
+    void RcvSPacket(string serverId);
 
-    void ProtocolError(int serverId);
+    void ProtocolError(string serverId);
 }
 

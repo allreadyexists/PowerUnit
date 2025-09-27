@@ -1,5 +1,7 @@
 using FastEnumUtility;
 
+using Microsoft.Extensions.Configuration;
+
 using PowerUnit.Service.IEC104.Abstract;
 
 using System.Diagnostics.Metrics;
@@ -37,80 +39,80 @@ public class IEC104Diagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IIEC60870
         _sendMsgPrepareDuration = _meter.CreateGauge<double>("app-send-msg-prepare-duration", "ns");
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSend(int serverId, ChannelLayerPacketPriority priority)
+    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSend(string serverId, ChannelLayerPacketPriority priority)
     {
         _appMsgSend.Add(1,
-            KeyValuePair.Create<string, object?>(nameof(serverId), serverId.ToString()),
+            KeyValuePair.Create<string, object?>(nameof(serverId), serverId),
             KeyValuePair.Create<string, object?>(nameof(priority), priority.FastToString())
             );
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSkip(int serverId, ChannelLayerPacketPriority priority)
+    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSkip(string serverId, ChannelLayerPacketPriority priority)
     {
         _appMsgSkip.Add(1,
-            KeyValuePair.Create<string, object?>(nameof(serverId), serverId.ToString()),
+            KeyValuePair.Create<string, object?>(nameof(serverId), serverId),
             KeyValuePair.Create<string, object?>(nameof(priority), priority.FastToString())
             );
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgTotal(int serverId, ChannelLayerPacketPriority priority)
+    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgTotal(string serverId, ChannelLayerPacketPriority priority)
     {
         _appMsgTotal.Add(1,
-            KeyValuePair.Create<string, object?>(nameof(serverId), serverId.ToString()),
+            KeyValuePair.Create<string, object?>(nameof(serverId), serverId),
             KeyValuePair.Create<string, object?>(nameof(priority), priority.FastToString())
             );
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.SendIPacket(int serverId)
+    void IIEC60870_5_104ChannelLayerDiagnostic.SendIPacket(string serverId)
     {
         _sndPacket.Add(1,
-            KeyValuePair.Create<string, object?>(nameof(serverId), serverId.ToString()),
+            KeyValuePair.Create<string, object?>(nameof(serverId), serverId),
             KeyValuePair.Create<string, object?>("type", "I"));
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.SendUPacket(int serverId)
+    void IIEC60870_5_104ChannelLayerDiagnostic.SendUPacket(string serverId)
     {
         _sndPacket.Add(1,
-            KeyValuePair.Create<string, object?>(nameof(serverId), serverId.ToString()),
+            KeyValuePair.Create<string, object?>(nameof(serverId), serverId),
             KeyValuePair.Create<string, object?>("type", "U"));
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.SendSPacket(int serverId)
+    void IIEC60870_5_104ChannelLayerDiagnostic.SendSPacket(string serverId)
     {
         _sndPacket.Add(1,
-            KeyValuePair.Create<string, object?>(nameof(serverId), serverId.ToString()),
+            KeyValuePair.Create<string, object?>(nameof(serverId), serverId),
             KeyValuePair.Create<string, object?>("type", "S"));
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.RcvIPacket(int serverId)
+    void IIEC60870_5_104ChannelLayerDiagnostic.RcvIPacket(string serverId)
     {
         _rcvPacket.Add(1,
-            KeyValuePair.Create<string, object?>(nameof(serverId), serverId.ToString()),
+            KeyValuePair.Create<string, object?>(nameof(serverId), serverId),
             KeyValuePair.Create<string, object?>("type", "I"));
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.RcvUPacket(int serverId)
+    void IIEC60870_5_104ChannelLayerDiagnostic.RcvUPacket(string serverId)
     {
         _rcvPacket.Add(1,
-            KeyValuePair.Create<string, object?>(nameof(serverId), serverId.ToString()),
+            KeyValuePair.Create<string, object?>(nameof(serverId), serverId),
             KeyValuePair.Create<string, object?>("type", "U"));
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.RcvSPacket(int serverId)
+    void IIEC60870_5_104ChannelLayerDiagnostic.RcvSPacket(string serverId)
     {
         _rcvPacket.Add(1,
-            KeyValuePair.Create<string, object?>(nameof(serverId), serverId.ToString()),
+            KeyValuePair.Create<string, object?>(nameof(serverId), serverId),
             KeyValuePair.Create<string, object?>("type", "S"));
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.ProtocolError(int serverId)
+    void IIEC60870_5_104ChannelLayerDiagnostic.ProtocolError(string serverId)
     {
-        _protocolError.Add(1, KeyValuePair.Create<string, object?>(nameof(serverId), serverId.ToString()));
+        _protocolError.Add(1, KeyValuePair.Create<string, object?>(nameof(serverId), serverId));
     }
 
-    void IIEC60870_5_104ApplicationLayerDiagnostic.AppSendMsgPrepareDuration(int serverId, double duration)
+    void IIEC60870_5_104ApplicationLayerDiagnostic.AppSendMsgPrepareDuration(string serverId, double duration)
     {
-        _sendMsgPrepareDuration.Record(duration, KeyValuePair.Create<string, object?>(nameof(serverId), serverId.ToString()));
+        _sendMsgPrepareDuration.Record(duration, KeyValuePair.Create<string, object?>(nameof(serverId), serverId));
     }
 
     void IDisposable.Dispose() => _meter.Dispose();
