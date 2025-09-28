@@ -12,6 +12,101 @@ public struct ByteBuffer10
 /// Заголовок пакета - причина передачи 2 байта, общий адрес ASDU 2 байта
 /// параметры постоянные для МЭК 104
 /// </summary>
+public /*readonly*/ class ASDUPacketHeader_2_2Class
+{
+    /// <summary>
+    /// Тип ASDU
+    /// </summary>
+    public /*readonly*/ byte AsduType;
+
+    #region Классификатор переменной структуры
+    ///// <summary>
+    ///// Одиночный - 0 индивидуальные / последовательность - 1 последовательность подряд идущих адресов
+    ///// </summary>
+    //public SQ SQ { get; }
+    ///// <summary>
+    ///// Число объектов информации
+    ///// </summary>
+    //public byte Count { get; }
+    public /*readonly*/ byte VarStructInfo;
+
+    #endregion
+
+    #region Причины передачи
+    //public CauseOfTransmit CauseOfTransmit { get; }
+    //public PN PN { get; }
+    //public TN TN { get; }
+    public /*readonly*/ byte CauseOfTransmit;
+    #endregion
+
+    /// <summary>
+    /// Адрес инициализатора
+    /// </summary>
+    public /*readonly*/ byte InitAddr;
+
+    /// <summary>
+    /// Общий адрес ASDU
+    /// </summary>
+    public ushort CommonAddrAsdu;
+}
+
+/// <summary>
+/// Заголовок пакета - причина передачи 2 байта, общий адрес ASDU 2 байта
+/// параметры постоянные для МЭК 104
+/// </summary>
+[StructLayout(LayoutKind.Explicit, Pack = 1)]
+public /*readonly*/ struct ASDUPacketHeader_2_2Template
+{
+    public static byte Size => (byte)Marshal.SizeOf<ASDUPacketHeader_2_2Template>();
+
+    //[FieldOffset(0)]
+    //public readonly ByteBuffer10 AsArray;
+
+    /// <summary>
+    /// Тип ASDU
+    /// </summary>
+    [FieldOffset(0)]
+    public /*readonly*/ byte AsduType;
+
+    #region Классификатор переменной структуры
+    ///// <summary>
+    ///// Одиночный - 0 индивидуальные / последовательность - 1 последовательность подряд идущих адресов
+    ///// </summary>
+    //public SQ SQ { get; }
+    ///// <summary>
+    ///// Число объектов информации
+    ///// </summary>
+    //public byte Count { get; }
+    [FieldOffset(1)]
+    public /*readonly*/ byte VarStructInfo;
+
+    #endregion
+
+    #region Причины передачи
+    //public CauseOfTransmit CauseOfTransmit { get; }
+    //public PN PN { get; }
+    //public TN TN { get; }
+    [FieldOffset(2)]
+    public /*readonly*/ byte CauseOfTransmit;
+    #endregion
+
+    /// <summary>
+    /// Адрес инициализатора
+    /// </summary>
+    [FieldOffset(3)]
+    public /*readonly*/ byte InitAddr;
+
+    /// <summary>
+    /// Общий адрес ASDU
+    /// </summary>
+    [FieldOffset(4)]
+    public ushort CommonAddrAsdu;
+}
+
+/// <summary>
+/// Заголовок пакета - причина передачи 2 байта, общий адрес ASDU 2 байта
+/// параметры постоянные для МЭК 104
+/// </summary>
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
 public readonly struct ASDUPacketHeader_2_2
 {

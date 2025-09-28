@@ -81,6 +81,22 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         }
     }
 
+    [ThreadStatic]
+    private static ASDUPacketHeader_2_2Class _header;
+    internal static ASDUPacketHeader_2_2Class Header
+    {
+        get
+        {
+            if (_header == null)
+            {
+                _header = new ASDUPacketHeader_2_2Class();
+                return _header;
+            }
+
+            return _header;
+        }
+    }
+
     private unsafe void SendValuesBase(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values, Action<IEC60870_5_104ServerApplicationLayer, byte[], int, COT> send)
 #pragma warning restore IDE0051 // Remove unused private members
     {
@@ -135,9 +151,13 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
                             break;
                     } while (true);
 
-                    var headerReq = new ASDUPacketHeader_2_2(currentValue.Type, SQ.Single, packetItemCount, cot, initAddr: initAddr,
-                                            commonAddrAsdu: _applicationLayerOption.CommonASDUAddress);
-                    headerReq.SerializeUnsafe(buffer, 0);
+                    Header.AsduType = (byte)currentValue.Type;
+                    Header.VarStructInfo = (byte)((byte)SQ.Single | packetItemCount);
+                    Header.CauseOfTransmit = (byte)((byte)PN.Positive | (byte)TN.NotTest | (byte)cot);
+                    Header.InitAddr = initAddr;
+                    Header.CommonAddrAsdu = _applicationLayerOption.CommonASDUAddress;
+
+                    ZeroCopySerialize(Header, ptr, 0, _mapHeaderConverterPtr);
                 }
 
                 duration = _timeProvider.GetElapsedTime(start);
@@ -219,6 +239,17 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         @struct->QDS = 0;
         @struct->Value = @object.Value.ValueAsFloat!.Value;
     };
+
+    private static readonly unsafe delegate*<ASDUPacketHeader_2_2Class, ASDUPacketHeader_2_2Template*, void> _mapHeaderConverterPtr = &MapHeaderConverter;
+
+    private static unsafe void MapHeaderConverter(ASDUPacketHeader_2_2Class @object, ASDUPacketHeader_2_2Template* @struct)
+    {
+        @struct->AsduType = @object.AsduType;
+        @struct->VarStructInfo = @object.VarStructInfo;
+        @struct->CauseOfTransmit = @object.CauseOfTransmit;
+        @struct->InitAddr = @object.InitAddr;
+        @struct->CommonAddrAsdu = @object.CommonAddrAsdu;
+    }
 
     public IEC60870_5_104ServerApplicationLayer(IEC104ServerModel serverModel,
         IDataSource<MapValueItem> dataSource,
