@@ -3,6 +3,17 @@ using System.Runtime.InteropServices;
 namespace PowerUnit.Service.IEC104.Types.Asdu;
 
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
+public struct Address3Template
+{
+    public static byte Size => (byte)Marshal.SizeOf<Address3>();
+
+    [FieldOffset(0)]
+    public ushort Address;
+    [FieldOffset(2)]
+    public byte InitAddress;
+}
+
+[StructLayout(LayoutKind.Explicit, Pack = 1)]
 public readonly struct Address3
 {
     public static byte Size => (byte)Marshal.SizeOf<Address3>();

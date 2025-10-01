@@ -11,13 +11,13 @@ public struct M_ME_TF_1_SingleTemplate
     public static byte MaxItemCount => (byte)(LengthHelper.PACKET_CONST_PART / Size);
 
     [FieldOffset(0)]
-    public /*private readonly */Address3 Address;
+    public /*private readonly */Address3Template Address;
     [FieldOffset(3)]
     public /*private readonly */float Value;
     [FieldOffset(7)]
     public /*private readonly */QDS_Status QDS;
     [FieldOffset(8)]
-    public /*private readonly */CP56Time2a DateTime;
+    public /*private readonly */CP56Time2aTemplate DateTime;
 
     //public M_ME_TF_1_Single(ushort address, float value, QDS_Status qds, DateTime dateTime, TimeStatus timeStatus)
     //{

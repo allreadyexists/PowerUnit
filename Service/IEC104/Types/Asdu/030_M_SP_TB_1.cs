@@ -11,11 +11,11 @@ public /*readonly*/ struct M_SP_TB_1_SingleTemplate
     public static byte MaxItemCount => (byte)(LengthHelper.PACKET_CONST_PART / Size);
 
     [FieldOffset(0)]
-    public Address3 Address;
+    public Address3Template Address;
     [FieldOffset(3)]
     public byte SIQ;
     [FieldOffset(4)]
-    public CP56Time2a DateTime;
+    public CP56Time2aTemplate DateTime;
 
     //public M_SP_TB_1_SingleTemplate(ushort address, SIQ_Value value, SIQ_Status siq, DateTime dateTime, TimeStatus timeStatus)
     //{

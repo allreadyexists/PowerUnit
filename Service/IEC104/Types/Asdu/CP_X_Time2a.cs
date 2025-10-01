@@ -12,6 +12,52 @@ public enum TimeStatus : int
 }
 
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
+public struct CP56Time2aTemplate
+{
+    [FieldOffset(0)]
+    public int T1234;
+
+    [FieldOffset(0)]
+    public byte T1;
+    [FieldOffset(1)]
+    public byte T2;
+
+    [FieldOffset(0)]
+    public ushort Ms;
+
+    [FieldOffset(2)]
+    public byte T3;
+
+    [FieldOffset(3)]
+    public byte T4;
+    [FieldOffset(4)]
+    public byte T5;
+    [FieldOffset(5)]
+    public byte T6;
+    [FieldOffset(6)]
+    public byte T7;
+
+    //public CP56Time2a(DateTime dateTime, TimeStatus timeStatus)
+    //{
+    //    var dayOfWeek = (byte)dateTime.DayOfWeek;
+
+    //    _ms = (ushort)(dateTime.Millisecond + 1000 * dateTime.Second);
+    //    _t3 = (byte)(dateTime.Minute & 0b00111111);
+    //    _t4 = (byte)(dateTime.Hour & 0b00011111);
+    //    _t5 = (byte)((byte)dateTime.Day | (byte)((dayOfWeek == 0 ? 7 : dayOfWeek) << 5));
+    //    _t6 = (byte)(dateTime.Month & 0b00011111);
+    //    _t7 = (byte)(dateTime.Year - 2000 & 0b01111111);
+
+    //    if ((timeStatus & TimeStatus.RES1) != 0)
+    //        _t1234 |= (int)TimeStatus.RES1;
+    //    if ((timeStatus & TimeStatus.IV) != 0)
+    //        _t1234 |= (int)TimeStatus.IV;
+    //    if ((timeStatus & TimeStatus.SU) != 0)
+    //        _t1234 |= (int)TimeStatus.SU;
+    //}
+}
+
+[StructLayout(LayoutKind.Explicit, Pack = 1)]
 public readonly struct CP56Time2a
 {
     [FieldOffset(0)]

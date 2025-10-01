@@ -11,11 +11,11 @@ public struct M_DP_TB_1_SingleTemplate
     public static byte MaxItemCount => (byte)(LengthHelper.PACKET_CONST_PART / Size);
 
     [FieldOffset(0)]
-    public /*readonly */Address3 Address;
+    public /*readonly */Address3Template Address;
     [FieldOffset(3)]
     public /*readonly */byte DIQ;
     [FieldOffset(4)]
-    public /*readonly */CP56Time2a DateTime;
+    public /*readonly */CP56Time2aTemplate DateTime;
 
     //public M_DP_TB_1_SingleTemplate(ushort address, DIQ_Value value, DIQ_Status diq, DateTime dateTime, TimeStatus timeStatus)
     //{

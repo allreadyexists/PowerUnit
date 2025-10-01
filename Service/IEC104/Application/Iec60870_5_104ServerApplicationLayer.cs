@@ -97,7 +97,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         }
     }
 
-    private unsafe void SendValuesBase(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values, Action<IEC60870_5_104ServerApplicationLayer, byte[], int, COT> send)
+    private unsafe void SendValuesBase(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values, delegate*<IEC60870_5_104ServerApplicationLayer, byte[], int, COT, void> sendActionPtr)
 #pragma warning restore IDE0051 // Remove unused private members
     {
         if (values.Count > 0)
@@ -108,6 +108,10 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
             byte packetItemCount = 0;
             MapValueItem currentValue;
             TimeSpan duration;
+
+            Header.CauseOfTransmit = (byte)((byte)PN.Positive | (byte)TN.NotTest | (byte)cot);
+            Header.InitAddr = initAddr;
+            Header.CommonAddrAsdu = _applicationLayerOption.CommonASDUAddress;
 
             while (i < values.Count)
             {
@@ -153,9 +157,6 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
                     Header.AsduType = (byte)currentValue.Type;
                     Header.VarStructInfo = (byte)((byte)SQ.Single | packetItemCount);
-                    Header.CauseOfTransmit = (byte)((byte)PN.Positive | (byte)TN.NotTest | (byte)cot);
-                    Header.InitAddr = initAddr;
-                    Header.CommonAddrAsdu = _applicationLayerOption.CommonASDUAddress;
 
                     ZeroCopySerialize(Header, ptr, 0, _mapHeaderConverterPtr);
                 }
@@ -163,82 +164,91 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
                 duration = _timeProvider.GetElapsedTime(start);
                 _diagnostic.AppSendMsgPrepareDuration(_serverName, duration.TotalNanoseconds);
 
-                send(this, buffer, ASDUPacketHeader_2_2.Size + packetItemCount * size, cot);
+                sendActionPtr(this, buffer, ASDUPacketHeader_2_2.Size + packetItemCount * size, cot);
             }
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-#pragma warning disable IDE0051 // Remove unused private members
-    private void SendValues2(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values)
-#pragma warning restore IDE0051 // Remove unused private members
+//    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+//#pragma warning disable IDE0051 // Remove unused private members
+//    private void SendValues2(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values)
+//#pragma warning restore IDE0051 // Remove unused private members
+//    {
+//        SendValuesBase(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
+//        {
+//            ctx._packetSender!.Send(buf.AsSpan(0, len), cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
+//        });
+//    }
+
+    private static readonly unsafe delegate*<IEC60870_5_104ServerApplicationLayer, byte[], int, COT, void> _sendActionPtr = &SendAction;
+
+    private static void SendAction(IEC60870_5_104ServerApplicationLayer ctx, byte[] buf, int len, COT cot)
     {
-        SendValuesBase(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
-        {
-            ctx._packetSender!.Send(buf.AsSpan(0, len), cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
-        });
+        ctx._packetSender!.Send(buf[..len], cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
     }
 
 #pragma warning disable IDE0051 // Remove unused private members
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void SendValues(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values)
+    private unsafe void SendValues(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values)
 #pragma warning restore IDE0051 // Remove unused private members
     {
-        SendValuesBase(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
-        {
-            ctx._packetSender!.Send(buf[..len], cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
-        });
+        SendValuesBase(buffer, initAddr, cot, values, _sendActionPtr);
     }
 
     private static readonly unsafe delegate*<MapValueItem, M_SP_TB_1_SingleTemplate*, void> _mapValueItemToM_SP_TB_1_SingleConverterPtr = &MapValueItemToM_SP_TB_1_SingleConverter;
 
     private static unsafe void MapValueItemToM_SP_TB_1_SingleConverter(MapValueItem @object, M_SP_TB_1_SingleTemplate* @struct)
     {
-        @struct->Address = new Address3(@object.Address);
-        @struct->DateTime = new CP56Time2a(@object.Value.ValueDt!.Value, 0);
-        @struct->SIQ = (byte)(@object.Value.ValueAsBool!.Value ? SIQ_Value.On : SIQ_Value.Off);
-    }
+        var dateTime = @object.Value.ValueDt;
+        var dayOfWeek = (byte)dateTime.DayOfWeek;
+        @struct->Address.Address = @object.Address;
 
-    private static readonly unsafe ObjectToStructConverter<MapValueItem, M_SP_TB_1_SingleTemplate> _mapValueItemToM_SP_TB_1_SingleConverter = static (@object, @struct) =>
-    {
-        @struct->Address = new Address3(@object.Address);
-        @struct->DateTime = new CP56Time2a(@object.Value.ValueDt!.Value, 0);
-        @struct->SIQ = (byte)(@object.Value.ValueAsBool!.Value ? SIQ_Value.On : SIQ_Value.Off);
-    };
+        @struct->DateTime.Ms = (ushort)(dateTime.Millisecond + 1000 * dateTime.Second);
+        @struct->DateTime.T3 = (byte)(dateTime.Minute & 0b00111111);
+        @struct->DateTime.T4 = (byte)(dateTime.Hour & 0b00011111);
+        @struct->DateTime.T5 = (byte)((byte)dateTime.Day | (byte)((dayOfWeek == 0 ? 7 : dayOfWeek) << 5));
+        @struct->DateTime.T6 = (byte)(dateTime.Month & 0b00011111);
+        @struct->DateTime.T7 = (byte)(dateTime.Year - 2000 & 0b01111111);
+
+        @struct->SIQ = (byte)(@object.Value.ValueAsBool ? SIQ_Value.On : SIQ_Value.Off);
+    }
 
     private static readonly unsafe delegate*<MapValueItem, M_DP_TB_1_SingleTemplate*, void> _mapValueItemToM_DP_TB_1_SingleConverterPtr = &MapValueItemToM_DP_TB_1_SingleConverter;
 
     private static unsafe void MapValueItemToM_DP_TB_1_SingleConverter(MapValueItem @object, M_DP_TB_1_SingleTemplate* @struct)
     {
-        @struct->Address = new Address3(@object.Address);
-        @struct->DateTime = new CP56Time2a(@object.Value.ValueDt!.Value, 0);
-        @struct->DIQ = (byte)(@object.Value.ValueAsBool!.Value ? DIQ_Value.On : DIQ_Value.Off);
-    }
+        var dateTime = @object.Value.ValueDt;
+        var dayOfWeek = (byte)dateTime.DayOfWeek;
+        @struct->Address.Address = @object.Address;
 
-    private static readonly unsafe ObjectToStructConverter<MapValueItem, M_DP_TB_1_SingleTemplate> _mapValueItemToM_DP_TB_1_SingleConverter = static (@object, @struct) =>
-    {
-        @struct->Address = new Address3(@object.Address);
-        @struct->DateTime = new CP56Time2a(@object.Value.ValueDt!.Value, 0);
-        @struct->DIQ = (byte)(@object.Value.ValueAsBool!.Value ? DIQ_Value.On : DIQ_Value.Off);
-    };
+        @struct->DateTime.Ms = (ushort)(dateTime.Millisecond + 1000 * dateTime.Second);
+        @struct->DateTime.T3 = (byte)(dateTime.Minute & 0b00111111);
+        @struct->DateTime.T4 = (byte)(dateTime.Hour & 0b00011111);
+        @struct->DateTime.T5 = (byte)((byte)dateTime.Day | (byte)((dayOfWeek == 0 ? 7 : dayOfWeek) << 5));
+        @struct->DateTime.T6 = (byte)(dateTime.Month & 0b00011111);
+        @struct->DateTime.T7 = (byte)(dateTime.Year - 2000 & 0b01111111);
+
+        @struct->DIQ = (byte)(@object.Value.ValueAsBool ? DIQ_Value.On : DIQ_Value.Off);
+    }
 
     private static readonly unsafe delegate*<MapValueItem, M_ME_TF_1_SingleTemplate*, void> _mapValueItemToM_ME_TF_1_SingleConverterPtr = &MapValueItemToM_ME_TF_1_SingleConverter;
 
     private static unsafe void MapValueItemToM_ME_TF_1_SingleConverter(MapValueItem @object, M_ME_TF_1_SingleTemplate* @struct)
     {
-        @struct->Address = new Address3(@object.Address);
-        @struct->DateTime = new CP56Time2a(@object.Value.ValueDt!.Value, 0);
-        @struct->QDS = 0;
-        @struct->Value = @object.Value.ValueAsFloat!.Value;
-    }
+        var dateTime = @object.Value.ValueDt;
+        var dayOfWeek = (byte)dateTime.DayOfWeek;
+        @struct->Address.Address = @object.Address;
 
-    private static readonly unsafe ObjectToStructConverter<MapValueItem, M_ME_TF_1_SingleTemplate> _mapValueItemToM_ME_TF_1_SingleConverter = static (@object, @struct) =>
-    {
-        @struct->Address = new Address3(@object.Address);
-        @struct->DateTime = new CP56Time2a(@object.Value.ValueDt!.Value, 0);
+        @struct->DateTime.Ms = (ushort)(dateTime.Millisecond + 1000 * dateTime.Second);
+        @struct->DateTime.T3 = (byte)(dateTime.Minute & 0b00111111);
+        @struct->DateTime.T4 = (byte)(dateTime.Hour & 0b00011111);
+        @struct->DateTime.T5 = (byte)((byte)dateTime.Day | (byte)((dayOfWeek == 0 ? 7 : dayOfWeek) << 5));
+        @struct->DateTime.T6 = (byte)(dateTime.Month & 0b00011111);
+        @struct->DateTime.T7 = (byte)(dateTime.Year - 2000 & 0b01111111);
+
         @struct->QDS = 0;
-        @struct->Value = @object.Value.ValueAsFloat!.Value;
-    };
+        @struct->Value = @object.Value.ValueAsFloat;
+    }
 
     private static readonly unsafe delegate*<ASDUPacketHeader_2_2Class, ASDUPacketHeader_2_2Template*, void> _mapHeaderConverterPtr = &MapHeaderConverter;
 
