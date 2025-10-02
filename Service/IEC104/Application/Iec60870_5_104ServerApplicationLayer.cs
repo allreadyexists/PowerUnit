@@ -36,7 +36,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
     private readonly CancellationTokenSource _cts;
 
-    private static readonly int _bufferizationSize = 100;
+    private static readonly int _bufferizationSize = 128;
     private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromSeconds(1);
     private IDisposable? _subscriber2;
 
@@ -202,6 +202,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         var dateTime = @object.Value.ValueDt;
         var dayOfWeek = (byte)dateTime.DayOfWeek;
         @struct->Address.Address = @object.Address;
+        @struct->Address.InitAddress = 0;
 
         @struct->DateTime.Ms = (ushort)(dateTime.Millisecond + 1000 * dateTime.Second);
         @struct->DateTime.T3 = (byte)(dateTime.Minute & 0b00111111);
@@ -220,6 +221,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         var dateTime = @object.Value.ValueDt;
         var dayOfWeek = (byte)dateTime.DayOfWeek;
         @struct->Address.Address = @object.Address;
+        @struct->Address.InitAddress = 0;
 
         @struct->DateTime.Ms = (ushort)(dateTime.Millisecond + 1000 * dateTime.Second);
         @struct->DateTime.T3 = (byte)(dateTime.Minute & 0b00111111);
@@ -238,6 +240,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         var dateTime = @object.Value.ValueDt;
         var dayOfWeek = (byte)dateTime.DayOfWeek;
         @struct->Address.Address = @object.Address;
+        @struct->Address.InitAddress = 0;
 
         @struct->DateTime.Ms = (ushort)(dateTime.Millisecond + 1000 * dateTime.Second);
         @struct->DateTime.T3 = (byte)(dateTime.Minute & 0b00111111);

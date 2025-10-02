@@ -4,6 +4,7 @@
     <Project Path="Common/DateTimeManager/PowerUnit.Common.DateTimeManager.csproj" />
     <Project Path="Common/EnviromentManager/PowerUnit.Common.EnviromentManager.csproj" />
     <Project Path="Common/Exceptions/PowerUnit.Common.Exceptions.csproj" />
+    <Project Path="Common/NetCoreServer/PowerUnit.Common.NetCoreServer.csproj" />
     <Project Path="Common/Options/PowerUnit.Common.Options.csproj" />
     <Project Path="Common/Other/PowerUnit.Common.Other.csproj" />
     <Project Path="Common/Reactive/PowerUnit.Common.Reactive.csproj" />

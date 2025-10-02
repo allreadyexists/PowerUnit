@@ -12,7 +12,7 @@
 	<ItemGroup>
 		<PackageReference Include="FastEnum" Version="$(FastEnumVersion)" />
 		<PackageReference Include="NLog.Web.AspNetCore" Version="$(NLogWebAspNetCoreVersion)" />
-		<PackageReference Include="NetCoreServer" Version="$(NetCoreServerVersion)" />
+		<!--<PackageReference Include="NetCoreServer" Version="$(NetCoreServerVersion)" />-->
 		<PackageReference Include="OpenTelemetry.Exporter.Prometheus.HttpListener" Version="1.12.0-beta.1" />
 		<!--PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="$(OpenTelemetryExporterPrometheusAspNetCoreVersion)" /-->
 		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryExtensionsHostingVersion)" />
@@ -25,6 +25,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\..\Common\EnviromentManager\PowerUnit.Common.EnviromentManager.csproj" />
+		<ProjectReference Include="..\..\..\Common\NetCoreServer\PowerUnit.Common.NetCoreServer.csproj" />
 		<ProjectReference Include="..\..\..\Common\StringHelpers\PowerUnit.Common.StringHelpers.csproj" />
 		<ProjectReference Include="..\..\..\Common\Subsciption\PowerUnit.Common.Subsciption.csproj" />
 		<ProjectReference Include="..\..\..\Common\TimeoutService\PowerUnit.Common.TimeoutService.csproj" />
