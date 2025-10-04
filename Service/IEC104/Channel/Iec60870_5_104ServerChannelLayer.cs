@@ -316,7 +316,6 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
         if (packetToSendCount > 0)
         {
-            var lastPacketToSendCount = packetToSendCount;
             packetToSendCount = Math.Min(packetToSendCount, _serverModel.ChannelLayerModel.WindowKSize - _txW);
 
             var skip = _txW;
@@ -585,10 +584,13 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         {
             await foreach (var @event in Events.Reader.ReadAllAsync(ct))
             {
-                if (@event is TimerEvent timerEvent)
-                    _logger.LogTimerEvent(@event, timerEvent.TimerId);
-                else
-                    _logger.LogEvent(@event);
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    if (@event is TimerEvent timerEvent)
+                        _logger.LogTimerEvent(@event, timerEvent.TimerId);
+                    else
+                        _logger.LogEvent(@event);
+                }
 
                 switch (@event)
                 {
@@ -649,19 +651,13 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
     /// <summary>
     /// Отключение физического уровня
     /// </summary>
-    void IPhysicalLayerNotification.Disconnect()
-    {
-        Events.Writer.TryWrite(DisconnectEvent);
-    }
+    void IPhysicalLayerNotification.Disconnect() => Events.Writer.TryWrite(DisconnectEvent);
 
     /// <summary>
     /// Принятый пакет из физического уровня нужно продетектировать
     /// </summary>
     /// <param name="packet"></param>
-    void IPhysicalLayerNotification.Recieve(byte[] packet)
-    {
-        FrameDetector.TryGetFrame(packet);
-    }
+    void IPhysicalLayerNotification.Recieve(byte[] packet) => FrameDetector.TryGetFrame(packet);
 
     /// <summary>
     /// Собран очередной пакет по протоколу
@@ -694,10 +690,6 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         Events.Writer.TryWrite(TxEvent);
     }
 
-    Task ITimeoutOwner.NotifyTimeoutReadyAsync(long timeout, CancellationToken cancellationToken)
-    {
-        Events.Writer.TryWrite(new TimerEvent(timeout));
-        return Task.CompletedTask;
-    }
+    void ITimeoutOwner.NotifyTimeoutReady(long timeout) => Events.Writer.TryWrite(new TimerEvent(timeout));
 }
 

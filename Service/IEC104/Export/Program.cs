@@ -78,12 +78,13 @@ internal sealed class Program
                     services.AddSingleton<IConfigProvider, IEC104ConfigProvider>();
 
                     // внутренний
+                    services.AddSingleton<IEC104ServerFactory>();
+                    services.AddTimeoutService(ServiceLifetime.Transient);
+
                     services.AddSingleton<IEC104Diagnostic>();
                     services.AddSingleton<IIEC60870_5_104ChannelLayerDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
                     services.AddSingleton<IIEC60870_5_104ApplicationLayerDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
-
-                    services.AddSingleton<IEC104ServerFactory>();
-                    services.AddTimeoutService(ServiceLifetime.Transient);
+                    services.AddSingleton<ITimeoutServiceDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
 
                     services.AddSingleton(s =>
                     {

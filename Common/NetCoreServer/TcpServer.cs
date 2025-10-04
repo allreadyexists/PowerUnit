@@ -1,10 +1,8 @@
-﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
 
 namespace NetCoreServer
 {
@@ -19,23 +17,23 @@ namespace NetCoreServer
         /// </summary>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public TcpServer(IPAddress address, int port) : this(new IPEndPoint(address, port)) {}
+        public TcpServer(IPAddress address, int port) : this(new IPEndPoint(address, port)) { }
         /// <summary>
         /// Initialize TCP server with a given IP address and port number
         /// </summary>
         /// <param name="address">IP address</param>
         /// <param name="port">Port number</param>
-        public TcpServer(string address, int port) : this(new IPEndPoint(IPAddress.Parse(address), port)) {}
+        public TcpServer(string address, int port) : this(new IPEndPoint(IPAddress.Parse(address), port)) { }
         /// <summary>
         /// Initialize TCP server with a given DNS endpoint
         /// </summary>
         /// <param name="endpoint">DNS endpoint</param>
-        public TcpServer(DnsEndPoint endpoint) : this(endpoint as EndPoint, endpoint.Host, endpoint.Port) {}
+        public TcpServer(DnsEndPoint endpoint) : this(endpoint as EndPoint, endpoint.Host, endpoint.Port) { }
         /// <summary>
         /// Initialize TCP server with a given IP endpoint
         /// </summary>
         /// <param name="endpoint">IP endpoint</param>
-        public TcpServer(IPEndPoint endpoint) : this(endpoint as EndPoint, endpoint.Address.ToString(), endpoint.Port) {}
+        public TcpServer(IPEndPoint endpoint) : this(endpoint as EndPoint, endpoint.Address.ToString(), endpoint.Port) { }
         /// <summary>
         /// Initialize TCP server with a given endpoint, address and port
         /// </summary>
@@ -202,6 +200,7 @@ namespace NetCoreServer
 
             // Setup acceptor event arg
             _acceptorEventArg = new SocketAsyncEventArgs();
+            _acceptorEventArg.UserToken = this;
             _acceptorEventArg.Completed += OnAsyncCompleted;
 
             // Create a new acceptor socket
@@ -275,12 +274,13 @@ namespace NetCoreServer
                 _acceptorSocket.Dispose();
 
                 // Dispose event arguments
+                _acceptorEventArg.UserToken = null;
                 _acceptorEventArg.Dispose();
 
                 // Update the acceptor socket disposed flag
                 IsSocketDisposed = true;
             }
-            catch (ObjectDisposedException) {}
+            catch (ObjectDisposedException) { }
 
             // Disconnect all sessions
             DisconnectAll();
@@ -354,12 +354,13 @@ namespace NetCoreServer
         /// This method is the callback method associated with Socket.AcceptAsync()
         /// operations and is invoked when an accept operation is complete
         /// </summary>
-        private void OnAsyncCompleted(object sender, SocketAsyncEventArgs e)
+        private static void OnAsyncCompleted(object? sender, SocketAsyncEventArgs e)
         {
-            if (IsSocketDisposed)
+            var obj = (TcpServer)e.UserToken!;
+            if (obj.IsSocketDisposed)
                 return;
 
-            ProcessAccept(e);
+            obj.ProcessAccept(e);
         }
 
         #endregion
@@ -489,46 +490,46 @@ namespace NetCoreServer
         /// <summary>
         /// Handle server starting notification
         /// </summary>
-        protected virtual void OnStarting() {}
+        protected virtual void OnStarting() { }
         /// <summary>
         /// Handle server started notification
         /// </summary>
-        protected virtual void OnStarted() {}
+        protected virtual void OnStarted() { }
         /// <summary>
         /// Handle server stopping notification
         /// </summary>
-        protected virtual void OnStopping() {}
+        protected virtual void OnStopping() { }
         /// <summary>
         /// Handle server stopped notification
         /// </summary>
-        protected virtual void OnStopped() {}
+        protected virtual void OnStopped() { }
 
         /// <summary>
         /// Handle session connecting notification
         /// </summary>
         /// <param name="session">Connecting session</param>
-        protected virtual void OnConnecting(TcpSession session) {}
+        protected virtual void OnConnecting(TcpSession session) { }
         /// <summary>
         /// Handle session connected notification
         /// </summary>
         /// <param name="session">Connected session</param>
-        protected virtual void OnConnected(TcpSession session) {}
+        protected virtual void OnConnected(TcpSession session) { }
         /// <summary>
         /// Handle session disconnecting notification
         /// </summary>
         /// <param name="session">Disconnecting session</param>
-        protected virtual void OnDisconnecting(TcpSession session) {}
+        protected virtual void OnDisconnecting(TcpSession session) { }
         /// <summary>
         /// Handle session disconnected notification
         /// </summary>
         /// <param name="session">Disconnected session</param>
-        protected virtual void OnDisconnected(TcpSession session) {}
+        protected virtual void OnDisconnected(TcpSession session) { }
 
         /// <summary>
         /// Handle error notification
         /// </summary>
         /// <param name="error">Socket error code</param>
-        protected virtual void OnError(SocketError error) {}
+        protected virtual void OnError(SocketError error) { }
 
         internal void OnConnectingInternal(TcpSession session) { OnConnecting(session); }
         internal void OnConnectedInternal(TcpSession session) { OnConnected(session); }

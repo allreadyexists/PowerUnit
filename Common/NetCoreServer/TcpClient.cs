@@ -1,57 +1,135 @@
+using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 
 namespace NetCoreServer
 {
     /// <summary>
-    /// TCP session is used to read and write data from the connected TCP client
+    /// TCP client is used to read/write data from/into the connected TCP server
     /// </summary>
     /// <remarks>Thread-safe</remarks>
-    public class TcpSession : IDisposable
+    public class TcpClient : IDisposable
     {
         /// <summary>
-        /// Initialize the session with a given server
+        /// Initialize TCP client with a given server IP address and port number
         /// </summary>
-        /// <param name="server">TCP server</param>
-        public TcpSession(TcpServer server)
+        /// <param name="address">IP address</param>
+        /// <param name="port">Port number</param>
+        public TcpClient(IPAddress address, int port) : this(new IPEndPoint(address, port)) {}
+        /// <summary>
+        /// Initialize TCP client with a given server IP address and port number
+        /// </summary>
+        /// <param name="address">IP address</param>
+        /// <param name="port">Port number</param>
+        public TcpClient(string address, int port) : this(new IPEndPoint(IPAddress.Parse(address), port)) {}
+        /// <summary>
+        /// Initialize TCP client with a given DNS endpoint
+        /// </summary>
+        /// <param name="endpoint">DNS endpoint</param>
+        public TcpClient(DnsEndPoint endpoint) : this(endpoint as EndPoint, endpoint.Host, endpoint.Port) {}
+        /// <summary>
+        /// Initialize TCP client with a given IP endpoint
+        /// </summary>
+        /// <param name="endpoint">IP endpoint</param>
+        public TcpClient(IPEndPoint endpoint) : this(endpoint as EndPoint, endpoint.Address.ToString(), endpoint.Port) {}
+        /// <summary>
+        /// Initialize TCP client with a given endpoint, address and port
+        /// </summary>
+        /// <param name="endpoint">Endpoint</param>
+        /// <param name="address">Server address</param>
+        /// <param name="port">Server port</param>
+        private TcpClient(EndPoint endpoint, string address, int port)
         {
             Id = Guid.NewGuid();
-            Server = server;
-            OptionReceiveBufferSize = server.OptionReceiveBufferSize;
-            OptionSendBufferSize = server.OptionSendBufferSize;
+            Address = address;
+            Port = port;
+            Endpoint = endpoint;
         }
 
         /// <summary>
-        /// Session Id
+        /// Client Id
         /// </summary>
         public Guid Id { get; }
 
         /// <summary>
-        /// Server
+        /// TCP server address
         /// </summary>
-        protected TcpServer Server { get; }
+        public string Address { get; }
+        /// <summary>
+        /// TCP server port
+        /// </summary>
+        public int Port { get; }
+        /// <summary>
+        /// Endpoint
+        /// </summary>
+        public EndPoint Endpoint { get; private set; }
         /// <summary>
         /// Socket
         /// </summary>
-        protected Socket Socket { get; private set; }
+        public Socket Socket { get; private set; }
 
         /// <summary>
-        /// Number of bytes pending sent by the session
+        /// Number of bytes pending sent by the client
         /// </summary>
         public long BytesPending { get; private set; }
         /// <summary>
-        /// Number of bytes sending by the session
+        /// Number of bytes sending by the client
         /// </summary>
         public long BytesSending { get; private set; }
         /// <summary>
-        /// Number of bytes sent by the session
+        /// Number of bytes sent by the client
         /// </summary>
         public long BytesSent { get; private set; }
         /// <summary>
-        /// Number of bytes received by the session
+        /// Number of bytes received by the client
         /// </summary>
         public long BytesReceived { get; private set; }
 
+        /// <summary>
+        /// Option: dual mode socket
+        /// </summary>
+        /// <remarks>
+        /// Specifies whether the Socket is a dual-mode socket used for both IPv4 and IPv6.
+        /// Will work only if socket is bound on IPv6 address.
+        /// </remarks>
+        public bool OptionDualMode { get; set; }
+        /// <summary>
+        /// Option: keep alive
+        /// </summary>
+        /// <remarks>
+        /// This option will setup SO_KEEPALIVE if the OS support this feature
+        /// </remarks>
+        public bool OptionKeepAlive { get; set; }
+        /// <summary>
+        /// Option: TCP keep alive time
+        /// </summary>
+        /// <remarks>
+        /// The number of seconds a TCP connection will remain alive/idle before keepalive probes are sent to the remote
+        /// </remarks>
+        public int OptionTcpKeepAliveTime { get; set; } = -1;
+        /// <summary>
+        /// Option: TCP keep alive interval
+        /// </summary>
+        /// <remarks>
+        /// The number of seconds a TCP connection will wait for a keepalive response before sending another keepalive probe
+        /// </remarks>
+        public int OptionTcpKeepAliveInterval { get; set; } = -1;
+        /// <summary>
+        /// Option: TCP keep alive retry count
+        /// </summary>
+        /// <remarks>
+        /// The number of TCP keep alive probes that will be sent before the connection is terminated
+        /// </remarks>
+        public int OptionTcpKeepAliveRetryCount { get; set; } = -1;
+        /// <summary>
+        /// Option: no delay
+        /// </summary>
+        /// <remarks>
+        /// This option will enable/disable Nagle's algorithm for TCP protocol
+        /// </remarks>
+        public bool OptionNoDelay { get; set; }
         /// <summary>
         /// Option: receive buffer limit
         /// </summary>
@@ -69,23 +147,43 @@ namespace NetCoreServer
         /// </summary>
         public int OptionSendBufferSize { get; set; } = 8192;
 
-        #region Connect/Disconnect session
+        #region Connect/Disconnect client
+
+        private SocketAsyncEventArgs _connectEventArg;
 
         /// <summary>
-        /// Is the session connected?
+        /// Is the client connecting?
+        /// </summary>
+        public bool IsConnecting { get; private set; }
+        /// <summary>
+        /// Is the client connected?
         /// </summary>
         public bool IsConnected { get; private set; }
 
         /// <summary>
-        /// Connect the session
+        /// Create a new socket object
         /// </summary>
-        /// <param name="socket">Session socket</param>
-        internal void Connect(Socket socket)
+        /// <remarks>
+        /// Method may be override if you need to prepare some specific socket object in your implementation.
+        /// </remarks>
+        /// <returns>Socket object</returns>
+        protected virtual Socket CreateSocket()
         {
-            Socket = socket;
+            return new Socket(Endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+        }
 
-            // Update the session socket disposed flag
-            IsSocketDisposed = false;
+        /// <summary>
+        /// Connect the client (synchronous)
+        /// </summary>
+        /// <remarks>
+        /// Please note that synchronous connect will not receive data automatically!
+        /// You should use Receive() or ReceiveAsync() method manually after successful connection.
+        /// </remarks>
+        /// <returns>'true' if the client was successfully connected, 'false' if the client failed to connect</returns>
+        public virtual bool Connect()
+        {
+            if (IsConnected || IsConnecting)
+                return false;
 
             // Setup buffers
             _receiveBuffer = new Buffer();
@@ -93,25 +191,73 @@ namespace NetCoreServer
             _sendBufferFlush = new Buffer();
 
             // Setup event args
+            _connectEventArg = new SocketAsyncEventArgs();
+            _connectEventArg.RemoteEndPoint = Endpoint;
+            _connectEventArg.Completed += OnAsyncCompleted;
             _receiveEventArg = new SocketAsyncEventArgs();
-            _receiveEventArg.UserToken = this;
             _receiveEventArg.Completed += OnAsyncCompleted;
-
             _sendEventArg = new SocketAsyncEventArgs();
-            _sendEventArg.UserToken = this;
             _sendEventArg.Completed += OnAsyncCompleted;
 
+            // Create a new client socket
+            Socket = CreateSocket();
+
+            // Update the client socket disposed flag
+            IsSocketDisposed = false;
+
+            // Apply the option: dual mode (this option must be applied before connecting)
+            if (Socket.AddressFamily == AddressFamily.InterNetworkV6)
+                Socket.DualMode = OptionDualMode;
+
+            // Call the client connecting handler
+            OnConnecting();
+
+            try
+            {
+                // Connect to the server
+                Socket.Connect(Endpoint);
+            }
+            catch (SocketException ex)
+            {
+                // Call the client error handler
+                SendError(ex.SocketErrorCode);
+
+                // Reset event args
+                _connectEventArg.Completed -= OnAsyncCompleted;
+                _receiveEventArg.Completed -= OnAsyncCompleted;
+                _sendEventArg.Completed -= OnAsyncCompleted;
+
+                // Call the client disconnecting handler
+                OnDisconnecting();
+
+                // Close the client socket
+                Socket.Close();
+
+                // Dispose the client socket
+                Socket.Dispose();
+
+                // Dispose event arguments
+                _connectEventArg.Dispose();
+                _receiveEventArg.Dispose();
+                _sendEventArg.Dispose();
+
+                // Call the client disconnected handler
+                OnDisconnected();
+
+                return false;
+            }
+
             // Apply the option: keep alive
-            if (Server.OptionKeepAlive)
+            if (OptionKeepAlive)
                 Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-            if (Server.OptionTcpKeepAliveTime >= 0)
-                Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, Server.OptionTcpKeepAliveTime);
-            if (Server.OptionTcpKeepAliveInterval >= 0)
-                Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, Server.OptionTcpKeepAliveInterval);
-            if (Server.OptionTcpKeepAliveRetryCount >= 0)
-                Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, Server.OptionTcpKeepAliveRetryCount);
+            if (OptionTcpKeepAliveTime >= 0)
+                Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, OptionTcpKeepAliveTime);
+            if (OptionTcpKeepAliveInterval >= 0)
+                Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, OptionTcpKeepAliveInterval);
+            if (OptionTcpKeepAliveRetryCount >= 0)
+                Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, OptionTcpKeepAliveRetryCount);
             // Apply the option: no delay
-            if (Server.OptionNoDelay)
+            if (OptionNoDelay)
                 Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
 
             // Prepare receive & send buffers
@@ -125,51 +271,39 @@ namespace NetCoreServer
             BytesSent = 0;
             BytesReceived = 0;
 
-            // Call the session connecting handler
-            OnConnecting();
-
-            // Call the session connecting handler in the server
-            Server.OnConnectingInternal(this);
-
             // Update the connected flag
             IsConnected = true;
 
-            // Try to receive something from the client
-            TryReceive();
-
-            // Check the socket disposed state: in some rare cases it might be disconnected while receiving!
-            if (IsSocketDisposed)
-                return;
-
-            // Call the session connected handler
+            // Call the client connected handler
             OnConnected();
-
-            // Call the session connected handler in the server
-            Server.OnConnectedInternal(this);
 
             // Call the empty send buffer handler
             if (_sendBufferMain.IsEmpty)
                 OnEmpty();
+
+            return true;
         }
 
         /// <summary>
-        /// Disconnect the session
+        /// Disconnect the client (synchronous)
         /// </summary>
-        /// <returns>'true' if the section was successfully disconnected, 'false' if the section is already disconnected</returns>
+        /// <returns>'true' if the client was successfully disconnected, 'false' if the client is already disconnected</returns>
         public virtual bool Disconnect()
         {
-            if (!IsConnected)
+            if (!IsConnected && !IsConnecting)
                 return false;
 
+            // Cancel connecting operation
+            if (IsConnecting)
+                Socket.CancelConnectAsync(_connectEventArg);
+
             // Reset event args
+            _connectEventArg.Completed -= OnAsyncCompleted;
             _receiveEventArg.Completed -= OnAsyncCompleted;
             _sendEventArg.Completed -= OnAsyncCompleted;
 
-            // Call the session disconnecting handler
+            // Call the client disconnecting handler
             OnDisconnecting();
-
-            // Call the session disconnecting handler in the server
-            Server.OnDisconnectingInternal(this);
 
             try
             {
@@ -178,24 +312,23 @@ namespace NetCoreServer
                     // Shutdown the socket associated with the client
                     Socket.Shutdown(SocketShutdown.Both);
                 }
-                catch (SocketException) { }
+                catch (SocketException) {}
 
-                // Close the session socket
+                // Close the client socket
                 Socket.Close();
 
-                // Dispose the session socket
+                // Dispose the client socket
                 Socket.Dispose();
 
                 // Dispose event arguments
-                _receiveEventArg.UserToken = null;
+                _connectEventArg.Dispose();
                 _receiveEventArg.Dispose();
-                _sendEventArg.UserToken = null;
                 _sendEventArg.Dispose();
 
-                // Update the session socket disposed flag
+                // Update the client socket disposed flag
                 IsSocketDisposed = true;
             }
-            catch (ObjectDisposedException) { }
+            catch (ObjectDisposedException) {}
 
             // Update the connected flag
             IsConnected = false;
@@ -207,16 +340,89 @@ namespace NetCoreServer
             // Clear send/receive buffers
             ClearBuffers();
 
-            // Call the session disconnected handler
+            // Call the client disconnected handler
             OnDisconnected();
 
-            // Call the session disconnected handler in the server
-            Server.OnDisconnectedInternal(this);
+            return true;
+        }
 
-            // Unregister session
-            Server.UnregisterSession(Id);
+        /// <summary>
+        /// Reconnect the client (synchronous)
+        /// </summary>
+        /// <returns>'true' if the client was successfully reconnected, 'false' if the client is already reconnected</returns>
+        public virtual bool Reconnect()
+        {
+            if (!Disconnect())
+                return false;
+
+            return Connect();
+        }
+
+        /// <summary>
+        /// Connect the client (asynchronous)
+        /// </summary>
+        /// <returns>'true' if the client was successfully connected, 'false' if the client failed to connect</returns>
+        public virtual bool ConnectAsync()
+        {
+            if (IsConnected || IsConnecting)
+                return false;
+
+            // Setup buffers
+            _receiveBuffer = new Buffer();
+            _sendBufferMain = new Buffer();
+            _sendBufferFlush = new Buffer();
+
+            // Setup event args
+            _connectEventArg = new SocketAsyncEventArgs();
+            _connectEventArg.RemoteEndPoint = Endpoint;
+            _connectEventArg.Completed += OnAsyncCompleted;
+            _receiveEventArg = new SocketAsyncEventArgs();
+            _receiveEventArg.Completed += OnAsyncCompleted;
+            _sendEventArg = new SocketAsyncEventArgs();
+            _sendEventArg.Completed += OnAsyncCompleted;
+
+            // Create a new client socket
+            Socket = CreateSocket();
+
+            // Update the client socket disposed flag
+            IsSocketDisposed = false;
+
+            // Apply the option: dual mode (this option must be applied before connecting)
+            if (Socket.AddressFamily == AddressFamily.InterNetworkV6)
+                Socket.DualMode = OptionDualMode;
+
+            // Update the connecting flag
+            IsConnecting = true;
+
+            // Call the client connecting handler
+            OnConnecting();
+
+            // Async connect to the server
+            if (!Socket.ConnectAsync(_connectEventArg))
+                ProcessConnect(_connectEventArg);
 
             return true;
+        }
+
+        /// <summary>
+        /// Disconnect the client (asynchronous)
+        /// </summary>
+        /// <returns>'true' if the client was successfully disconnected, 'false' if the client is already disconnected</returns>
+        public virtual bool DisconnectAsync() => Disconnect();
+
+        /// <summary>
+        /// Reconnect the client (asynchronous)
+        /// </summary>
+        /// <returns>'true' if the client was successfully reconnected, 'false' if the client is already reconnected</returns>
+        public virtual bool ReconnectAsync()
+        {
+            if (!DisconnectAsync())
+                return false;
+
+            while (IsConnected)
+                Thread.Yield();
+
+            return ConnectAsync();
         }
 
         #endregion
@@ -235,24 +441,24 @@ namespace NetCoreServer
         private SocketAsyncEventArgs _sendEventArg;
         private long _sendBufferFlushOffset;
 
-        ///// <summary>
-        ///// Send data to the client (synchronous)
-        ///// </summary>
-        ///// <param name="buffer">Buffer to send</param>
-        ///// <returns>Size of sent data</returns>
-        //public virtual long Send(byte[] buffer) => Send(buffer.AsSpan());
-
-        ///// <summary>
-        ///// Send data to the client (synchronous)
-        ///// </summary>
-        ///// <param name="buffer">Buffer to send</param>
-        ///// <param name="offset">Buffer offset</param>
-        ///// <param name="size">Buffer size</param>
-        ///// <returns>Size of sent data</returns>
-        //public virtual long Send(byte[] buffer, long offset, long size) => Send(buffer.AsSpan((int)offset, (int)size));
+        /// <summary>
+        /// Send data to the server (synchronous)
+        /// </summary>
+        /// <param name="buffer">Buffer to send</param>
+        /// <returns>Size of sent data</returns>
+        public virtual long Send(byte[] buffer) => Send(buffer.AsSpan());
 
         /// <summary>
-        /// Send data to the client (synchronous)
+        /// Send data to the server (synchronous)
+        /// </summary>
+        /// <param name="buffer">Buffer to send</param>
+        /// <param name="offset">Buffer offset</param>
+        /// <param name="size">Buffer size</param>
+        /// <returns>Size of sent data</returns>
+        public virtual long Send(byte[] buffer, long offset, long size) => Send(buffer.AsSpan((int)offset, (int)size));
+
+        /// <summary>
+        /// Send data to the server (synchronous)
         /// </summary>
         /// <param name="buffer">Buffer to send as a span of bytes</param>
         /// <returns>Size of sent data</returns>
@@ -264,13 +470,12 @@ namespace NetCoreServer
             if (buffer.IsEmpty)
                 return 0;
 
-            // Sent data to the client
+            // Sent data to the server
             long sent = Socket.Send(buffer, SocketFlags.None, out SocketError ec);
             if (sent > 0)
             {
                 // Update statistic
                 BytesSent += sent;
-                Interlocked.Add(ref Server._bytesSent, sent);
 
                 // Call the buffer sent handler
                 OnSent(sent, BytesPending + BytesSending);
@@ -286,41 +491,41 @@ namespace NetCoreServer
             return sent;
         }
 
-        ///// <summary>
-        ///// Send text to the client (synchronous)
-        ///// </summary>
-        ///// <param name="text">Text string to send</param>
-        ///// <returns>Size of sent data</returns>
-        //public virtual long Send(string text) => Send(Encoding.UTF8.GetBytes(text));
-
-        ///// <summary>
-        ///// Send text to the client (synchronous)
-        ///// </summary>
-        ///// <param name="text">Text to send as a span of characters</param>
-        ///// <returns>Size of sent data</returns>
-        //public virtual long Send(ReadOnlySpan<char> text) => Send(Encoding.UTF8.GetBytes(text.ToArray()));
+        /// <summary>
+        /// Send text to the server (synchronous)
+        /// </summary>
+        /// <param name="text">Text string to send</param>
+        /// <returns>Size of sent text</returns>
+        public virtual long Send(string text) => Send(Encoding.UTF8.GetBytes(text));
 
         /// <summary>
-        /// Send data to the client (asynchronous)
+        /// Send text to the server (synchronous)
+        /// </summary>
+        /// <param name="text">Text to send as a span of characters</param>
+        /// <returns>Size of sent text</returns>
+        public virtual long Send(ReadOnlySpan<char> text) => Send(Encoding.UTF8.GetBytes(text.ToArray()));
+
+        /// <summary>
+        /// Send data to the server (asynchronous)
         /// </summary>
         /// <param name="buffer">Buffer to send</param>
-        /// <returns>'true' if the data was successfully sent, 'false' if the session is not connected</returns>
+        /// <returns>'true' if the data was successfully sent, 'false' if the client is not connected</returns>
         public virtual bool SendAsync(byte[] buffer) => SendAsync(buffer.AsSpan());
 
         /// <summary>
-        /// Send data to the client (asynchronous)
+        /// Send data to the server (asynchronous)
         /// </summary>
         /// <param name="buffer">Buffer to send</param>
         /// <param name="offset">Buffer offset</param>
         /// <param name="size">Buffer size</param>
-        /// <returns>'true' if the data was successfully sent, 'false' if the session is not connected</returns>
+        /// <returns>'true' if the data was successfully sent, 'false' if the client is not connected</returns>
         public virtual bool SendAsync(byte[] buffer, long offset, long size) => SendAsync(buffer.AsSpan((int)offset, (int)size));
 
         /// <summary>
-        /// Send data to the client (asynchronous)
+        /// Send data to the server (asynchronous)
         /// </summary>
         /// <param name="buffer">Buffer to send as a span of bytes</param>
-        /// <returns>'true' if the data was successfully sent, 'false' if the session is not connected</returns>
+        /// <returns>'true' if the data was successfully sent, 'false' if the client is not connected</returns>
         public virtual bool SendAsync(ReadOnlySpan<byte> buffer)
         {
             if (!IsConnected)
@@ -358,28 +563,28 @@ namespace NetCoreServer
         }
 
         /// <summary>
-        /// Send text to the client (asynchronous)
+        /// Send text to the server (asynchronous)
         /// </summary>
         /// <param name="text">Text string to send</param>
-        /// <returns>'true' if the text was successfully sent, 'false' if the session is not connected</returns>
+        /// <returns>'true' if the text was successfully sent, 'false' if the client is not connected</returns>
         public virtual bool SendAsync(string text) => SendAsync(Encoding.UTF8.GetBytes(text));
 
         /// <summary>
-        /// Send text to the client (asynchronous)
+        /// Send text to the server (asynchronous)
         /// </summary>
         /// <param name="text">Text to send as a span of characters</param>
-        /// <returns>'true' if the text was successfully sent, 'false' if the session is not connected</returns>
+        /// <returns>'true' if the text was successfully sent, 'false' if the client is not connected</returns>
         public virtual bool SendAsync(ReadOnlySpan<char> text) => SendAsync(Encoding.UTF8.GetBytes(text.ToArray()));
 
         /// <summary>
-        /// Receive data from the client (synchronous)
+        /// Receive data from the server (synchronous)
         /// </summary>
         /// <param name="buffer">Buffer to receive</param>
         /// <returns>Size of received data</returns>
         public virtual long Receive(byte[] buffer) { return Receive(buffer, 0, buffer.Length); }
 
         /// <summary>
-        /// Receive data from the client (synchronous)
+        /// Receive data from the server (synchronous)
         /// </summary>
         /// <param name="buffer">Buffer to receive</param>
         /// <param name="offset">Buffer offset</param>
@@ -393,13 +598,12 @@ namespace NetCoreServer
             if (size == 0)
                 return 0;
 
-            // Receive data from the client
+            // Receive data from the server
             long received = Socket.Receive(buffer, (int)offset, (int)size, SocketFlags.None, out SocketError ec);
             if (received > 0)
             {
                 // Update statistic
                 BytesReceived += received;
-                Interlocked.Add(ref Server._bytesReceived, received);
 
                 // Call the buffer received handler
                 OnReceived(buffer, 0, received);
@@ -416,7 +620,7 @@ namespace NetCoreServer
         }
 
         /// <summary>
-        /// Receive text from the client (synchronous)
+        /// Receive text from the server (synchronous)
         /// </summary>
         /// <param name="size">Text size to receive</param>
         /// <returns>Received text</returns>
@@ -428,11 +632,11 @@ namespace NetCoreServer
         }
 
         /// <summary>
-        /// Receive data from the client (asynchronous)
+        /// Receive data from the server (asynchronous)
         /// </summary>
         public virtual void ReceiveAsync()
         {
-            // Try to receive data from the client
+            // Try to receive data from the server
             TryReceive();
         }
 
@@ -461,7 +665,7 @@ namespace NetCoreServer
                     if (!Socket.ReceiveAsync(_receiveEventArg))
                         process = ProcessReceive(_receiveEventArg);
                 }
-                catch (ObjectDisposedException) { }
+                catch (ObjectDisposedException) {}
             }
         }
 
@@ -521,7 +725,7 @@ namespace NetCoreServer
                     if (!Socket.SendAsync(_sendEventArg))
                         process = ProcessSend(_sendEventArg);
                 }
-                catch (ObjectDisposedException) { }
+                catch (ObjectDisposedException) {}
             }
         }
 
@@ -535,7 +739,7 @@ namespace NetCoreServer
                 // Clear send buffers
                 _sendBufferMain.Clear();
                 _sendBufferFlush.Clear();
-                _sendBufferFlushOffset = 0;
+                _sendBufferFlushOffset= 0;
 
                 // Update statistic
                 BytesPending = 0;
@@ -550,27 +754,87 @@ namespace NetCoreServer
         /// <summary>
         /// This method is called whenever a receive or send operation is completed on a socket
         /// </summary>
-        private static void OnAsyncCompleted(object? sender, SocketAsyncEventArgs e)
+        private void OnAsyncCompleted(object? sender, SocketAsyncEventArgs e)
         {
-            var obj = (TcpSession)e.UserToken!;
-            if (obj.IsSocketDisposed)
+            if (IsSocketDisposed)
                 return;
 
             // Determine which type of operation just completed and call the associated handler
             switch (e.LastOperation)
             {
+                case SocketAsyncOperation.Connect:
+                    ProcessConnect(e);
+                    break;
                 case SocketAsyncOperation.Receive:
-                    if (obj.ProcessReceive(e))
-                        obj.TryReceive();
+                    if (ProcessReceive(e))
+                        TryReceive();
                     break;
                 case SocketAsyncOperation.Send:
-                    if (obj.ProcessSend(e))
-                        obj.TrySend();
+                    if (ProcessSend(e))
+                        TrySend();
                     break;
                 default:
                     throw new ArgumentException("The last operation completed on the socket was not a receive or send");
             }
 
+        }
+
+        /// <summary>
+        /// This method is invoked when an asynchronous connect operation completes
+        /// </summary>
+        private void ProcessConnect(SocketAsyncEventArgs e)
+        {
+            IsConnecting = false;
+
+            if (e.SocketError == SocketError.Success)
+            {
+                // Apply the option: keep alive
+                if (OptionKeepAlive)
+                    Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                if (OptionTcpKeepAliveTime >= 0)
+                    Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, OptionTcpKeepAliveTime);
+                if (OptionTcpKeepAliveInterval >= 0)
+                    Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, OptionTcpKeepAliveInterval);
+                if (OptionTcpKeepAliveRetryCount >= 0)
+                    Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, OptionTcpKeepAliveRetryCount);
+                // Apply the option: no delay
+                if (OptionNoDelay)
+                    Socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
+
+                // Prepare receive & send buffers
+                _receiveBuffer.Reserve(OptionReceiveBufferSize);
+                _sendBufferMain.Reserve(OptionSendBufferSize);
+                _sendBufferFlush.Reserve(OptionSendBufferSize);
+
+                // Reset statistic
+                BytesPending = 0;
+                BytesSending = 0;
+                BytesSent = 0;
+                BytesReceived = 0;
+
+                // Update the connected flag
+                IsConnected = true;
+
+                // Try to receive something from the server
+                TryReceive();
+
+                // Check the socket disposed state: in some rare cases it might be disconnected while receiving!
+                if (IsSocketDisposed)
+                    return;
+
+                // Call the client connected handler
+                OnConnected();
+
+                // Call the empty send buffer handler
+                if (_sendBufferMain.IsEmpty)
+                    OnEmpty();
+            }
+            else
+            {
+                // Call the client disconnected handler
+                SendError(e.SocketError);
+                OnDisconnected();
+            }
         }
 
         /// <summary>
@@ -583,12 +847,11 @@ namespace NetCoreServer
 
             long size = e.BytesTransferred;
 
-            // Received some data from the client
+            // Received some data from the server
             if (size > 0)
             {
                 // Update statistic
                 BytesReceived += size;
-                Interlocked.Add(ref Server._bytesReceived, size);
 
                 // Call the buffer received handler
                 OnReceived(_receiveBuffer.Data, 0, size);
@@ -600,7 +863,7 @@ namespace NetCoreServer
                     if (((2 * size) > OptionReceiveBufferLimit) && (OptionReceiveBufferLimit > 0))
                     {
                         SendError(SocketError.NoBufferSpaceAvailable);
-                        Disconnect();
+                        DisconnectAsync();
                         return false;
                     }
 
@@ -610,19 +873,19 @@ namespace NetCoreServer
 
             _receiving = false;
 
-            // Try to receive again if the session is valid
+            // Try to receive again if the client is valid
             if (e.SocketError == SocketError.Success)
             {
                 // If zero is returned from a read operation, the remote end has closed the connection
                 if (size > 0)
                     return true;
                 else
-                    Disconnect();
+                    DisconnectAsync();
             }
             else
             {
                 SendError(e.SocketError);
-                Disconnect();
+                DisconnectAsync();
             }
 
             return false;
@@ -638,13 +901,12 @@ namespace NetCoreServer
 
             long size = e.BytesTransferred;
 
-            // Send some data to the client
+            // Send some data to the server
             if (size > 0)
             {
                 // Update statistic
                 BytesSending -= size;
                 BytesSent += size;
-                Interlocked.Add(ref Server._bytesSent, size);
 
                 // Increase the flush buffer offset
                 _sendBufferFlushOffset += size;
@@ -661,13 +923,13 @@ namespace NetCoreServer
                 OnSent(size, BytesPending + BytesSending);
             }
 
-            // Try to send again if the session is valid
+            // Try to send again if the client is valid
             if (e.SocketError == SocketError.Success)
                 return true;
             else
             {
                 SendError(e.SocketError);
-                Disconnect();
+                DisconnectAsync();
                 return false;
             }
         }
@@ -679,19 +941,19 @@ namespace NetCoreServer
         /// <summary>
         /// Handle client connecting notification
         /// </summary>
-        protected virtual void OnConnecting() { }
+        protected virtual void OnConnecting() {}
         /// <summary>
         /// Handle client connected notification
         /// </summary>
-        protected virtual void OnConnected() { }
+        protected virtual void OnConnected() {}
         /// <summary>
         /// Handle client disconnecting notification
         /// </summary>
-        protected virtual void OnDisconnecting() { }
+        protected virtual void OnDisconnecting() {}
         /// <summary>
         /// Handle client disconnected notification
         /// </summary>
-        protected virtual void OnDisconnected() { }
+        protected virtual void OnDisconnected() {}
 
         /// <summary>
         /// Handle buffer received notification
@@ -700,34 +962,34 @@ namespace NetCoreServer
         /// <param name="offset">Received buffer offset</param>
         /// <param name="size">Received buffer size</param>
         /// <remarks>
-        /// Notification is called when another part of buffer was received from the client
+        /// Notification is called when another part of buffer was received from the server
         /// </remarks>
-        protected virtual void OnReceived(byte[] buffer, long offset, long size) { }
+        protected virtual void OnReceived(byte[] buffer, long offset, long size) {}
         /// <summary>
         /// Handle buffer sent notification
         /// </summary>
         /// <param name="sent">Size of sent buffer</param>
         /// <param name="pending">Size of pending buffer</param>
         /// <remarks>
-        /// Notification is called when another part of buffer was sent to the client.
-        /// This handler could be used to send another buffer to the client for instance when the pending size is zero.
+        /// Notification is called when another part of buffer was sent to the server.
+        /// This handler could be used to send another buffer to the server for instance when the pending size is zero.
         /// </remarks>
-        protected virtual void OnSent(long sent, long pending) { }
+        protected virtual void OnSent(long sent, long pending) {}
 
         /// <summary>
         /// Handle empty send buffer notification
         /// </summary>
         /// <remarks>
         /// Notification is called when the send buffer is empty and ready for a new data to send.
-        /// This handler could be used to send another buffer to the client.
+        /// This handler could be used to send another buffer to the server.
         /// </remarks>
-        protected virtual void OnEmpty() { }
+        protected virtual void OnEmpty() {}
 
         /// <summary>
         /// Handle error notification
         /// </summary>
         /// <param name="error">Socket error code</param>
-        protected virtual void OnError(SocketError error) { }
+        protected virtual void OnError(SocketError error) {}
 
         #endregion
 
@@ -760,7 +1022,7 @@ namespace NetCoreServer
         public bool IsDisposed { get; private set; }
 
         /// <summary>
-        /// Session socket disposed flag
+        /// Client socket disposed flag
         /// </summary>
         public bool IsSocketDisposed { get; private set; } = true;
 
@@ -790,7 +1052,7 @@ namespace NetCoreServer
                 if (disposingManagedResources)
                 {
                     // Dispose managed resources here...
-                    Disconnect();
+                    DisconnectAsync();
                 }
 
                 // Dispose unmanaged resources here...

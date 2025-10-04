@@ -1,14 +1,13 @@
 using FastEnumUtility;
 
-using Microsoft.Extensions.Configuration;
-
+using PowerUnit.Common.TimeoutService;
 using PowerUnit.Service.IEC104.Abstract;
 
 using System.Diagnostics.Metrics;
 
 namespace PowerUnit.Service.IEC104.Export;
 
-public class IEC104Diagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IIEC60870_5_104ApplicationLayerDiagnostic, IDisposable
+public class IEC104Diagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IIEC60870_5_104ApplicationLayerDiagnostic, ITimeoutServiceDiagnostic, IDisposable
 {
     public static readonly string MeterName = nameof(IIEC60870_5_104ChannelLayerDiagnostic);
     private readonly Meter _meter;
@@ -23,6 +22,10 @@ public class IEC104Diagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IIEC60870
     private readonly Counter<long> _protocolError;
 
     private readonly Gauge<double> _sendMsgPrepareDuration;
+
+    private readonly Counter<long> _timerOperationCall;
+    private readonly Gauge<double> _timerOperationDuration;
+
     public IEC104Diagnostic(IMeterFactory meterFactory)
     {
         _meter = meterFactory.Create(new MeterOptions(MeterName));
@@ -37,6 +40,9 @@ public class IEC104Diagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IIEC60870
         _appMsgTotal = _meter.CreateCounter<long>("app-msg-total");
 
         _sendMsgPrepareDuration = _meter.CreateGauge<double>("app-send-msg-prepare-duration", "ns");
+
+        _timerOperationCall = _meter.CreateCounter<long>("timer-operation-call");
+        _timerOperationDuration = _meter.CreateGauge<double>("timer-operation-call-duration", "ns");
     }
 
     void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSend(string serverId, ChannelLayerPacketPriority priority)
@@ -116,5 +122,37 @@ public class IEC104Diagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IIEC60870
     }
 
     void IDisposable.Dispose() => _meter.Dispose();
+    void ITimeoutServiceDiagnostic.TimerCallbackDuration(double duration)
+    {
+        _timerOperationDuration.Record(duration, KeyValuePair.Create<string, object?>("type", "Callback"));
+    }
+    void ITimeoutServiceDiagnostic.TimerCallbackCall()
+    {
+        _timerOperationCall.Add(1, KeyValuePair.Create<string, object?>("type", "Callback"));
+    }
+    void ITimeoutServiceDiagnostic.CreateTimeoutDuration(double duration)
+    {
+        _timerOperationDuration.Record(duration, KeyValuePair.Create<string, object?>("type", "Create"));
+    }
+    void ITimeoutServiceDiagnostic.CreateTimeoutCall()
+    {
+        _timerOperationCall.Add(1, KeyValuePair.Create<string, object?>("type", "Create"));
+    }
+    void ITimeoutServiceDiagnostic.RestartTimeoutDuration(double duration)
+    {
+        _timerOperationDuration.Record(duration, KeyValuePair.Create<string, object?>("type", "Restart"));
+    }
+    void ITimeoutServiceDiagnostic.RestartTimeoutCall()
+    {
+        _timerOperationCall.Add(1, KeyValuePair.Create<string, object?>("type", "Restart"));
+    }
+    void ITimeoutServiceDiagnostic.CancelTimeoutDuration(double duration)
+    {
+        _timerOperationDuration.Record(duration, KeyValuePair.Create<string, object?>("type", "Cancel"));
+    }
+    void ITimeoutServiceDiagnostic.CancelTimeoutCall()
+    {
+        _timerOperationCall.Add(1, KeyValuePair.Create<string, object?>("type", "Cancel"));
+    }
 }
 

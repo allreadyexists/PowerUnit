@@ -31,10 +31,10 @@ internal static partial class IEC60870_5_104ChannelLayerLogExtension
     [LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "RX: U: {Control}")]
     public static partial void LogProcessUPacket(this ILogger logger, UControl control);
 
-    [LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "Event: {evnt} {@timerId:X2}")]
+    [LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "Event: {evnt} {@timerId:X2}", SkipEnabledCheck = true)]
     public static partial void LogTimerEvent(this ILogger logger, IEvent evnt, long timerId);
 
-    [LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "Event: {evnt}")]
+    [LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "Event: {evnt}", SkipEnabledCheck = true)]
     public static partial void LogEvent(this ILogger logger, IEvent evnt);
 }
 

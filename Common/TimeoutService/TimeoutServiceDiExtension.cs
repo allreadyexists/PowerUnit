@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace PowerUnit.Common.TimeoutService;
 
@@ -6,6 +7,8 @@ public static class TimeoutServiceDiExtension
 {
     public static IServiceCollection AddTimeoutService(this IServiceCollection services, ServiceLifetime lifeTime = ServiceLifetime.Singleton)
     {
+        services.TryAddSingleton(_ => TimeProvider.System);
+        services.AddSingleton<ITimeoutServiceDiagnostic, TimeoutServiceDiagnosticIdle>();
         switch (lifeTime)
         {
             case ServiceLifetime.Singleton:
