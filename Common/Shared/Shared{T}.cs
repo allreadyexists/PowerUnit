@@ -38,7 +38,7 @@ public struct Shared<T> : IDisposable where T : class
         }
     }
 
-    private class SharedContainer<TT> where TT : class
+    private sealed class SharedContainer<TT> where TT : class
     {
         public TT? Value;
         public Action<TT>? Free;
