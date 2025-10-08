@@ -3,6 +3,28 @@ using System.Runtime.InteropServices;
 namespace PowerUnit.Service.IEC104.Types;
 
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
+public struct PacketSTemplate
+{
+    public static byte Size => (byte)Marshal.SizeOf<PacketSTemplate>();
+
+    [FieldOffset(0)]
+    private readonly byte _s1 = 1;
+    [FieldOffset(1)]
+    private readonly byte _s2 = 0;
+    [FieldOffset(2)]
+    private readonly byte _s3;
+    [FieldOffset(3)]
+    private readonly byte _s4;
+
+    [FieldOffset(2)]
+    public ushort Rx;
+
+    public PacketSTemplate()
+    {
+    }
+}
+
+[StructLayout(LayoutKind.Explicit, Pack = 1)]
 public readonly struct PacketS
 {
     public static byte Size => (byte)Marshal.SizeOf<PacketS>();

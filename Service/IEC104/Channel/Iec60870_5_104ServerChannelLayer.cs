@@ -274,6 +274,8 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
 
     #region Обработка передаваемых пакетов
 
+    private readonly NetCoreServer.Buffer _largeBuffer = new NetCoreServer.Buffer();
+
     /// <summary>
     /// Передача пользовательских пакетов
     /// </summary>
@@ -326,22 +328,35 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
                 skip--;
             }
 
+            _largeBuffer.Clear();
+
             while (packetToSendCount > 0 && _txW < TxButNotAckQueue.Count)
             {
                 var msg = txPacket!.ValueRef;
-                new APCI((byte)(PacketI.Size + msg.MsgLength), new PacketI(_txCounter, _rxCounter)).SerializeUnsafe(_buffer, 0);
+
+                var tx = _txCounter << 1;
+                var rx = _rxCounter << 1;
+
+                _buffer[0] = APCI.START_PACKET;
+                _buffer[1] = (byte)(PacketI.Size + msg.MsgLength);
+                _buffer[2] = (byte)(tx & 0xFF);
+                _buffer[3] = (byte)(tx >> 8);
+                _buffer[4] = (byte)(rx & 0xFF);
+                _buffer[5] = (byte)(rx >> 8);
 
                 // Хорошая задумка, но похоже некоторые клиенты могут ожидать ответ только в одном пакете не получив его, они вполне могут разорвать связь поэтому вынесем в тонкую настройку
-                if (_serverModel.ChannelLayerModel.UseFragmentSend)
-                {
-                    _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
-                    _physicalLayerController.SendPacket(msg.Msg, 0, msg.MsgLength);
-                }
-                else
-                {
-                    msg.Msg.AsSpan(0, msg.MsgLength).CopyTo(_buffer.AsSpan(APCI.Size));
-                    _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + msg.MsgLength);
-                }
+                //if (_serverModel.ChannelLayerModel.UseFragmentSend)
+                //{
+                //_physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
+                _largeBuffer.Append(_buffer.AsSpan(0, APCI.Size));
+                //_physicalLayerController.SendPacket(msg.Msg, 0, msg.MsgLength);
+                _largeBuffer.Append(msg.Msg.AsSpan(0, msg.MsgLength));
+                //}
+                //else
+                //{
+                //    msg.Msg.AsSpan(0, msg.MsgLength).CopyTo(_buffer.AsSpan(APCI.Size));
+                //    _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + msg.MsgLength);
+                //}
 
                 _diagnostic.SendIPacket(_serverModel.ServerName);
                 _logger.LogProcessTxQueue(_rxCounter, _txCounter);
@@ -352,6 +367,8 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
                 packetToSendCount--;
                 txPacket = txPacket.Next;
             }
+
+            _physicalLayerController.SendPacket(_largeBuffer.Data, 0, _largeBuffer.Size);
 
             // остановить таймер 2
             _timeout2Id = await StopTimerAsync(_timeout2Id, ct);

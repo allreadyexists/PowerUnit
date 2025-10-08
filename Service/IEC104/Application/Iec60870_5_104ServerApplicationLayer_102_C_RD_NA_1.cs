@@ -46,27 +46,27 @@ public partial class IEC60870_5_104ServerApplicationLayer
                 int length;
                 var header = additionInfo.Header;
 
-                if (result != null)
+                if (result.HasValue)
                 {
                     ASDUPacketHeader_2_2 headerReq;
-                    switch (result.Type)
+                    switch (result.Value.Type)
                     {
                         case ASDUType.M_SP_TB_1: // Одноэлементная информация с меткой времени СР56Время2а
                             headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
                                 COT.REQUEST_REQUESTED_DATA, pn: PN.Positive, initAddr: header.InitAddr, commonAddrAsdu: context._applicationLayerOption.CommonASDUAddress);
-                            var M_SP_TB_1 = new M_SP_TB_1_Single(additionInfo.Address, result.Value.ValueAsBool ? SIQ_Value.On : SIQ_Value.Off, 0, result.Value.ValueDt!, TimeStatus.OK);
+                            var M_SP_TB_1 = new M_SP_TB_1_Single(additionInfo.Address, result.Value.Value.ValueAsBool ? SIQ_Value.On : SIQ_Value.Off, 0, result.Value.Value.ValueDt!, TimeStatus.OK);
                             length = M_SP_TB_1_Single.Serialize(buffer, in headerReq, M_SP_TB_1);
                             break;
                         case ASDUType.M_DP_TB_1: // Двухэлементная информация с меткой времени СР56Время2а
                             headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
                                 COT.REQUEST_REQUESTED_DATA, pn: PN.Positive, initAddr: header.InitAddr, commonAddrAsdu: context._applicationLayerOption.CommonASDUAddress);
-                            var M_DP_TB_1 = new M_DP_TB_1_Single(additionInfo.Address, result.Value.ValueAsBool ? DIQ_Value.On : DIQ_Value.Off, 0, result.Value.ValueDt!, TimeStatus.OK);
+                            var M_DP_TB_1 = new M_DP_TB_1_Single(additionInfo.Address, result.Value.Value.ValueAsBool ? DIQ_Value.On : DIQ_Value.Off, 0, result.Value.Value.ValueDt!, TimeStatus.OK);
                             length = M_DP_TB_1_Single.Serialize(buffer, in headerReq, M_DP_TB_1);
                             break;
                         case ASDUType.M_ME_TF_1: // Значение измеряемой величины, короткий формат с плавающей запятой с меткой времени СР56Время2а
                             headerReq = new ASDUPacketHeader_2_2(header.AsduType, header.SQ, header.Count,
                                 COT.REQUEST_REQUESTED_DATA, pn: PN.Positive, initAddr: header.InitAddr, commonAddrAsdu: context._applicationLayerOption.CommonASDUAddress);
-                            var M_ME_TF_1 = new M_ME_TF_1_Single(additionInfo.Address, result.Value.ValueAsFloat, 0, result.Value.ValueDt!, TimeStatus.OK);
+                            var M_ME_TF_1 = new M_ME_TF_1_Single(additionInfo.Address, result.Value.Value.ValueAsFloat, 0, result.Value.Value.ValueDt!, TimeStatus.OK);
                             length = M_ME_TF_1_Single.Serialize(buffer, in headerReq, M_ME_TF_1);
                             break;
                         default:

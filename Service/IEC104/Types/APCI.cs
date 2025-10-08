@@ -2,6 +2,47 @@ using System.Runtime.InteropServices;
 
 namespace PowerUnit.Service.IEC104.Types;
 
+public class APCIIPacketClass
+{
+    public byte Length;
+    public ushort Tx;
+    public ushort Rx;
+}
+
+public class APCIUPacketClass
+{
+    public byte Length;
+    public byte U1;
+}
+
+public class APCISPacketClass
+{
+    public byte Length;
+    public ushort Rx;
+}
+
+[StructLayout(LayoutKind.Explicit, Pack = 1)]
+public struct APCITemplate
+{
+    public const byte START_PACKET = 0x68;
+    public const byte MIN_LENGTH = 4;
+    public static byte Size => (byte)Marshal.SizeOf<APCITemplate>();
+
+    [FieldOffset(0)]
+    public byte StartPacket = START_PACKET;
+    [FieldOffset(1)]
+    public byte Length;
+    [FieldOffset(2)]
+    public PacketITemplate IPacket;
+    [FieldOffset(2)]
+    public PacketUTemplate UPacket;
+    [FieldOffset(2)]
+    public PacketSTemplate SPacket;
+
+    public APCITemplate()
+    { }
+}
+
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
 public readonly struct APCI
 {

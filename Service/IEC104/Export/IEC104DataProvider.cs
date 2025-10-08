@@ -11,7 +11,7 @@ namespace PowerUnit.Service.IEC104.Export;
 
 public sealed class IEC104DataProvider : IDataProvider, IDisposable
 {
-    private static readonly int _bufferizationSize = 100;
+    private static readonly int _bufferizationSize = 32;
     private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromSeconds(1);
 
     private readonly FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> _mapping;

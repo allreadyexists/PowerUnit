@@ -11,6 +11,12 @@ internal abstract class TestDataSource<T> : DataSourceBase<T>
 
     private readonly CancellationTokenSource _cancellationTokenSource;
 
+    private static T Callback(DataSourceBase<T> ctx)
+    {
+        var curCtx = (TestDataSource<T>)ctx;
+        return curCtx.CreateNewValue(curCtx._timeProvider.GetUtcNow().DateTime);
+    }
+
     public TestDataSource(TimeProvider timeProvider, ILogger<TestDataSource<T>> logger) : base(logger)
     {
         _timeProvider = timeProvider;
@@ -20,15 +26,10 @@ internal abstract class TestDataSource<T> : DataSourceBase<T>
         {
             while (!_cancellationTokenSource.Token.IsCancellationRequested)
             {
-                var now = _timeProvider.GetUtcNow().DateTime;
                 try
                 {
-                    Notify(static ctx =>
-                    {
-                        var curCtx = (TestDataSource<T>)ctx;
-                        return curCtx.CreateNewValue(curCtx._timeProvider.GetUtcNow().DateTime);
-                    });
-                    await Task.Delay(1, _cancellationTokenSource.Token);
+                    Notify(Callback);
+                    await Task.Delay(0, _cancellationTokenSource.Token);
                 }
                 catch (OperationCanceledException)
                 {

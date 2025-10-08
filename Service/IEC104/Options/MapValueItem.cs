@@ -2,7 +2,7 @@ using PowerUnit.Service.IEC104.Types;
 
 namespace PowerUnit.Service.IEC104;
 
-public class MapValueItem
+public struct MapValueItem
 {
     public readonly ushort Address;
     public readonly ASDUType Type;

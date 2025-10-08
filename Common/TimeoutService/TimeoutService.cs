@@ -24,6 +24,7 @@ internal sealed class TimeoutService : ITimeoutService, IDisposable
         var timeoutService = (TimeoutService)state!;
         timeoutService._diagnostic.TimerCallbackCall();
 
+        long? nextTime = null;
         KeyValuePair<long, HashSet<long>>[] readyTimeoutes;
 
         try
@@ -37,6 +38,18 @@ internal sealed class TimeoutService : ITimeoutService, IDisposable
                 foreach (var smallestTimeout in readyTimeoutes)
                 {
                     timeoutService._sortedTimeouts.Remove(smallestTimeout.Key);
+                    foreach (var rt in smallestTimeout.Value)
+                    {
+                        if (timeoutService._timeouts.TryGetValue(rt, out var timerInfo))
+                        {
+                            timerInfo.Owner.NotifyTimeoutReady(rt);
+                        }
+                    }
+                }
+
+                if (timeoutService._sortedTimeouts.Count != 0)
+                {
+                    nextTime = timeoutService._sortedTimeouts.First().Key;
                 }
             }
             finally
@@ -45,23 +58,12 @@ internal sealed class TimeoutService : ITimeoutService, IDisposable
                 timeoutService._collectionLock.Release();
             }
 
-            foreach (var readyTimeout in readyTimeoutes)
-            {
-                foreach (var rt in readyTimeout.Value)
-                {
-                    if (timeoutService._timeouts.TryGetValue(rt, out var timerInfo))
-                    {
-                        timerInfo.Owner.NotifyTimeoutReady(rt);
-                    }
-                }
-            }
-
             var now2 = timeoutService._timeProvider.GetTimestamp();
 
             var delay = Timeout.InfiniteTimeSpan;
-            if (timeoutService._sortedTimeouts.Count != 0)
+            if (nextTime.HasValue)
             {
-                delay = TimeSpan.FromMilliseconds(timeoutService._sortedTimeouts.First().Key - now2).AlignToValidValue();
+                delay = TimeSpan.FromTicks(nextTime.Value - now2).AlignToValidValue();
             }
 
             timeoutService._timer.Change(delay, Timeout.InfiniteTimeSpan);
@@ -89,7 +91,7 @@ internal sealed class TimeoutService : ITimeoutService, IDisposable
         await _collectionLock.WaitAsync(cancellationToken);
 
         var now = _timeProvider.GetTimestamp();
-        var ticksToFire = now + (long)timeout.TotalMilliseconds;
+        var ticksToFire = now + (long)timeout.TotalMilliseconds * TimeSpan.TicksPerMillisecond;
 
         try
         {
@@ -104,7 +106,7 @@ internal sealed class TimeoutService : ITimeoutService, IDisposable
             _timeouts[result] = new TimerInfo() { Tick = ticksToFire, Owner = owner };
 
             // расчитываем время пробуждения
-            var delay = TimeSpan.FromMilliseconds(_sortedTimeouts.First().Key - now).AlignToValidValue();
+            var delay = TimeSpan.FromTicks(_sortedTimeouts.First().Key - now).AlignToValidValue();
             _timer.Change(delay, Timeout.InfiniteTimeSpan);
         }
         catch (Exception ex)
@@ -162,7 +164,7 @@ internal sealed class TimeoutService : ITimeoutService, IDisposable
                 var delay = Timeout.InfiniteTimeSpan;
                 if (_sortedTimeouts.Count != 0)
                 {
-                    delay = TimeSpan.FromMilliseconds(_sortedTimeouts.First().Key - now).AlignToValidValue();
+                    delay = TimeSpan.FromTicks(_sortedTimeouts.First().Key - now).AlignToValidValue();
                 }
 
                 _timer.Change(delay, Timeout.InfiniteTimeSpan);
@@ -209,7 +211,7 @@ internal sealed class TimeoutService : ITimeoutService, IDisposable
                 var delay = Timeout.InfiniteTimeSpan;
                 if (_sortedTimeouts.Count != 0)
                 {
-                    delay = TimeSpan.FromMilliseconds(_sortedTimeouts.First().Key - now).AlignToValidValue();
+                    delay = TimeSpan.FromTicks(_sortedTimeouts.First().Key - now).AlignToValidValue();
                 }
 
                 _timer.Change(delay, Timeout.InfiniteTimeSpan);

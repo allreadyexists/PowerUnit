@@ -62,13 +62,13 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
 
     public bool SendInternal(byte[] buffer, long offset, long size)
     {
-        var result = base.SendAsync(buffer, offset, size);
-        if (result && _logger.IsEnabled(LogLevel.Trace))
+        var result = base.Send(new ReadOnlySpan<byte>(buffer, (int)offset, (int)size));
+        if (result > 0 && _logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace("{@id} Tx: {@tx}", Id, new Span<byte>(buffer, (int)offset, (int)size).ToHex());
         }
 
-        return result;
+        return result > 0;
     }
 
     protected override void OnError(SocketError error)
