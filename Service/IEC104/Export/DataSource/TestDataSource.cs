@@ -10,6 +10,7 @@ internal abstract class TestDataSource<T> : DataSourceBase<T>
     private readonly ILogger<TestDataSource<T>> _logger;
 
     private readonly CancellationTokenSource _cancellationTokenSource;
+    private readonly CancellationToken _cancellationToken;
 
     private static T Callback(DataSourceBase<T> ctx)
     {
@@ -22,14 +23,17 @@ internal abstract class TestDataSource<T> : DataSourceBase<T>
         _timeProvider = timeProvider;
         _logger = logger;
         _cancellationTokenSource = new CancellationTokenSource();
-        _ = Task.Run(async () =>
+        _cancellationToken = _cancellationTokenSource.Token;
+
+        new Task(static /*async */(value) =>
         {
-            while (!_cancellationTokenSource.Token.IsCancellationRequested)
+            var source = (TestDataSource<T>)value!;
+            while (!source._cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    Notify(Callback);
-                    await Task.Delay(0, _cancellationTokenSource.Token);
+                    source.Notify(Callback);
+                    Thread.SpinWait(1);
                 }
                 catch (OperationCanceledException)
                 {
@@ -41,10 +45,10 @@ internal abstract class TestDataSource<T> : DataSourceBase<T>
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, string.Empty);
+                    source._logger.LogError(ex, string.Empty);
                 }
             }
-        }, _cancellationTokenSource.Token);
+        }, this, _cancellationTokenSource.Token, TaskCreationOptions.LongRunning).Start();
     }
 
     public override void Dispose()

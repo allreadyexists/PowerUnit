@@ -8,6 +8,7 @@
     <Project Path="Common/Options/PowerUnit.Common.Options.csproj" />
     <Project Path="Common/Other/PowerUnit.Common.Other.csproj" />
     <Project Path="Common/Reactive/PowerUnit.Common.Reactive.csproj" />
+    <Project Path="Common/Shared.ConsoleTest/PowerUnit.Common.Shared.ConsoleTest.csproj" Id="89cc9c61-3d6e-472a-9129-57ec20cecd2e" />
     <Project Path="Common/Shared/PowerUnit.Common.Shared.csproj" />
     <Project Path="Common/Shell/PowerUnit.Common.Shell.csproj" />
     <Project Path="Common/StringHelpers/PowerUnit.Common.StringHelpers.csproj" />

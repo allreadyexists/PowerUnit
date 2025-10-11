@@ -2,7 +2,7 @@ using Microsoft.Extensions.ObjectPool;
 
 namespace PowerUnit.Common.Shared;
 
-public struct Shared<T> : IDisposable where T : class
+public struct Shared<T> : IShared<Shared<T>> where T : class
 {
     private static readonly ObjectPool<SharedContainer<T>> _pool = new DefaultObjectPoolProvider().Create<SharedContainer<T>>();
     private readonly SharedContainer<T> _sharedContainer;
@@ -24,7 +24,7 @@ public struct Shared<T> : IDisposable where T : class
         return this;
     }
 
-    void IDisposable.Dispose()
+    public void Dispose()
     {
         if (Interlocked.Exchange(ref _dispose, 1) != 0)
             return;

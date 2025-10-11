@@ -4,21 +4,22 @@ using PowerUnit.Common.Subsciption;
 using PowerUnit.Service.IEC104.Abstract;
 using PowerUnit.Service.IEC104.Types;
 
-using System.Collections.Concurrent;
 using System.Collections.Frozen;
+using System.Runtime.InteropServices;
 
 namespace PowerUnit.Service.IEC104.Export;
 
 public sealed class IEC104DataProvider : IDataProvider, IDisposable
 {
-    private static readonly int _bufferizationSize = 32;
-    private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromSeconds(1);
+    private static readonly int _bufferizationSize = 64;
+    private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromMilliseconds(500);
 
     private readonly FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> _mapping;
     private readonly FrozenDictionary<byte, FrozenSet<ushort>> _groups;
     private readonly SubscriberBase<BaseValue, IEC104DataProvider>? _subscriber;
 
-    private readonly ConcurrentDictionary<ushort, MapValueItem> _values = new ConcurrentDictionary<ushort, MapValueItem>();
+    private readonly ReaderWriterLock _lock = new ReaderWriterLock();
+    private readonly Dictionary<ushort, MapValueItem> _values = new Dictionary<ushort, MapValueItem>();
 
     public IEC104DataProvider(IDataSource<BaseValue> source,
         FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> mapping,
@@ -41,29 +42,57 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
     IEnumerable<MapValueItem> IDataProvider.GetGroup(byte group)
     {
         if (_groups.TryGetValue(group, out var g))
-            return _values.Where(x => g.Contains(x.Key)).Select(x => x.Value);
+        {
+            _lock.AcquireReaderLock(int.MaxValue);
+            try
+            {
+                return _values.Where(x => g.Contains(x.Key)).Select(x => x.Value);
+            }
+            finally
+            {
+                _lock.ReleaseReaderLock();
+            }
+        }
         return Array.Empty<MapValueItem>();
     }
     MapValueItem? IDataProvider.GetValue(ushort address)
     {
-        if (_values.TryGetValue(address, out var value))
-            return value;
-        return null;
+        _lock.AcquireReaderLock(int.MaxValue);
+        try
+        {
+            return _values.TryGetValue(address, out var value) ? value : null;
+        }
+        finally
+        {
+            _lock.ReleaseReaderLock();
+        }
     }
 
     private void Snapshot(IList<BaseValue> values)
     {
-        for (var i = 0; i < values.Count; i++)
+        _lock.AcquireWriterLock(int.MaxValue);
+        try
         {
-            var value = values[i];
-            if (_mapping.TryGetValue((value.SourceId, value.EquipmentId, value.ParameterId), out var v))
-                _values.AddOrUpdate(v.Address,
-                    address => new MapValueItem(v.Address, (ASDUType)v.AsduType) { Value = value },
-                    (address, oldValue) =>
-                    {
-                        oldValue.Value = value;
-                        return oldValue;
-                    });
+            for (var i = 0; i < values.Count; i++)
+            {
+                var value = values[i];
+                var v = _mapping[(value.SourceId, value.EquipmentId, value.ParameterId)];
+
+                ref var valueItem = ref CollectionsMarshal.GetValueRefOrAddDefault(_values, v.Address, out bool exists);
+
+                if (exists)
+                {
+                    valueItem.Value = value;
+                }
+                else
+                {
+                    _values[v.Address] = valueItem = new MapValueItem(v.Address, (ASDUType)v.AsduType);
+                }
+            }
+        }
+        finally
+        {
+            _lock.ReleaseWriterLock();
         }
     }
 
