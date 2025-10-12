@@ -15,7 +15,7 @@ public abstract class Subscriber<T, TContext> : SubscriberBase<T, TContext>
             value =>
             {
                 Channel.Writer.TryWrite(value);
-                SubscriberDiagnostic?.RcvCounter(typeof(TContext).Name, typeof(T).Name);
+                SubscriberDiagnostic?.RcvCounter(TypeName);
             },
             OnError,
             OnComplite);
@@ -35,7 +35,7 @@ public abstract class Subscriber<T, TContext> : SubscriberBase<T, TContext>
                                 try
                                 {
                                     await _onNext(value, Context, token);
-                                    SubscriberDiagnostic?.ProcessCounter(typeof(TContext).Name, typeof(T).Name);
+                                    SubscriberDiagnostic?.ProcessCounter(TypeName);
                                 }
                                 catch (Exception ex)
                                 {

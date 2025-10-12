@@ -29,6 +29,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
     private readonly IPhysicalLayerCommander _physicalLayerCommander;
 
     private readonly IIEC60870_5_104ApplicationLayerDiagnostic _diagnostic;
+    private readonly ISubscriberDiagnostic _subscriberDiagnostic;
 
     private readonly ILogger<IEC60870_5_104ServerApplicationLayer> _logger;
 
@@ -36,8 +37,8 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
 
     private readonly CancellationTokenSource _cts;
 
-    private static readonly int _bufferizationSize = 32;
-    private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromSeconds(1);
+    private static readonly int _bufferizationSize = 512;
+    private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromMilliseconds(500);
     private IDisposable? _subscriber2;
 
     [ThreadStatic]
@@ -271,6 +272,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         IPhysicalLayerCommander physicalLayerCommander,
         TimeProvider timeProvider,
         IIEC60870_5_104ApplicationLayerDiagnostic diagnostic,
+        ISubscriberDiagnostic subscriberDiagnostic,
         ILogger<IEC60870_5_104ServerApplicationLayer> logger)
     {
         _timeProvider = timeProvider;
@@ -283,6 +285,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         _packetSender = packetSender;
         _physicalLayerCommander = physicalLayerCommander;
         _diagnostic = diagnostic;
+        _subscriberDiagnostic = subscriberDiagnostic;
         _cts = new CancellationTokenSource();
 
         _logger = logger;
@@ -311,7 +314,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
                         }
 
                         return Task.CompletedTask;
-                    });
+                    }, subscriberDiagnostic: context._subscriberDiagnostic);
             }
         }, this, this);
     }

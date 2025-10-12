@@ -1,7 +1,9 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
-namespace PowerUnit.Service.IEC104.Export.DataSource;
+using PowerUnit.Service.IEC104;
+
+namespace PowerUnit.DataSource.Test;
 
 internal sealed class BaseValueTestDataSource : TestDataSource<BaseValue>
 {
@@ -11,16 +13,9 @@ internal sealed class BaseValueTestDataSource : TestDataSource<BaseValue>
     private bool _toggler;
     private readonly GenerateMode _mode;
 
-    private enum GenerateMode
+    public BaseValueTestDataSource(IOptions<BaseValueTestDataSourceOptions> options, TimeProvider timeProvider, ITestDataSourceDiagnostic testDataSourceDiagnostic, ILogger<BaseValueTestDataSource> logger) : base(options, timeProvider, testDataSourceDiagnostic, logger)
     {
-        Single,
-        Random,
-        Block
-    }
-
-    public BaseValueTestDataSource(TimeProvider timeProvider, IConfiguration configuration, ILogger<BaseValueTestDataSource> logger) : base(timeProvider, logger)
-    {
-        _mode = configuration.GetValue("GenerateMode", GenerateMode.Single);
+        _mode = options.Value.GenerateMode;
         _testDataAnalog = new BaseValue[COUNT];
         _testDataDiscret = new BaseValue[COUNT];
         for (var i = 0; i < _testDataAnalog.Length; i++)
@@ -48,7 +43,7 @@ internal sealed class BaseValueTestDataSource : TestDataSource<BaseValue>
     {
         var randomValue = Random.Shared.Next(0, COUNT);
 
-        BaseValue value = _toggler ? _testDataAnalog[randomValue] : _testDataDiscret[randomValue];
+        var value = _toggler ? _testDataAnalog[randomValue] : _testDataDiscret[randomValue];
         value.ValueDt = now;
         value.RegistrationDt = now;
 
@@ -72,7 +67,7 @@ internal sealed class BaseValueTestDataSource : TestDataSource<BaseValue>
     {
         var randomValue = Random.Shared.Next(0, COUNT);
 
-        BaseValue value = _testDataAnalog[randomValue];
+        var value = _testDataAnalog[randomValue];
         value.ValueDt = now;
         value.RegistrationDt = now;
 

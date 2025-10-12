@@ -11,7 +11,7 @@ namespace PowerUnit.Service.IEC104.Export;
 
 public sealed class IEC104DataProvider : IDataProvider, IDisposable
 {
-    private static readonly int _bufferizationSize = 64;
+    private static readonly int _bufferizationSize = 512;
     private static readonly TimeSpan _bufferizationTimeout = TimeSpan.FromMilliseconds(500);
 
     private readonly FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> _mapping;
@@ -24,6 +24,7 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
     public IEC104DataProvider(IDataSource<BaseValue> source,
         FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> mapping,
         FrozenDictionary<byte, FrozenSet<ushort>> groups,
+        ISubscriberDiagnostic subscriberDiagnostic,
         ILogger<IEC104DataProvider> logger)
     {
         _mapping = mapping;
@@ -34,7 +35,7 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
             {
                 context.Snapshot(values);
                 return Task.CompletedTask;
-            }, filter: ValueFilter);
+            }, filter: ValueFilter, subscriberDiagnostic: subscriberDiagnostic);
         }
     }
 

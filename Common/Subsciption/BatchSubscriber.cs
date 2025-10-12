@@ -25,7 +25,7 @@ public sealed class BatchSubscriber<T, TContext> : SubscriberBase<T, TContext>
             value =>
             {
                 _channel.Writer.TryWrite(value);
-                SubscriberDiagnostic?.RcvCounter(typeof(TContext).Name, typeof(T).Name);
+                SubscriberDiagnostic?.RcvCounter(TypeName);
             },
             OnError,
             OnComplite);
@@ -43,7 +43,7 @@ public sealed class BatchSubscriber<T, TContext> : SubscriberBase<T, TContext>
                             try
                             {
                                 await onNext(value, Context, token);
-                                SubscriberDiagnostic?.ProcessCounter(typeof(TContext).Name, typeof(T).Name);
+                                SubscriberDiagnostic?.ProcessCounter(TypeName);
                             }
                             catch (Exception ex)
                             {

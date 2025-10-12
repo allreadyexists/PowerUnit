@@ -12,6 +12,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\Other\PowerUnit.Common.Other.csproj" />
 	  <ProjectReference Include="..\Reactive\PowerUnit.Common.Reactive.csproj" />
 	</ItemGroup>
 

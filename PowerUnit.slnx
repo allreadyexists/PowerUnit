@@ -23,7 +23,9 @@
     <Project Path="Infrastructure/DbContexts/Iec104ServerContext.Sqlite/PowerUnit.Infrastructure.IEC104ServerDb.Sqlite.csproj" />
     <Project Path="Infrastructure/DbContexts/Iec104ServerContext/PowerUnit.Infrastructure.IEC104ServerDb.csproj" />
   </Folder>
-  <Folder Name="/Service/" />
+  <Folder Name="/Service/">
+    <Project Path="Service/DataSource/PowerUnit.DataSource.Test/PowerUnit.DataSource.Test.csproj" Id="e0a63ad3-49e5-4631-8bdc-4874394333df" />
+  </Folder>
   <Folder Name="/Service/IEC104/">
     <Project Path="Service/IEC104/Application/PowerUnit.Service.IEC104.Application.csproj" />
     <Project Path="Service/IEC104/Channel/PowerUnit.Service.IEC104.Channel.csproj" />

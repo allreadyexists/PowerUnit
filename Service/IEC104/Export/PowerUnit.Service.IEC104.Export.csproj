@@ -32,6 +32,7 @@
 		<ProjectReference Include="..\..\..\Infrastructure\DbContexts\Iec104ServerContext.PostgreSql\PowerUnit.Infrastructure.IEC104ServerDb.PostgreSql.csproj" />
 		<ProjectReference Include="..\..\..\Infrastructure\DbContexts\Iec104ServerContext.Sqlite\PowerUnit.Infrastructure.IEC104ServerDb.Sqlite.csproj" />
 		<ProjectReference Include="..\..\..\Infrastructure\DbContexts\Iec104ServerContext\PowerUnit.Infrastructure.IEC104ServerDb.csproj" />
+		<ProjectReference Include="..\..\DataSource\PowerUnit.DataSource.Test\PowerUnit.DataSource.Test.csproj" />
 		<ProjectReference Include="..\Application\PowerUnit.Service.IEC104.Application.csproj" />
 		<ProjectReference Include="..\Channel\PowerUnit.Service.IEC104.Channel.csproj" />
 		<ProjectReference Include="..\Options\PowerUnit.Service.IEC104.Models.csproj" />

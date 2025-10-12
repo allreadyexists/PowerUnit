@@ -18,7 +18,7 @@ public sealed class SubscriberBounded<T, TContext> : Subscriber<T, TContext>
             SingleWriter = true,
         }, dropped =>
         {
-            SubscriberDiagnostic?.DropCounter(typeof(TContext).Name, typeof(T).Name);
+            SubscriberDiagnostic?.DropCounter(TypeName);
         });
 
         Initialize();

@@ -1,3 +1,5 @@
+using PowerUnit.Common.Other;
+
 namespace PowerUnit.Common.Subsciption;
 
 public abstract class SubscriberBase<T, TContext> : IDisposable
@@ -14,10 +16,13 @@ public abstract class SubscriberBase<T, TContext> : IDisposable
     protected Func<T, TContext, bool> Filter { get; set; }
     protected ISubscriberDiagnostic? SubscriberDiagnostic { get; }
 
+    protected string TypeName { get; }
+
     public SubscriberBase(IDataSource<T> dataSource, TContext context, Action<Exception>? onError, Action? onComplite, Func<T, TContext, bool>? filter,
         ISubscriberDiagnostic? subscriberDiagnostic)
     {
         Id = Guid.NewGuid();
+        TypeName = GetType().GetFormattedName();
 
         DataSource = dataSource;
         Context = context;

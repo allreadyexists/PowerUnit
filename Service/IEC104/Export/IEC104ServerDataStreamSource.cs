@@ -13,7 +13,7 @@ public sealed class IEC104ServerDataStreamSource : DataSourceBase<MapValueItem>
 
     private readonly FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> _mapping;
 
-    public IEC104ServerDataStreamSource(IDataSource<BaseValue> source, bool sporadicSendEnable, FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> mapping, ILogger<IEC104ServerDataStreamSource> logger) : base(logger)
+    public IEC104ServerDataStreamSource(IDataSource<BaseValue> source, bool sporadicSendEnable, FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> mapping, ISubscriberDiagnostic diagnostic, ILogger<IEC104ServerDataStreamSource> logger) : base(logger)
     {
         _mapping = mapping;
         if (sporadicSendEnable && _mapping.Count != 0)
@@ -27,7 +27,7 @@ public sealed class IEC104ServerDataStreamSource : DataSourceBase<MapValueItem>
                         Value = x
                     });
                     return Task.CompletedTask;
-                }, filter: ValueFilter);
+                }, filter: ValueFilter, subscriberDiagnostic: diagnostic);
         }
     }
 

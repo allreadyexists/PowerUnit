@@ -17,11 +17,11 @@ using OpenTelemetry.Resources;
 using PowerUnit.Common.EnviromentManager;
 using PowerUnit.Common.Subsciption;
 using PowerUnit.Common.TimeoutService;
+using PowerUnit.DataSource.Test;
 using PowerUnit.Infrastructure.IEC104ServerDb;
 using PowerUnit.Infrastructure.IEC104ServerDb.PostgreSql;
 using PowerUnit.Infrastructure.IEC104ServerDb.Sqlite;
 using PowerUnit.Service.IEC104.Abstract;
-using PowerUnit.Service.IEC104.Export.DataSource;
 using PowerUnit.Service.IEC104.Types;
 
 using System.Reflection;
@@ -74,17 +74,20 @@ internal sealed class Program
                     }
 
                     // внешний
-                    services.AddSingleton<IDataSource<BaseValue>, BaseValueTestDataSource>();
+                    services.AddBaseValueTestDataSource(hostBuilderContext.Configuration);
                     services.AddSingleton<IConfigProvider, IEC104ConfigProvider>();
 
                     // внутренний
                     services.AddSingleton<IEC104ServerFactory>();
                     services.AddTimeoutService(ServiceLifetime.Transient);
+                    services.AddSingleton<IDataProvider, IEC104DataProvider>();
 
                     services.AddSingleton<IEC104Diagnostic>();
                     services.AddSingleton<IIEC60870_5_104ChannelLayerDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
                     services.AddSingleton<IIEC60870_5_104ApplicationLayerDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
                     services.AddSingleton<ITimeoutServiceDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
+                    services.AddSingleton<ITestDataSourceDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
+                    services.AddSingleton<ISubscriberDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
 
                     services.AddSingleton(s =>
                     {

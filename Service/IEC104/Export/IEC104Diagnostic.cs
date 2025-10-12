@@ -1,15 +1,23 @@
 using FastEnumUtility;
 
+using PowerUnit.Common.Subsciption;
 using PowerUnit.Common.TimeoutService;
+using PowerUnit.DataSource.Test;
 using PowerUnit.Service.IEC104.Abstract;
 
 using System.Diagnostics.Metrics;
 
 namespace PowerUnit.Service.IEC104.Export;
 
-public class IEC104Diagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IIEC60870_5_104ApplicationLayerDiagnostic, ITimeoutServiceDiagnostic, IDisposable
+public class IEC104Diagnostic :
+    IIEC60870_5_104ChannelLayerDiagnostic,
+    IIEC60870_5_104ApplicationLayerDiagnostic,
+    ITimeoutServiceDiagnostic,
+    ITestDataSourceDiagnostic,
+    ISubscriberDiagnostic,
+    IDisposable
 {
-    public static readonly string MeterName = nameof(IIEC60870_5_104ChannelLayerDiagnostic);
+    public static readonly string MeterName = nameof(IEC104Diagnostic);
     private readonly Meter _meter;
 
     private readonly Counter<long> _appMsgSend;
@@ -25,6 +33,12 @@ public class IEC104Diagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IIEC60870
 
     private readonly Counter<long> _timerOperationCall;
     private readonly Gauge<double> _timerOperationDuration;
+
+    private readonly Counter<long> _testMsgCount;
+
+    private readonly Counter<long> _subscriberRcv;
+    private readonly Counter<long> _subscriberProcess;
+    private readonly Counter<long> _subscriberDrop;
 
     public IEC104Diagnostic(IMeterFactory meterFactory)
     {
@@ -43,6 +57,12 @@ public class IEC104Diagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IIEC60870
 
         _timerOperationCall = _meter.CreateCounter<long>("timer-operation-call");
         _timerOperationDuration = _meter.CreateGauge<double>("timer-operation-call-duration", "ns");
+
+        _testMsgCount = _meter.CreateCounter<long>("test-msg-total");
+
+        _subscriberRcv = _meter.CreateCounter<long>("subscriber-msg-rcv");
+        _subscriberProcess = _meter.CreateCounter<long>("subscriber-msg-process");
+        _subscriberDrop = _meter.CreateCounter<long>("subscriber-msg-drop");
     }
 
     void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSend(string serverId, ChannelLayerPacketPriority priority)
@@ -153,6 +173,26 @@ public class IEC104Diagnostic : IIEC60870_5_104ChannelLayerDiagnostic, IIEC60870
     void ITimeoutServiceDiagnostic.CancelTimeoutCall()
     {
         _timerOperationCall.Add(1, KeyValuePair.Create<string, object?>("type", "Cancel"));
+    }
+
+    void ITestDataSourceDiagnostic.IncRequest()
+    {
+        _testMsgCount.Add(1);
+    }
+
+    void ISubscriberDiagnostic.RcvCounter(string source)
+    {
+        _subscriberRcv.Add(1, KeyValuePair.Create<string, object?>("subscriber", source));
+    }
+
+    void ISubscriberDiagnostic.ProcessCounter(string source)
+    {
+        _subscriberProcess.Add(1, KeyValuePair.Create<string, object?>("subscriber", source));
+    }
+
+    void ISubscriberDiagnostic.DropCounter(string source)
+    {
+        _subscriberDrop.Add(1, KeyValuePair.Create<string, object?>("subscriber", source));
     }
 }
 
