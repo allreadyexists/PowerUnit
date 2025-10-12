@@ -13,25 +13,29 @@ public sealed class IEC104ServerDataStreamSource : DataSourceBase<MapValueItem>
 
     private readonly FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> _mapping;
 
+    private static Task Subscribe(BaseValue value, IEC104ServerDataStreamSource context, CancellationToken ct)
+    {
+        if (context._mapping.TryGetValue((value.SourceId, value.EquipmentId, value.ParameterId), out var map))
+        {
+            var newValue = new MapValueItem(map.Address, (ASDUType)map.AsduType)
+            {
+                Value = value
+            };
+            context.Notify(ref newValue);
+        }
+
+        return Task.CompletedTask;
+    }
+
     public IEC104ServerDataStreamSource(IDataSource<BaseValue> source, bool sporadicSendEnable, FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> mapping, ISubscriberDiagnostic diagnostic, ILogger<IEC104ServerDataStreamSource> logger) : base(logger)
     {
         _mapping = mapping;
         if (sporadicSendEnable && _mapping.Count != 0)
         {
-            _subscriber = new SubscriberBounded<BaseValue, IEC104ServerDataStreamSource>(1, source, this,
-                static (x, context, token) =>
-                {
-                    var map = context._mapping[(x.SourceId, x.EquipmentId, x.ParameterId)];
-                    context.Notify(new MapValueItem(map.Address, (ASDUType)map.AsduType)
-                    {
-                        Value = x
-                    });
-                    return Task.CompletedTask;
-                }, filter: ValueFilter, subscriberDiagnostic: diagnostic);
+            _subscriber = new SubscriberBounded<BaseValue, IEC104ServerDataStreamSource>(1, source,
+                this, Subscribe, subscriberDiagnostic: diagnostic);
         }
     }
-
-    private static bool ValueFilter(BaseValue value, IEC104ServerDataStreamSource context) => context._mapping.ContainsKey((value.SourceId, value.EquipmentId, value.ParameterId));
 
     public override void Dispose()
     {

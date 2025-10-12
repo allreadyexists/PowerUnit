@@ -170,16 +170,16 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         }
     }
 
-//    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-//#pragma warning disable IDE0051 // Remove unused private members
-//    private void SendValues2(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values)
-//#pragma warning restore IDE0051 // Remove unused private members
-//    {
-//        SendValuesBase(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
-//        {
-//            ctx._packetSender!.Send(buf.AsSpan(0, len), cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
-//        });
-//    }
+    //    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    //#pragma warning disable IDE0051 // Remove unused private members
+    //    private void SendValues2(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values)
+    //#pragma warning restore IDE0051 // Remove unused private members
+    //    {
+    //        SendValuesBase(buffer, initAddr, cot, values, static (ctx, buf, len, cot) =>
+    //        {
+    //            ctx._packetSender!.Send(buf.AsSpan(0, len), cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
+    //        });
+    //    }
 
     private static readonly unsafe delegate*<IEC60870_5_104ServerApplicationLayer, byte[], int, COT, void> _sendActionPtr = &SendAction;
 
@@ -265,6 +265,21 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         @struct->CommonAddrAsdu = @object.CommonAddrAsdu;
     }
 
+    private static void SubscribeCallback2(byte[] buffer, IEC60870_5_104ServerApplicationLayer context, IList<MapValueItem> additionInfo)
+    {
+        context.Stream(buffer, additionInfo);
+    }
+
+    private static Task SubscribeCallback(IList<MapValueItem> values, IEC60870_5_104ServerApplicationLayer context, CancellationToken ct)
+    {
+        if (values.Count > 0)
+        {
+            SendInRentBuffer(SubscribeCallback2, context, values);
+        }
+
+        return Task.CompletedTask;
+    }
+
     public IEC60870_5_104ServerApplicationLayer(IEC104ServerModel serverModel,
         IDataSource<MapValueItem> dataSource,
         IDataProvider dataProvider,
@@ -303,18 +318,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
             {
                 context._subscriber2 = new BatchSubscriber<MapValueItem, IEC60870_5_104ServerApplicationLayer>(
                     _bufferizationSize, _bufferizationTimeout, context._dataSource, context,
-                    static (values, context2, token) =>
-                    {
-                        if (values.TryGetNonEnumeratedCount(out var count) && count > 0)
-                        {
-                            SendInRentBuffer(static (buffer, context3, additionInfo2) =>
-                            {
-                                context3.Stream(buffer, additionInfo2);
-                            }, context2, values);
-                        }
-
-                        return Task.CompletedTask;
-                    }, subscriberDiagnostic: context._subscriberDiagnostic);
+                    SubscribeCallback, subscriberDiagnostic: context._subscriberDiagnostic);
             }
         }, this, this);
     }

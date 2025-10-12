@@ -21,6 +21,12 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
     private readonly ReaderWriterLock _lock = new ReaderWriterLock();
     private readonly Dictionary<ushort, MapValueItem> _values = new Dictionary<ushort, MapValueItem>();
 
+    private static Task SubscriberCallback(IList<BaseValue> values, IEC104DataProvider context, CancellationToken ct)
+    {
+        context.Snapshot(values);
+        return Task.CompletedTask;
+    }
+
     public IEC104DataProvider(IDataSource<BaseValue> source,
         FrozenDictionary<(string SourceId, string EquipmentId, string ParameterId), IEC104MappingModel> mapping,
         FrozenDictionary<byte, FrozenSet<ushort>> groups,
@@ -31,11 +37,8 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
         _groups = groups;
         if (_mapping.Count != 0)
         {
-            _subscriber = new BatchSubscriber<BaseValue, IEC104DataProvider>(_bufferizationSize, _bufferizationTimeout, source, this, static (values, context, token) =>
-            {
-                context.Snapshot(values);
-                return Task.CompletedTask;
-            }, filter: ValueFilter, subscriberDiagnostic: subscriberDiagnostic);
+            _subscriber = new BatchSubscriber<BaseValue, IEC104DataProvider>(_bufferizationSize, _bufferizationTimeout, source, this,
+                SubscriberCallback, subscriberDiagnostic: subscriberDiagnostic);
         }
     }
 
@@ -77,17 +80,19 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
             for (var i = 0; i < values.Count; i++)
             {
                 var value = values[i];
-                var v = _mapping[(value.SourceId, value.EquipmentId, value.ParameterId)];
 
-                ref var valueItem = ref CollectionsMarshal.GetValueRefOrAddDefault(_values, v.Address, out bool exists);
+                if (_mapping.TryGetValue((value.SourceId, value.EquipmentId, value.ParameterId), out var map))
+                {
+                    ref var valueItem = ref CollectionsMarshal.GetValueRefOrAddDefault(_values, map.Address, out bool exists);
 
-                if (exists)
-                {
-                    valueItem.Value = value;
-                }
-                else
-                {
-                    _values[v.Address] = valueItem = new MapValueItem(v.Address, (ASDUType)v.AsduType);
+                    if (exists)
+                    {
+                        valueItem.Value = value;
+                    }
+                    else
+                    {
+                        _values[map.Address] = valueItem = new MapValueItem(map.Address, (ASDUType)map.AsduType);
+                    }
                 }
             }
         }
@@ -95,10 +100,5 @@ public sealed class IEC104DataProvider : IDataProvider, IDisposable
         {
             _lock.ReleaseWriterLock();
         }
-    }
-
-    private static bool ValueFilter(BaseValue value, IEC104DataProvider context)
-    {
-        return context._mapping.ContainsKey((value.SourceId, value.EquipmentId, value.ParameterId));
     }
 }

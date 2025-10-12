@@ -22,17 +22,18 @@ public abstract class DataSourceBase<T> : IDataSource<T>, IDisposable
 
     protected void Notify(T value)
     {
-        if (_subject.HasObservers)
-            _subject.OnNext(value);
+        _subject.OnNext(value);
+    }
+
+    protected void Notify(ref T value)
+    {
+        _subject.OnNext(value);
     }
 
     protected void Notify(Func<DataSourceBase<T>, T> generatorValue)
     {
-        if (_subject.HasObservers)
-        {
-            var value = generatorValue(this);
-            _subject.OnNext(value);
-        }
+        var value = generatorValue(this);
+        _subject.OnNext(value);
     }
 
     public abstract void Dispose();
