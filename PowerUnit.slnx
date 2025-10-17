@@ -24,13 +24,14 @@
     <Project Path="Infrastructure/DbContexts/Iec104ServerContext/PowerUnit.Infrastructure.IEC104ServerDb.csproj" />
   </Folder>
   <Folder Name="/Service/">
-    <Project Path="Service/DataSource/PowerUnit.DataSource.Test/PowerUnit.DataSource.Test.csproj" Id="e0a63ad3-49e5-4631-8bdc-4874394333df" />
+    <Project Path="Service/DataSource/Test/PowerUnit.DataSource.Test.csproj" />
   </Folder>
   <Folder Name="/Service/IEC104/">
     <Project Path="Service/IEC104/Application/PowerUnit.Service.IEC104.Application.csproj" />
     <Project Path="Service/IEC104/Channel/PowerUnit.Service.IEC104.Channel.csproj" />
     <Project Path="Service/IEC104/Common/PowerUnit.Service.IEC104.Abstract.csproj" />
     <Project Path="Service/IEC104/Export/PowerUnit.Service.IEC104.Export.csproj" />
+    <Project Path="Service/IEC104/Import/PowerUnit.Service.IEC104.Import.csproj" />
     <Project Path="Service/IEC104/Options/PowerUnit.Service.IEC104.Models.csproj" />
     <Project Path="Service/IEC104/Types/PowerUnit.Service.IEC104.Types.csproj" />
   </Folder>

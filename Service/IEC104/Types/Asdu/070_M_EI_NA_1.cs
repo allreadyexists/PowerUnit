@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace PowerUnit.Service.IEC104.Types.Asdu;
 
 [StructLayout(LayoutKind.Explicit, Pack = 1)]
-[ASDUTypeInfo(ASDUType.M_EI_NA_1, SQ.Single, toServerCauseOfTransmits: [COT.INIT_MESSAGE])]
+[ASDUTypeInfo(ASDUType.M_EI_NA_1, SQ.Single, toClientCauseOfTransmits: [COT.INIT_MESSAGE])]
 public readonly struct M_EI_NA_1
 {
     public static byte Size => (byte)Marshal.SizeOf<M_EI_NA_1>();

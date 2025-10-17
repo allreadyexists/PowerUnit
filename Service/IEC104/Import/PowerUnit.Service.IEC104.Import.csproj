@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NLog.Web.AspNetCore" Version="$(NLogWebAspNetCoreVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
+    <PackageReference Include="NLog" Version="6.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Common\NetCoreServer\PowerUnit.Common.NetCoreServer.csproj" />
+    <ProjectReference Include="..\Channel\PowerUnit.Service.IEC104.Channel.csproj" />
+    <ProjectReference Include="..\Common\PowerUnit.Service.IEC104.Abstract.csproj" />
+  </ItemGroup>
+
+</Project>

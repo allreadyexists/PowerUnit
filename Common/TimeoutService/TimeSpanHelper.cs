@@ -6,11 +6,11 @@ internal static class TimeSpanHelper
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TimeSpan AlignToValidValue(this TimeSpan value) =>
-        value == Timeout.InfiniteTimeSpan ?
+        value == TimeSpan.MaxValue ?
             value :
             value < TimeSpan.Zero ?
                 TimeSpan.Zero :
-                value > Timeout.InfiniteTimeSpan ?
-                    Timeout.InfiniteTimeSpan :
+                value > TimeSpan.MaxValue ?
+                    TimeSpan.MaxValue :
                     value;
 }
