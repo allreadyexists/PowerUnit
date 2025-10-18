@@ -22,9 +22,8 @@ public sealed class IEC60870_5_104ClientChannelLayer : IEC60870_5_104ChannelLaye
         TimeProvider timeProvider,
         ITimeoutService timeoutService,
         IIEC60870_5_104ChannelLayerDiagnostic diagnostic,
-        ILogger<IEC60870_5_104ClientChannelLayer> logger,
-        CancellationToken ct) :
-        base(physicalLayerCommander, parserGenerator, timeProvider, timeoutService, diagnostic, logger, ct)
+        ILogger<IEC60870_5_104ClientChannelLayer> logger) :
+        base(physicalLayerCommander, parserGenerator, timeProvider, timeoutService, diagnostic, logger)
     {
         _id = id;
         // дружим каналку и сборщик пакета
@@ -47,7 +46,7 @@ public sealed class IEC60870_5_104ClientChannelLayer : IEC60870_5_104ChannelLaye
     /// <returns></returns>
     protected sealed override async Task ProcessUPacket(UControl control, CancellationToken ct)
     {
-        _logger.LogProcessUPacket(control);
+        Logger.LogProcessUPacket(control);
 
         switch (control)
         {
@@ -69,9 +68,9 @@ public sealed class IEC60870_5_104ClientChannelLayer : IEC60870_5_104ChannelLaye
                 _timeout1Id = await StopTimerAsync(_timeout1Id, ct);
                 break;
             default:
-                _diagnostic.ProtocolError(Id);
-                _physicalLayerController.DisconnectLayer();
-                _logger.LogTrace("U packet not supported");
+                Diagnostic.ProtocolError(Id);
+                PhysicalLayerController.DisconnectLayer();
+                Logger.LogTrace("U packet not supported");
                 break;
         }
     }
@@ -82,24 +81,26 @@ public sealed class IEC60870_5_104ClientChannelLayer : IEC60870_5_104ChannelLaye
         {
             await foreach (var @event in Events.Reader.ReadAllAsync(ct))
             {
-                if (_logger.IsEnabled(LogLevel.Trace))
+                if (Logger.IsEnabled(LogLevel.Trace))
                 {
                     if (@event is TimerEvent timerEvent)
-                        _logger.LogTimerEvent(@event, timerEvent.TimerId);
+                        Logger.LogTimerEvent(@event, timerEvent.TimerId);
                     else
-                        _logger.LogEvent(@event);
+                        Logger.LogEvent(@event);
                 }
 
                 switch (@event)
                 {
                     case Channel.Events.ConnectEvent:
-                        _physicalLayerController.SendPacket(_startAct, 0, APCI.Size);
+                        PhysicalLayerController.SendPacket(_startAct, 0, APCI.Size);
                         // взводим таймер ожидания идентификации соединения - должен придти правильный пакет от клиента
                         _timeout0Id = await StartTimerAsync(_timeout0Id, TimeSpan.FromSeconds(ChannelLayerModel.Timeout0Sec), ct);
                         break;
                     case Channel.Events.DisconnectEvent:
+                        _isEstablishedConnection = false;
                         _asduNotification?.Dispose();
-                        WorkCycle = null;
+                        ResetCounter();
+                        ResetTxQueue();
                         break;
                     case Channel.Events.TxEvent:
                         await ProcessTxQueue(ct);

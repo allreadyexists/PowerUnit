@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 using NLog;
+using NLog.Extensions.Logging;
 using NLog.Web;
 
 using PowerUnit.Common.TimeoutService;
@@ -120,19 +122,19 @@ internal sealed class Program
 
                     services.AddHostedService<IEC104ClientsStarterService>();
                 })
-                //.ConfigureLogging((hostBuilderContext, logging) =>
-                //{
-                //    logging.ClearProviders();
-                //    var serviceName = hostBuilderContext.Configuration.GetValue("ServiceName", "IEC104Export");
-                //    LogManager.Configuration = new NLogLoggingConfiguration(hostBuilderContext.Configuration.GetSection("NLog"));
-                //    var fileTargetConfig = LogManager.Configuration.FindTargetByName<AsyncTargetWrapper>("logfile");
-                //    var enviromentManager = EnviromentManagerDiExtension.GetEnviromentManager(serviceName);
-                //    if (fileTargetConfig!.WrappedTarget is FileTarget fileTarget)
-                //    {
-                //        fileTarget.FileName = Path.Combine(enviromentManager.GetLogPath(), "current.log");
-                //        fileTarget.ArchiveFileName = Path.Combine(enviromentManager.GetLogPath(), "{#}.log");
-                //    }
-                //})
+                .ConfigureLogging((hostBuilderContext, logging) =>
+                {
+                    logging.ClearProviders();
+                    //var serviceName = hostBuilderContext.Configuration.GetValue("ServiceName", "IEC104Export");
+                    LogManager.Configuration = new NLogLoggingConfiguration(hostBuilderContext.Configuration.GetSection("NLog"));
+                    //var fileTargetConfig = LogManager.Configuration.FindTargetByName<AsyncTargetWrapper>("logfile");
+                    //var enviromentManager = EnviromentManagerDiExtension.GetEnviromentManager(serviceName);
+                    //if (fileTargetConfig!.WrappedTarget is FileTarget fileTarget)
+                    //{
+                    //    fileTarget.FileName = Path.Combine(enviromentManager.GetLogPath(), "current.log");
+                    //    fileTarget.ArchiveFileName = Path.Combine(enviromentManager.GetLogPath(), "{#}.log");
+                    //}
+                })
                 .UseNLog();
 
                 var host = builder.Build();

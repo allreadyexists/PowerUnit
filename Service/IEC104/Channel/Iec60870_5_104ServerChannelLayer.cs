@@ -43,8 +43,7 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         IIEC60870_5_104ChannelLayerDiagnostic diagnostic,
         ILogger<IEC60870_5_104ServerChannelLayer> logger,
         TimeProvider timeProvider,
-        ITimeoutService timeoutService,
-        CancellationToken ct) : base(physicalLayerController, parserGenerator, timeProvider, timeoutService, diagnostic, logger, ct)
+        ITimeoutService timeoutService) : base(physicalLayerController, parserGenerator, timeProvider, timeoutService, diagnostic, logger)
     {
         _serviceProvider = serviceProvider;
         _serverModel = serverModel;
@@ -67,21 +66,21 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
     /// <returns></returns>
     protected sealed override async Task ProcessUPacket(UControl control, CancellationToken ct)
     {
-        _logger.LogProcessUPacket(control);
+        Logger.LogProcessUPacket(control);
 
         switch (control)
         {
             case UControl.StartDtAct:
                 if (!_isEstablishedConnection)
                 {
-                    _asduNotification = GetApplicationLayer(_serviceProvider, _serverModel, _dataSource, _dataProvider, this, _physicalLayerController);
+                    _asduNotification = GetApplicationLayer(_serviceProvider, _serverModel, _dataSource, _dataProvider, this, PhysicalLayerController);
 
                     _isEstablishedConnection = true;
                     _timeout0Id = await StopTimerAsync(_timeout0Id, ct);
                 }
 
-                _physicalLayerController.SendPacket(_startCon, 0, APCI.Size);
-                _diagnostic.SendUPacket(Id);
+                PhysicalLayerController.SendPacket(_startCon, 0, APCI.Size);
+                Diagnostic.SendUPacket(Id);
                 break;
             case UControl.StopDtAct:
                 // Подумать - клиент может отключиться, но при этом не разорвать соединение
@@ -99,28 +98,20 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
                     await ResetTimers(ct);
                 }
 
-                _physicalLayerController.SendPacket(_stopCon, 0, APCI.Size);
-                _diagnostic.SendUPacket(Id);
+                PhysicalLayerController.SendPacket(_stopCon, 0, APCI.Size);
+                Diagnostic.SendUPacket(Id);
                 break;
             case UControl.TestFrAct:
                 if (_isEstablishedConnection)
                 {
-                    _physicalLayerController.SendPacket(_testCon, 0, APCI.Size);
+                    PhysicalLayerController.SendPacket(_testCon, 0, APCI.Size);
                 }
 
                 break;
-            //case UControl.StartDtCon:
-            //    break;
-            //case UControl.StopDtCon:
-            //    break;
-            //case UControl.TestFrCon:
-            //    // остановить таймер 1
-            //    _timeout1Id = await StopTimerAsync(_timeout1Id, ct);
-            //    break;
             default:
-                _diagnostic.ProtocolError(Id);
-                _physicalLayerController.DisconnectLayer();
-                _logger.LogTrace("U packet not supported");
+                Diagnostic.ProtocolError(Id);
+                PhysicalLayerController.DisconnectLayer();
+                Logger.LogTrace("U packet not supported");
                 break;
         }
     }
@@ -131,12 +122,12 @@ public sealed class IEC60870_5_104ServerChannelLayer : IEC60870_5_104ChannelLaye
         {
             await foreach (var @event in Events.Reader.ReadAllAsync(ct))
             {
-                if (_logger.IsEnabled(LogLevel.Trace))
+                if (Logger.IsEnabled(LogLevel.Trace))
                 {
                     if (@event is TimerEvent timerEvent)
-                        _logger.LogTimerEvent(@event, timerEvent.TimerId);
+                        Logger.LogTimerEvent(@event, timerEvent.TimerId);
                     else
-                        _logger.LogEvent(@event);
+                        Logger.LogEvent(@event);
                 }
 
                 switch (@event)

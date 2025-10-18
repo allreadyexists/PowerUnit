@@ -15,11 +15,13 @@ namespace PowerUnit.Service.IEC104.Export;
 
 public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
 {
+    private readonly IServiceProvider _provider;
     private readonly IEC104ServerModel _options;
+    private readonly IDataSource<MapValueItem> _dataSource;
+    private readonly IDataProvider _dataProvider;
 
-    private readonly IEC60870_5_104ServerChannelLayer _channelLayer;
+    private IEC60870_5_104ServerChannelLayer? _channelLayer;
     private readonly ILogger<IEC104ServerSession> _logger;
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     public IEC104ServerSession(IServiceProvider provider, IEC104ServerModel options, IDataSource<MapValueItem> dataSource,
         IDataProvider dataProvider,
@@ -28,19 +30,20 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
         //OptionSendBufferSize = 256 * 3 / 2;
         //OptionReceiveBufferSize = 256 * 3 / 2;
 
+        _provider = provider;
         _options = options;
+        _dataSource = dataSource;
+        _dataProvider = dataProvider;
 
         _logger = logger;
-
-        // Канальный уровень
-        _channelLayer = ActivatorUtilities.CreateInstance<IEC60870_5_104ServerChannelLayer>(provider,
-            [this, _options, dataSource, dataProvider, _cancellationTokenSource.Token]);
     }
 
     protected override void OnConnecting()
     {
         if (_logger.IsEnabled(LogLevel.Trace))
             _logger.LogTrace("{@id} connect", Id);
+        _channelLayer = ActivatorUtilities.CreateInstance<IEC60870_5_104ServerChannelLayer>(_provider,
+            [this, _options, _dataSource, _dataProvider]);
         ((IPhysicalLayerNotification)_channelLayer).Connect();
     }
 
@@ -48,8 +51,7 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
     {
         if (_logger.IsEnabled(LogLevel.Trace))
             _logger.LogTrace("{@id} disconnect", Id);
-        (_channelLayer as IPhysicalLayerNotification)?.Disconnect();
-        _cancellationTokenSource.Cancel();
+        _channelLayer?.Dispose();
     }
 
     protected override void OnReceived(byte[] buffer, long offset, long size)
@@ -85,5 +87,11 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
     bool IPhysicalLayerCommander.DisconnectLayer()
     {
         return Disconnect();
+    }
+
+    protected override void Dispose(bool disposingManagedResources)
+    {
+        _channelLayer?.Dispose();
+        base.Dispose(disposingManagedResources);
     }
 }

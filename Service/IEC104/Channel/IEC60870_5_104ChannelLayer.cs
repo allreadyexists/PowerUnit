@@ -15,15 +15,16 @@ namespace PowerUnit.Service.IEC104.Channel;
 public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,     // прием уведомлений от физического канала
     IChannelLayerPacketSender,      // прием запросов на передачу в канал
     IIEC60870_5_104NotifyPacket,    // прием уведомления о собранном кадре
-    ITimeoutOwner             // прием уведомления о срабытывании таймера
+    ITimeoutOwner,             // прием уведомления о срабытывании таймера
+    IDisposable
 {
-    protected readonly IPhysicalLayerCommander _physicalLayerController;
-    protected readonly IECParserGenerator _parserGenerator;
+    protected IPhysicalLayerCommander PhysicalLayerController { get; }
+    protected IECParserGenerator ParserGenerator { get; }
     private readonly TimeProvider _timeProvider;
     private readonly ITimeoutService _timeoutsService;
-    protected readonly IIEC60870_5_104ChannelLayerDiagnostic _diagnostic;
-    protected readonly ILogger _logger;
-    protected readonly CancellationToken _ct;
+    protected IIEC60870_5_104ChannelLayerDiagnostic Diagnostic { get; }
+    protected ILogger Logger { get; }
+    protected readonly CancellationTokenSource Cts = new CancellationTokenSource();
 
     #region Счетчики пакетов
 
@@ -97,15 +98,14 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
         TimeProvider timeProvider,
         ITimeoutService timeoutService,
         IIEC60870_5_104ChannelLayerDiagnostic diagnostic,
-        ILogger logger, CancellationToken ct)
+        ILogger logger)
     {
-        _physicalLayerController = physicalLayerCommander;
-        _parserGenerator = parserGenerator;
+        PhysicalLayerController = physicalLayerCommander;
+        ParserGenerator = parserGenerator;
         _timeProvider = timeProvider;
         _timeoutsService = timeoutService;
-        _diagnostic = diagnostic;
-        _logger = logger;
-        _ct = ct;
+        Diagnostic = diagnostic;
+        Logger = logger;
     }
 
     /// <summary>
@@ -213,9 +213,9 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
     protected async Task ProcessTimer0Async(CancellationToken ct)
     {
         _timeout0Id = await StopTimerAsync(_timeout0Id, ct);
-        _logger.LogTrace("Disconnect by timer0");
-        _diagnostic.ProtocolError(Id);
-        _physicalLayerController.DisconnectLayer();
+        Logger.LogTrace("Disconnect by timer0");
+        Diagnostic.ProtocolError(Id);
+        PhysicalLayerController.DisconnectLayer();
     }
 
     /// <summary>
@@ -225,9 +225,9 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
     protected async Task ProcessTimer1Async(CancellationToken ct)
     {
         _timeout1Id = await StopTimerAsync(_timeout1Id, ct);
-        _logger.LogTrace("Disconnect by timer1");
-        _diagnostic.ProtocolError(Id);
-        _physicalLayerController.DisconnectLayer();
+        Logger.LogTrace("Disconnect by timer1");
+        Diagnostic.ProtocolError(Id);
+        PhysicalLayerController.DisconnectLayer();
     }
 
     /// <summary>
@@ -239,9 +239,9 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
         _timeout2Id = await StopTimerAsync(_timeout2Id, ct);
         // отправка квитирующего S пакета
         new APCI(PacketS.Size, new PacketS(_rxCounter)).SerializeUnsafe(_buffer, 0);
-        _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
-        _diagnostic.SendSPacket(Id);
-        _logger.LogTimer2(_rxCounter);
+        PhysicalLayerController.SendPacket(_buffer, 0, APCI.Size);
+        Diagnostic.SendSPacket(Id);
+        Logger.LogTimer2(_rxCounter);
 
         _rxW = 0;
     }
@@ -255,9 +255,9 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
         _timeout3Id = await StopTimerAsync(_timeout3Id, ct);
 
         // отправка U Test пакета
-        _physicalLayerController.SendPacket(_testAct, 0, APCI.Size);
-        _diagnostic.SendUPacket(Id);
-        _logger.LogTimer3(UControl.TestFrAct);
+        PhysicalLayerController.SendPacket(_testAct, 0, APCI.Size);
+        Diagnostic.SendUPacket(Id);
+        Logger.LogTimer3(UControl.TestFrAct);
 
         _timeout1Id = await StartTimerAsync(_timeout1Id, TimeSpan.FromSeconds(ChannelLayerModel.Timeout1Sec), ct);
         _timeout3Id = await StartTimerAsync(_timeout3Id, TimeSpan.FromSeconds(ChannelLayerModel.Timeout3Sec), ct);
@@ -331,24 +331,24 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
 
             if (apci_2.TryGetIPacket(out var iPacket))
             {
-                _diagnostic.RcvIPacket(Id);
+                Diagnostic.RcvIPacket(Id);
                 await ProcessIPacket(iPacket.Rx, iPacket.Tx, rxPacket[6..], ct);
             }
             else if (apci_2.TryGetUPacket(out var uPacket))
             {
-                _diagnostic.RcvUPacket(Id);
+                Diagnostic.RcvUPacket(Id);
                 await ProcessUPacket(uPacket.UControl, ct);
             }
             else if (apci_2.TryGetSPacket(out var sPacket))
             {
-                _diagnostic.RcvSPacket(Id);
+                Diagnostic.RcvSPacket(Id);
                 await ProcessSPacket(sPacket.Rx, ct);
             }
             else
             {
-                _logger.LogTrace("Undefined packet rcv");
-                _diagnostic.ProtocolError(Id);
-                _physicalLayerController.DisconnectLayer();
+                Logger.LogTrace("Undefined packet rcv");
+                Diagnostic.ProtocolError(Id);
+                PhysicalLayerController.DisconnectLayer();
                 return;
             }
         }
@@ -368,7 +368,7 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
     {
         Events.Writer.TryWrite(ConnectEvent);
         // запускаем рабочий поток
-        WorkCycle ??= Task.Run(() => WorkCycleAsync(_ct));
+        WorkCycle ??= Task.Run(() => WorkCycleAsync(Cts.Token));
     }
 
     /// <summary>
@@ -399,7 +399,7 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
     /// <returns></returns>
     void IChannelLayerPacketSender.Send(ReadOnlySpan<byte> packet, ChannelLayerPacketPriority priority)
     {
-        _diagnostic.AppMsgTotal(Id, priority);
+        Diagnostic.AppMsgTotal(Id, priority);
 
         TxQueue.Writer.TryWrite(new SendMsg(packet, priority));
         Events.Writer.TryWrite(TxEvent);
@@ -407,7 +407,7 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
 
     void IChannelLayerPacketSender.Send(byte[] packet, ChannelLayerPacketPriority priority)
     {
-        _diagnostic.AppMsgTotal(Id, priority);
+        Diagnostic.AppMsgTotal(Id, priority);
 
         TxQueue.Writer.TryWrite(new SendMsg(packet, priority));
         Events.Writer.TryWrite(TxEvent);
@@ -429,7 +429,7 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
         var ackCount = _txW - dountAckPacket;
         _txW -= ackCount; // уменьшаем на количество подтвержденных пакетов
 
-        _logger.LogProcessRecievedAck(dountAckPacket, ackCount);
+        Logger.LogProcessRecievedAck(dountAckPacket, ackCount);
 
         while (ackCount > 0)
         {
@@ -449,7 +449,7 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
     /// <returns></returns>
     private async Task ProcessIPacket(ushort rx, ushort tx, byte[] data, CancellationToken ct)
     {
-        _logger.LogProcessIPacket(rx, tx);
+        Logger.LogProcessIPacket(rx, tx);
 
         var txDelta = CalcUnAckPacket(_txCounter, rx);
         var counterOk = txDelta >= 0 && txDelta <= _txW && tx == _rxCounter;
@@ -464,11 +464,11 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
             if (_rxW >= ChannelLayerModel.WindowWSize)
             {
                 new APCI(PacketS.Size, new PacketS(_rxCounter)).SerializeUnsafe(_buffer, 0);
-                _physicalLayerController.SendPacket(_buffer, 0, APCI.Size);
-                _diagnostic.SendSPacket(Id);
+                PhysicalLayerController.SendPacket(_buffer, 0, APCI.Size);
+                Diagnostic.SendSPacket(Id);
                 _rxW = 0; // несквитированные мною
 
-                _logger.LogProcessIPacket2(_rxCounter);
+                Logger.LogProcessIPacket2(_rxCounter);
                 // остановить таймер 2
                 _timeout2Id = await StopTimerAsync(_timeout2Id, ct);
             }
@@ -479,14 +479,14 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
             }
 
             if (_asduNotification != null)
-                _parserGenerator.Parse(_asduNotification, data, _timeProvider.GetUtcNow().DateTime, IsServerSide);
+                ParserGenerator.Parse(_asduNotification, data, _timeProvider.GetUtcNow().DateTime, IsServerSide);
         }
         else
         {
             // нарушение протокола - разрыв соединения по нашей инициативе
-            _logger.LogTrace("Disconnect by IPacket Rcv corruption");
-            _diagnostic.ProtocolError(Id);
-            _physicalLayerController.DisconnectLayer();
+            Logger.LogTrace("Disconnect by IPacket Rcv corruption");
+            Diagnostic.ProtocolError(Id);
+            PhysicalLayerController.DisconnectLayer();
         }
     }
 
@@ -498,7 +498,7 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
     /// <returns></returns>
     private async Task ProcessSPacket(ushort rx, CancellationToken ct)
     {
-        _logger.LogProcessSPacket(rx);
+        Logger.LogProcessSPacket(rx);
 
         var txDelta = CalcUnAckPacket(_txCounter, rx);
         var counterOk = txDelta >= 0 && txDelta <= _txW;
@@ -510,9 +510,9 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
         else
         {
             // нарушение протокола - разрыв соединения по нашей инициативе
-            _logger.LogTrace("Disconnect by SPacket Rcv corruption");
-            _diagnostic.ProtocolError(Id);
-            _physicalLayerController.DisconnectLayer();
+            Logger.LogTrace("Disconnect by SPacket Rcv corruption");
+            Diagnostic.ProtocolError(Id);
+            PhysicalLayerController.DisconnectLayer();
         }
     }
 
@@ -532,7 +532,7 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
         // только на установленном соединении
         if (!_isEstablishedConnection)
         {
-            _logger.LogTrace("ProcessTxQueue connection not established");
+            Logger.LogTrace("ProcessTxQueue connection not established");
             return;
         }
 
@@ -544,13 +544,13 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
             txQueueCount--;
             if (sendMsg.Priority == ChannelLayerPacketPriority.Low && TxButNotAckQueue.Count > ChannelLayerModel.MaxQueueSize)
             {
-                _diagnostic.AppMsgSkip(Id, sendMsg.Priority);
+                Diagnostic.AppMsgSkip(Id, sendMsg.Priority);
                 continue;
             }
             else
             {
                 TxButNotAckQueue.AddLast(sendMsg);
-                _diagnostic.AppMsgSend(Id, sendMsg.Priority);
+                Diagnostic.AppMsgSend(Id, sendMsg.Priority);
             }
         }
 
@@ -604,8 +604,8 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
                 //    _physicalLayerController.SendPacket(_buffer, 0, APCI.Size + msg.MsgLength);
                 //}
 
-                _diagnostic.SendIPacket(Id);
-                _logger.LogProcessTxQueue(_rxCounter, _txCounter);
+                Diagnostic.SendIPacket(Id);
+                Logger.LogProcessTxQueue(_rxCounter, _txCounter);
 
                 _rxW = 0; // сброс счетчика несквитированных посылок
                 _txCounter = CounterIncrement(_txCounter); // наращиваем счетчик отправленных
@@ -614,7 +614,7 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
                 txPacket = txPacket.Next;
             }
 
-            _physicalLayerController.SendPacket(_largeBuffer.Data, 0, _largeBuffer.Size);
+            PhysicalLayerController.SendPacket(_largeBuffer.Data, 0, _largeBuffer.Size);
 
             // остановить таймер 2
             _timeout2Id = await StopTimerAsync(_timeout2Id, ct);
@@ -626,6 +626,13 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
     #endregion
 
     protected abstract Task ProcessUPacket(UControl control, CancellationToken ct);
+    public void Dispose()
+    {
+        (_timeoutsService as IDisposable)?.Dispose();
+        Cts.Cancel();
+        Cts.Dispose();
+    }
+
     protected abstract string Id { get; }
     protected abstract IEC104ChannelLayerModel ChannelLayerModel { get; }
     protected abstract bool IsServerSide { get; }

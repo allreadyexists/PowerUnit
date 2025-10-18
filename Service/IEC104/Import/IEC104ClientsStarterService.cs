@@ -7,12 +7,14 @@ namespace PowerUnit.Service.IEC104.Import;
 
 public sealed class IEC104ClientsStarterService : BackgroundService
 {
-    private readonly IEC104Client[] _clients;
+    private readonly IEC104BaseClient[] _clients;
 
     public IEC104ClientsStarterService(IServiceProvider serviceProvider)
     {
-        var ipAddress = IPAddress.Parse("127.0.0.1");
-        _clients = [.. Enumerable.Range(0, 1).Select(x => ActivatorUtilities.CreateInstance<IEC104Client>(serviceProvider, [ipAddress, 2404 + x]))];
+        var ipAddress = IPAddress.Parse("192.168.1.69");
+        _clients = [.. Enumerable.Range(0, 1).Select(x => ActivatorUtilities.CreateInstance<IEC104BaseClient>(serviceProvider,
+            [ipAddress, 2404, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5)]
+            ))];
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -21,9 +23,7 @@ public sealed class IEC104ClientsStarterService : BackgroundService
         {
             try
             {
-                _clients[i].ConnectAsync();
-                while (!_clients[i].IsConnected)
-                    Thread.Yield();
+                _clients[i].StartAsync();
             }
             catch (Exception ex)
             {
