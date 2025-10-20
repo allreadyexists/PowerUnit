@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using PowerUnit.Common.TimeoutService;
@@ -13,10 +14,17 @@ namespace PowerUnit.Service.IEC104.Channel;
 /// </summary>
 public sealed class IEC60870_5_104ClientChannelLayer : IEC60870_5_104ChannelLayer
 {
+    private readonly IServiceProvider _serviceProvider;
     private readonly string _id;
+
+    private static IEC60870_5_104ClientApplicationLayer GetApplicationLayer(IServiceProvider serviceProvider)
+    {
+        return ActivatorUtilities.CreateInstance<IEC60870_5_104ClientApplicationLayer>(serviceProvider);
+    }
 
     public IEC60870_5_104ClientChannelLayer(
         string id,
+        IServiceProvider serviceProvider,
         IPhysicalLayerCommander physicalLayerCommander,
         IECParserGenerator parserGenerator,
         TimeProvider timeProvider,
@@ -26,6 +34,7 @@ public sealed class IEC60870_5_104ClientChannelLayer : IEC60870_5_104ChannelLaye
         base(physicalLayerCommander, parserGenerator, timeProvider, timeoutService, diagnostic, logger)
     {
         _id = id;
+        _serviceProvider = serviceProvider;
         // дружим каналку и сборщик пакета
         FrameDetector.AssignNotified(this);
     }
@@ -53,7 +62,7 @@ public sealed class IEC60870_5_104ClientChannelLayer : IEC60870_5_104ChannelLaye
             case UControl.StartDtCon:
                 if (!_isEstablishedConnection)
                 {
-                    _asduNotification = new IEC60870_5_104ClientApplicationLayer();
+                    _asduNotification = GetApplicationLayer(_serviceProvider);
                     _timeout0Id = await StopTimerAsync(_timeout0Id, ct);
                     _isEstablishedConnection = true;
                 }
