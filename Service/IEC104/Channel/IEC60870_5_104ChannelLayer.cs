@@ -397,19 +397,19 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
     /// </summary>
     /// <param name="packet"></param>
     /// <returns></returns>
-    void IChannelLayerPacketSender.Send(ReadOnlySpan<byte> packet, ChannelLayerPacketPriority priority)
+    void IChannelLayerPacketSender.Send(ReadOnlySpan<byte> packet, byte itemCnt, ChannelLayerPacketPriority priority)
     {
-        Diagnostic.AppMsgTotal(Id, priority);
+        Diagnostic.AppMsgTotal(Id, itemCnt, priority);
 
-        TxQueue.Writer.TryWrite(new SendMsg(packet, priority));
+        TxQueue.Writer.TryWrite(new SendMsg(packet, itemCnt, priority));
         Events.Writer.TryWrite(TxEvent);
     }
 
-    void IChannelLayerPacketSender.Send(byte[] packet, ChannelLayerPacketPriority priority)
+    void IChannelLayerPacketSender.Send(byte[] packet, byte itemCnt, ChannelLayerPacketPriority priority)
     {
-        Diagnostic.AppMsgTotal(Id, priority);
+        Diagnostic.AppMsgTotal(Id, itemCnt, priority);
 
-        TxQueue.Writer.TryWrite(new SendMsg(packet, priority));
+        TxQueue.Writer.TryWrite(new SendMsg(packet, itemCnt, priority));
         Events.Writer.TryWrite(TxEvent);
     }
 
@@ -544,13 +544,13 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
             txQueueCount--;
             if (sendMsg.Priority == ChannelLayerPacketPriority.Low && TxButNotAckQueue.Count > ChannelLayerModel.MaxQueueSize)
             {
-                Diagnostic.AppMsgSkip(Id, sendMsg.Priority);
+                Diagnostic.AppMsgSkip(Id, sendMsg.ItemCnt, sendMsg.Priority);
                 continue;
             }
             else
             {
                 TxButNotAckQueue.AddLast(sendMsg);
-                Diagnostic.AppMsgSend(Id, sendMsg.Priority);
+                Diagnostic.AppMsgSend(Id, sendMsg.ItemCnt, sendMsg.Priority);
             }
         }
 
@@ -628,6 +628,7 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
     protected abstract Task ProcessUPacket(UControl control, CancellationToken ct);
     public void Dispose()
     {
+        (_asduNotification as IDisposable)?.Dispose();
         (_timeoutsService as IDisposable)?.Dispose();
         Cts.Cancel();
         Cts.Dispose();
@@ -640,21 +641,24 @@ public abstract class IEC60870_5_104ChannelLayer : IPhysicalLayerNotification,  
     protected readonly struct SendMsg
     {
         public readonly byte[] Msg;
+        public readonly byte ItemCnt;
         public readonly int MsgLength;
         public readonly ChannelLayerPacketPriority Priority;
         private readonly bool _usePool;
-        public SendMsg(ReadOnlySpan<byte> packet, ChannelLayerPacketPriority priority)
+        public SendMsg(ReadOnlySpan<byte> packet, byte itemCnt, ChannelLayerPacketPriority priority)
         {
             MsgLength = packet.Length;
+            ItemCnt = itemCnt;
             Msg = ArrayPool<byte>.Shared.Rent(packet.Length);
             packet.CopyTo(Msg);
             Priority = priority;
             _usePool = true;
         }
 
-        public SendMsg(byte[] packet, ChannelLayerPacketPriority priority)
+        public SendMsg(byte[] packet, byte itemCnt, ChannelLayerPacketPriority priority)
         {
             MsgLength = packet.Length;
+            ItemCnt = itemCnt;
             Msg = packet;
             Priority = priority;
         }

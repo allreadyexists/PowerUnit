@@ -98,7 +98,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         }
     }
 
-    private unsafe void SendValuesBase(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values, delegate*<IEC60870_5_104ServerApplicationLayer, byte[], int, COT, void> sendActionPtr)
+    private unsafe void SendValuesBase(byte[] buffer, byte initAddr, COT cot, IList<MapValueItem> values, delegate*<IEC60870_5_104ServerApplicationLayer, byte, byte[], int, COT, void> sendActionPtr)
 #pragma warning restore IDE0051 // Remove unused private members
     {
         if (values.Count > 0)
@@ -165,7 +165,7 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
                 duration = _timeProvider.GetElapsedTime(start);
                 _diagnostic.AppSendMsgPrepareDuration(_serverName, duration.TotalNanoseconds);
 
-                sendActionPtr(this, buffer, ASDUPacketHeader_2_2.Size + packetItemCount * size, cot);
+                sendActionPtr(this, packetItemCount, buffer, ASDUPacketHeader_2_2.Size + packetItemCount * size, cot);
             }
         }
     }
@@ -181,11 +181,11 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
     //        });
     //    }
 
-    private static readonly unsafe delegate*<IEC60870_5_104ServerApplicationLayer, byte[], int, COT, void> _sendActionPtr = &SendAction;
+    private static readonly unsafe delegate*<IEC60870_5_104ServerApplicationLayer, byte, byte[], int, COT, void> _sendActionPtr = &SendAction;
 
-    private static void SendAction(IEC60870_5_104ServerApplicationLayer ctx, byte[] buf, int len, COT cot)
+    private static void SendAction(IEC60870_5_104ServerApplicationLayer ctx, byte itemCnt, byte[] buf, int len, COT cot)
     {
-        ctx._packetSender!.Send(buf[..len], cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
+        ctx._packetSender!.Send(buf[..len], itemCnt, cot == COT.SPORADIC ? ChannelLayerPacketPriority.Low : ChannelLayerPacketPriority.Normal);
     }
 
 #pragma warning disable IDE0051 // Remove unused private members
@@ -437,8 +437,13 @@ public sealed partial class IEC60870_5_104ServerApplicationLayer : IASDUNotifica
         return Process_Notify_CommonAsduAddress(in header, asduInfoRaw, _cts.Token);
     }
 
+    private int _dispose;
+
     void IDisposable.Dispose()
     {
+        if (Interlocked.Exchange(ref _dispose, 1) != 0)
+            return;
+
         _subscriber2?.Dispose();
         _cts.Cancel();
         _cts.Dispose();

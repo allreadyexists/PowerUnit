@@ -6,7 +6,7 @@ namespace PowerUnit.Common.Reactive;
 
 internal static class Buffer2<TSource>
 {
-    internal sealed class Ferry2 : Producer<IList<TSource>, Ferry2._>
+    internal sealed class Ferry2 : Producer<List<TSource>, Ferry2._>
     {
         private readonly IObservable<TSource> _source;
         private readonly int _count;
@@ -21,11 +21,11 @@ internal static class Buffer2<TSource>
             _scheduler = scheduler;
         }
 
-        protected override _ CreateSink(IObserver<IList<TSource>> observer) => new(this, observer);
+        protected override _ CreateSink(IObserver<List<TSource>> observer) => new(this, observer);
 
         protected override void Run(_ sink) => sink.Run();
 
-        internal sealed class _ : Sink<TSource, IList<TSource>>
+        internal sealed class _ : Sink<TSource, List<TSource>>
         {
             private readonly Ferry2 _parent;
             private readonly int _count;
@@ -34,7 +34,7 @@ internal static class Buffer2<TSource>
 #pragma warning restore IDE0330 // Use 'System.Threading.Lock'
             private List<TSource> _s;
 
-            public _(Ferry2 parent, IObserver<IList<TSource>> observer)
+            public _(Ferry2 parent, IObserver<List<TSource>> observer)
                 : base(observer)
             {
                 _parent = parent;

@@ -35,6 +35,7 @@ public class IEC104Diagnostic :
     private readonly Gauge<double> _timerOperationDuration;
 
     private readonly Counter<long> _testMsgCount;
+    private readonly Gauge<long> _testMsgGenerateDuration;
 
     private readonly Counter<long> _subscriberRcv;
     private readonly Counter<long> _subscriberProcess;
@@ -59,31 +60,32 @@ public class IEC104Diagnostic :
         _timerOperationDuration = _meter.CreateGauge<double>("timer-operation-call-duration", "ns");
 
         _testMsgCount = _meter.CreateCounter<long>("test-msg-total");
+        _testMsgGenerateDuration = _meter.CreateGauge<long>("test-msg-generate-duration", unit: "us");
 
         _subscriberRcv = _meter.CreateCounter<long>("subscriber-msg-rcv");
         _subscriberProcess = _meter.CreateCounter<long>("subscriber-msg-process");
         _subscriberDrop = _meter.CreateCounter<long>("subscriber-msg-drop");
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSend(string serverId, ChannelLayerPacketPriority priority)
+    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSend(string serverId, byte itemCnt, ChannelLayerPacketPriority priority)
     {
-        _appMsgSend.Add(1,
+        _appMsgSend.Add(itemCnt,
             KeyValuePair.Create<string, object?>(nameof(serverId), serverId),
             KeyValuePair.Create<string, object?>(nameof(priority), priority.FastToString())
             );
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSkip(string serverId, ChannelLayerPacketPriority priority)
+    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSkip(string serverId, byte itemCnt, ChannelLayerPacketPriority priority)
     {
-        _appMsgSkip.Add(1,
+        _appMsgSkip.Add(itemCnt,
             KeyValuePair.Create<string, object?>(nameof(serverId), serverId),
             KeyValuePair.Create<string, object?>(nameof(priority), priority.FastToString())
             );
     }
 
-    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgTotal(string serverId, ChannelLayerPacketPriority priority)
+    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgTotal(string serverId, byte itemCnt, ChannelLayerPacketPriority priority)
     {
-        _appMsgTotal.Add(1,
+        _appMsgTotal.Add(itemCnt,
             KeyValuePair.Create<string, object?>(nameof(serverId), serverId),
             KeyValuePair.Create<string, object?>(nameof(priority), priority.FastToString())
             );
@@ -178,6 +180,11 @@ public class IEC104Diagnostic :
     void ITestDataSourceDiagnostic.IncRequest()
     {
         _testMsgCount.Add(1);
+    }
+
+    void ITestDataSourceDiagnostic.BatchGenerateDuration(long durationUs)
+    {
+        _testMsgGenerateDuration.Record(durationUs);
     }
 
     void ISubscriberDiagnostic.RcvCounter(string source)

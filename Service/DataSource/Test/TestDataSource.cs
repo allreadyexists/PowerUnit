@@ -50,6 +50,8 @@ internal abstract class TestDataSource<T> : DataSourceBase<T>
                     source._diffUs = elapsed % source._intervalUs;
                     sw = source._timeProvider.GetTimestamp();
 
+                    var swGenerate = source._timeProvider.GetTimestamp();
+
                     for (var i = 0; i < batchSize; i++)
                     {
                         if (ct.IsCancellationRequested)
@@ -57,6 +59,8 @@ internal abstract class TestDataSource<T> : DataSourceBase<T>
                         source.Notify(Callback);
                         source._testDataSourceDiagnostic.IncRequest();
                     }
+
+                    source._testDataSourceDiagnostic.BatchGenerateDuration((long)source._timeProvider.GetElapsedTime(swGenerate).TotalMicroseconds);
 
                     await source._timer.WaitForNextTickAsync(ct);
                 }

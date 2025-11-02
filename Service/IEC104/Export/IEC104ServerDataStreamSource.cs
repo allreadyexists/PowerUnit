@@ -32,7 +32,7 @@ public sealed class IEC104ServerDataStreamSource : DataSourceBase<MapValueItem>
         _mapping = mapping;
         if (sporadicSendEnable && _mapping.Count != 0)
         {
-            _subscriber = new SubscriberBounded<BaseValue, IEC104ServerDataStreamSource>(1, source,
+            _subscriber = new SubscriberBounded<BaseValue, IEC104ServerDataStreamSource>(1024, source,
                 this, Subscribe, subscriberDiagnostic: diagnostic);
         }
     }

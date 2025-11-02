@@ -18,9 +18,9 @@ namespace PowerUnit.Service.IEC104.Export;
 
 internal sealed class IEC60870_5_104ChannelLayerEmptyDiagnostic : IIEC60870_5_104ChannelLayerDiagnostic
 {
-    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSend(string serverId, ChannelLayerPacketPriority priority) { }
-    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSkip(string serverId, ChannelLayerPacketPriority priority) { }
-    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgTotal(string serverId, ChannelLayerPacketPriority priority) { }
+    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSend(string serverId, byte itemCnt, ChannelLayerPacketPriority priority) { }
+    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgSkip(string serverId, byte itemCnt, ChannelLayerPacketPriority priority) { }
+    void IIEC60870_5_104ChannelLayerDiagnostic.AppMsgTotal(string serverId, byte itemCnt, ChannelLayerPacketPriority priority) { }
     void IIEC60870_5_104ChannelLayerDiagnostic.ProtocolError(string serverId) { }
     void IIEC60870_5_104ChannelLayerDiagnostic.RcvIPacket(string serverId) { }
     void IIEC60870_5_104ChannelLayerDiagnostic.RcvSPacket(string serverId) { }
