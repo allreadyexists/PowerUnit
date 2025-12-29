@@ -1,0 +1,1 @@
+dotnet publish --sc --runtime win-x64 -c Release

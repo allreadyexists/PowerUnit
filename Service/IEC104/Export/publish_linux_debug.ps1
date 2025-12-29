@@ -1,0 +1,1 @@
+dotnet publish --sc --runtime linux-x64 -c Debug
