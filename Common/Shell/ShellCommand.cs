@@ -63,6 +63,15 @@ public static class ShellCommand
         ExecuteInternal(command, out output, out error, null);
     }
 
+    public static string? ExecuteWithOutput(string command)
+    {
+        ExecuteInternal(command, out var output, out var error, null);
+        if (!string.IsNullOrEmpty(error))
+            throw new ShellCommandException(command, SUCCESS, error);
+
+        return output;
+    }
+
     /// <summary>
     /// Выполнить команду с выводом в консоль
     /// </summary>

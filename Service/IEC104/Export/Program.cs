@@ -1,14 +1,10 @@
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using NLog;
-using NLog.Extensions.Logging;
-using NLog.Targets;
-using NLog.Targets.Wrappers;
 using NLog.Web;
 
 using OpenTelemetry.Metrics;
@@ -18,7 +14,6 @@ using PowerUnit.Common.EnviromentManager;
 using PowerUnit.Common.Subsciption;
 using PowerUnit.Common.TimeoutService;
 using PowerUnit.DataSource.Test;
-using PowerUnit.Infrastructure.IEC104ServerDb;
 using PowerUnit.Infrastructure.IEC104ServerDb.PostgreSql;
 using PowerUnit.Infrastructure.IEC104ServerDb.Sqlite;
 using PowerUnit.Service.IEC104.Abstract;
@@ -26,11 +21,88 @@ using PowerUnit.Service.IEC104.Types;
 
 using System.Reflection;
 
+using ILogger = NLog.ILogger;
+
 namespace PowerUnit.Service.IEC104.Export;
 
 internal sealed class Program
 {
     private static readonly string[] _uriPrefixes = ["http://localhost:5000/"];
+
+#pragma warning disable CA1859 // Use concrete types when possible for improved performance
+    private static IHost? CreateHost(string[] args, ILogger? logger)
+#pragma warning restore CA1859 // Use concrete types when possible for improved performance
+    {
+        var builder = Host.CreateApplicationBuilder(args);
+
+        builder.Services.Configure<HostOptions>(hostOptions => hostOptions.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.StopHost);
+
+        var serviceName = builder.Configuration.GetValue("ServiceName", "IEC104Export");
+
+        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddEnviromentManager(serviceName);
+
+        var dbProvider = builder.Configuration.GetValue("DbProvider", "Sqlite");
+        switch (dbProvider)
+        {
+            case "Sqlite":
+                builder.Services.AddPowerUnitIEC104ServerDbContextSqlite(builder.Configuration);
+                break;
+            case "PostgreSql":
+                builder.Services.AddPowerUnitIEC104ServerPostgreSqlDbContext(builder.Configuration);
+                break;
+            default:
+                logger?.Error($"Unsupported db provider: {dbProvider}");
+                return null;
+        }
+
+        builder.Services.AddBaseValueTestDataSource(builder.Configuration);
+
+        builder.Services.AddSingleton<IConfigProvider, IEC104ConfigProvider>();
+
+        builder.Services.AddSingleton<IEC104ServerFactory>();
+        builder.Services.AddTimeoutService(ServiceLifetime.Transient);
+        builder.Services.AddSingleton<IDataProvider, IEC104DataProvider>();
+
+        builder.Services.AddSingleton<IEC104Diagnostic>();
+        builder.Services.AddSingleton<IIEC60870_5_104ChannelLayerDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
+        builder.Services.AddSingleton<IIEC60870_5_104ApplicationLayerDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
+        builder.Services.AddSingleton<ITimeoutServiceDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
+        builder.Services.AddSingleton<ITestDataSourceDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
+        builder.Services.AddSingleton<ISubscriberDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
+
+        builder.Services.AddSingleton(s =>
+        {
+            var iecReflection = ActivatorUtilities.CreateInstance<IECParserGenerator>(s, [Array.Empty<Assembly>()]);
+            iecReflection.Validate();
+            return iecReflection;
+        });
+
+        var uriPrefixes = builder.Configuration.GetSection("PrometheusOptions:Endpoints").Get<string[]>() ?? _uriPrefixes;
+
+        builder.Services.AddOpenTelemetry().WithMetrics(pb =>
+        {
+            pb
+            .ConfigureResource(r => r.AddService(serviceName: serviceName))
+            .AddRuntimeInstrumentation()
+            .AddProcessInstrumentation()
+            .AddMeter(IEC104Diagnostic.MeterName)
+            .AddEventCountersInstrumentation(c => c.AddEventSources("System.Net.Sockets"))
+            .AddPrometheusHttpListener(
+                options =>
+                {
+                    options.UriPrefixes = uriPrefixes;
+                    options.ScrapeEndpointPath = "/metrics";
+                    options.DisableTotalNameSuffixForCounters = true;
+                });
+        });
+
+        builder.Services.AddHostedService<IEC104ServersStarterService>();
+
+        builder.AddNLogEx(serviceName);
+
+        return builder.Build();
+    }
 
     private static async Task Main(string[] args)
     {
@@ -42,106 +114,14 @@ internal sealed class Program
         {
             try
             {
-                var builder = Host.CreateDefaultBuilder(args);
-                builder.UseDefaultServiceProvider((context, options) => { options.ValidateScopes = true; })
-                    .ConfigureAppConfiguration((hostingContext, config) =>
-                    {
-                    })
-                .ConfigureServices((hostBuilderContext, services) =>
-                {
-                    services.Configure<HostOptions>(hostOptions =>
-                    {
-                        hostOptions.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.StopHost;
-                    });
+                var host = CreateHost(args, logger);
+                if (host == null)
+                    break;
 
-                    var serviceName = hostBuilderContext.Configuration.GetValue("ServiceName", "IEC104Export");
-
-                    services.AddSingleton(TimeProvider.System);
-
-                    services.AddEnviromentManager(serviceName);
-
-                    var dbProvider = hostBuilderContext.Configuration.GetValue("DbProvider", "Sqlite");
-                    switch (dbProvider)
-                    {
-                        case "Sqlite":
-                            services.AddPowerUnitIEC104ServerDbContextSqlite(hostBuilderContext.Configuration);
-                            break;
-                        case "PostgreSql":
-                            services.AddPowerUnitIEC104ServerPostgreSqlDbContext(hostBuilderContext.Configuration);
-                            break;
-                        default:
-                            throw new Exception($"Unsupported db provider: {dbProvider}");
-                    }
-
-                    // внешний
-                    services.AddBaseValueTestDataSource(hostBuilderContext.Configuration);
-                    services.AddSingleton<IConfigProvider, IEC104ConfigProvider>();
-
-                    // внутренний
-                    services.AddSingleton<IEC104ServerFactory>();
-                    services.AddTimeoutService(ServiceLifetime.Transient);
-                    services.AddSingleton<IDataProvider, IEC104DataProvider>();
-
-                    services.AddSingleton<IEC104Diagnostic>();
-                    services.AddSingleton<IIEC60870_5_104ChannelLayerDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
-                    services.AddSingleton<IIEC60870_5_104ApplicationLayerDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
-                    services.AddSingleton<ITimeoutServiceDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
-                    services.AddSingleton<ITestDataSourceDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
-                    services.AddSingleton<ISubscriberDiagnostic>(sp => sp.GetRequiredService<IEC104Diagnostic>());
-
-                    services.AddSingleton(s =>
-                    {
-                        var iecReflection = ActivatorUtilities.CreateInstance<IECParserGenerator>(s, [Array.Empty<Assembly>()]);
-                        iecReflection.Validate();
-                        return iecReflection;
-                    });
-
-                    var uriPrefixes = hostBuilderContext.Configuration.GetSection("PrometheusOptions:Endpoints").Get<string[]>() ?? _uriPrefixes;
-
-                    services.AddOpenTelemetry().WithMetrics(pb =>
-                    {
-                        pb
-                        .ConfigureResource(r => r.AddService(serviceName: serviceName))
-                        .AddRuntimeInstrumentation()
-                        .AddProcessInstrumentation()
-                        .AddMeter(IEC104Diagnostic.MeterName)
-                        .AddEventCountersInstrumentation(c =>
-                            c.AddEventSources("System.Net.Sockets"))
-                        .AddPrometheusHttpListener(
-                            options =>
-                            {
-                                options.UriPrefixes = uriPrefixes;
-                                options.ScrapeEndpointPath = "/metrics";
-                                options.DisableTotalNameSuffixForCounters = true;
-                            });
-                    });
-
-                    services.AddHostedService<IEC104ServersStarterService>();
-                })
-                .ConfigureLogging((hostBuilderContext, logging) =>
-                {
-                    logging.ClearProviders();
-                    var serviceName = hostBuilderContext.Configuration.GetValue("ServiceName", "IEC104Export");
-                    LogManager.Configuration = new NLogLoggingConfiguration(hostBuilderContext.Configuration.GetSection("NLog"));
-                    var fileTargetConfig = LogManager.Configuration.FindTargetByName<AsyncTargetWrapper>("logfile");
-                    var enviromentManager = EnviromentManagerDiExtension.GetEnviromentManager(serviceName);
-                    if (fileTargetConfig!.WrappedTarget is FileTarget fileTarget)
-                    {
-                        fileTarget.FileName = Path.Combine(enviromentManager.GetLogPath(), "current.log");
-                        fileTarget.ArchiveFileName = Path.Combine(enviromentManager.GetLogPath(), "{#}.log");
-                    }
-                })
-                .UseNLog();
-
-                var host = builder.Build();
-
-                using (var scope = host.Services.CreateScope())
-                {
-                    using var db = scope.ServiceProvider.GetRequiredService<IPowerUnitIEC104ServerDbContext>();
-                    await db.Database.MigrateAsync();
-                }
+                await host.ApplyDbMigrations();
 
                 await host.RunAsync();
+
                 break;
             }
             catch (OperationCanceledException)

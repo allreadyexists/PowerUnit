@@ -27,9 +27,6 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
         IDataProvider dataProvider,
         TcpServer server, ILogger<IEC104ServerSession> logger) : base(server)
     {
-        //OptionSendBufferSize = 256 * 3 / 2;
-        //OptionReceiveBufferSize = 256 * 3 / 2;
-
         _provider = provider;
         _options = options;
         _dataSource = dataSource;
@@ -59,7 +56,7 @@ public class IEC104ServerSession : TcpSession, IPhysicalLayerCommander
         var bufferPart = buffer[(int)offset..(int)(offset + size)];
         if (_logger.IsEnabled(LogLevel.Trace))
             _logger.LogTrace("{@id} Rx: {@rx}", Id, new Span<byte>(bufferPart, (int)offset, (int)size).ToHex());
-        ((IPhysicalLayerNotification)_channelLayer).Recieve(bufferPart);
+        (_channelLayer as IPhysicalLayerNotification)?.Recieve(bufferPart);
     }
 
     public bool SendInternal(byte[] buffer, long offset, long size)
