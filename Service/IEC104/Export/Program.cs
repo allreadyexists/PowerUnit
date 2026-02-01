@@ -99,6 +99,9 @@ internal sealed class Program
 
         builder.Services.AddHostedService<IEC104ServersStarterService>();
 
+        builder.Services.AddWindowsService(opt => opt.ServiceName = serviceName);
+        builder.Services.AddSystemd();
+
         builder.AddNLogEx(serviceName);
 
         return builder.Build();
